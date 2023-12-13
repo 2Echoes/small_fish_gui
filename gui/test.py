@@ -1,7 +1,10 @@
-from small_fish.gui.prompt import *
-from small_fish.pipeline._preprocess import *
-values = ask_input_parameters()
-values = convert_parameters_types(values)
-values = check_integrity(values)
-del values['image']
-print(values)
+import PySimpleGUI as sg
+
+layout = [
+    [sg.InputText(default_text= 'Hello enter something please', key='answer')],
+    [sg.Button('Ok')]      
+          ]
+
+window = sg.Window('Testing', layout=layout)
+output = window.read()
+print(output)

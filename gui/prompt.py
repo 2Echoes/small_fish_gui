@@ -23,7 +23,7 @@ def prompt(layout) :
     layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     window = sg.Window('small fish', layout=layout, margins=(10,10))
     event, values = window.read()
-    if event == 'Cancel' : 
+    if event != 'Ok' : 
         window.close()
         quit()
     else : 
@@ -44,7 +44,7 @@ def input_image_prompt() :
     try : 
         check_format(image, is_3D_stack, is_time_stack, is_multichannel)
     except FormatError as error:
-        sg.popup("Inconsistency between image format and options selected.")
+        sg.popup("Inconsistency between image format and options selected.\n Image shape : {0}".format(image.shape))
         raise error
 
     values.update({'image' : image})
@@ -67,7 +67,7 @@ def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_de
 
     #Deconvolution
     if do_dense_region_deconvolution :
-        layout += parameters_layout(['alpha', 'beta', 'gamma'], header= 'Dense regions deconvolution')
+        layout += parameters_layout(['alpha', 'beta', 'gamma'], default_values= [0.5, 1, 5], header= 'Dense regions deconvolution')
         layout += tuple_layout(deconvolution_kernel = tuple_shape)
 
     event, values = prompt(layout)

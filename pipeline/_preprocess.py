@@ -29,17 +29,19 @@ def convert_parameters_types(values:dict) :
 
     for parameter in int_list :
         try :
-            parameter_value = int(parameter)
+            parameter_value = int(values[parameter])
         except Exception :
             values[parameter] = None
         else : values[parameter] = parameter_value
 
     for parameter in float_list :
         try :
-            parameter_value = float(parameter)
+            parameter_value = float(values[parameter])
         except Exception :
             values[parameter] = None
         else : values[parameter] = parameter_value
+
+    return values
 
 
 def check_integrity(values: dict):
@@ -48,7 +50,7 @@ def check_integrity(values: dict):
     if type(values['voxel_size']) == type(None) : _error_popup(ParameterInputError('Incorrect voxel size parameter.'))
     
     #detection integrity :
-    if not isinstance(values['spot_radius'], (tuple, list)) and not(isinstance(values['minimum_distance'], (tuple, list)) and isinstance(values['log_kernel_size'], (tuple, list))) :
+    if not isinstance(values['spot_size'], (tuple, list)) and not(isinstance(values['minimum_distance'], (tuple, list)) and isinstance(values['log_kernel_size'], (tuple, list))) :
         _error_popup(ParameterInputError("Either minimum_distance and 'log_kernel_size' must be correctly set\n OR 'spot_size' must be correctly set."))
     
     #Deconvolution integrity
