@@ -4,11 +4,31 @@ class ParameterInputError(Exception) :
     pass
 
 
-def prepare_image(image_stack) :
-    #TODO : use yield output for memory optimisation
-    pass
+def prepare_image(image_stack, is_3D_stack, is_time_stack, multichannel, channel_to_compute=0) :
+    """
+    Generator yielding one image at a time for analysis.
+    """
+    
+    if multichannel and is_time_stack :
+        image = image[:,channel_to_compute,:]
+    elif multichannel :
+        image = image[channel_to_compute,:]
+    
+    if not is_time_stack : image_stack = [image_stack]
+
+    for image in image_stack : 
+        
+        if is_3D_stack : assert image.ndim == 3
+        else : assert image.ndim == 2
+        yield image
+
+
+
 
 def convert_parameters_types(values:dict) :
+    """
+    Convert parameters from `ask_input_parameters` from strings to float, int or tuple type.
+    """
 
     #Tuples
     tuples_list = ['voxel_size', 'spot_size', 'log_kernel_size', 'minimum_distance', 'deconvolution_kernel']
@@ -45,6 +65,9 @@ def convert_parameters_types(values:dict) :
 
 
 def check_integrity(values: dict):
+    """
+    Checks that parameters given in input by user are fit to be used for bigfish detection.
+    """
 
     #voxel_size
     if type(values['voxel_size']) == type(None) : _error_popup(ParameterInputError('Incorrect voxel size parameter.'))

@@ -33,3 +33,23 @@ def check_parameter(**kwargs):
                             "instead.".format(arg, target, actual))
 
     return True
+
+
+def compute_anisotropy_coef(voxel_size) :
+    """
+    Returns tuple (anisotropy_z, anisotropy_y, 1)
+    voxel_size : tuple (z,y,x).
+    """
+
+    if not isinstance(voxel_size, (tuple, list)) : raise TypeError("Expected voxel_size tuple or list")
+    if len(voxel_size) == 2 : is_3D = False
+    elif len(voxel_size) == 3 : is_3D = True
+    else : raise ValueError("Expected 2D or 3D voxel, {0} element(s) found".format(len(voxel_size)))
+
+    if is_3D :
+        z_anisotropy = voxel_size[0] / voxel_size [2]
+        xy_anisotropy = voxel_size[1] / voxel_size [2]
+        return (z_anisotropy, xy_anisotropy, 1)
+
+    else :
+        return (voxel_size[0] / voxel_size[1], 1)

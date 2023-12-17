@@ -3,6 +3,28 @@ from .layout import path_layout, parameters_layout, bool_layout, tuple_layout
 from ..interface import open_image, check_format, FormatError
 
 def ask_input_parameters() :
+    """
+    Prompt user with interface allowing parameters setting for bigFish detection / deconvolution.
+    
+    Keys :
+        - 'image path'
+        - 'image'
+        - '3D stack'
+        - 'time stack'
+        - 'multichannel'
+        - 'Dense regions deconvolution'
+        - 'threshold'
+        - 'time step'
+        - 'channel to compute'
+        - 'alpha'
+        - 'beta'
+        - 'gamma'
+        - 'voxel_size_{(z,y,x)}'
+        - 'spot_size{(z,y,x)}'
+        - 'log_kernel_size{(z,y,x)}'
+        - 'minimum_distance{(z,y,x)}'
+    """
+    
     values = {}
 
     image_input_values = input_image_prompt()
@@ -32,6 +54,14 @@ def prompt(layout) :
 
 
 def input_image_prompt() :
+    """
+        Keys :
+        - 'image path'
+        - '3D stack'
+        - 'time stack'
+        - 'multichannel'
+        - 'Dense regions deconvolution'
+    """
     layout_image_path = path_layout(['image path'], header= "Image")
     layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'])
     layout_image_path += bool_layout(['Dense regions deconvolution', 'Napari correction', 'show detection results'], header= "Pipeline settings")
@@ -53,6 +83,19 @@ def input_image_prompt() :
 
 
 def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
+    """
+    keys :
+        - 'threshold'
+        - 'time step'
+        - 'channel to compute'
+        - 'alpha'
+        - 'beta'
+        - 'gamma'
+        - 'voxel_size_{(z,y,x)}'
+        - 'spot_size{(z,y,x)}'
+        - 'log_kernel_size{(z,y,x)}'
+        - 'minimum_distance{(z,y,x)}'
+    """
     if is_3D_stack : dim = 3
     else : dim = 2
 
