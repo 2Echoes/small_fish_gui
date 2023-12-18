@@ -1,5 +1,6 @@
 import bigfish.detection as detection
 import numpy as np
+import pandas as pd
 from ..gui import ask_input_parameters
 from ._preprocess import prepare_image, check_integrity, convert_parameters_types
 from . napari_wrapper import correct_spots, show_spots
@@ -22,6 +23,14 @@ show_spots_res = user_parameters.setdefault('show_spots_res', False)
 time_step = user_parameters.get('time_step')
 channel_to_compute = user_parameters.get('channel to compute')
 
+
+##One element per time step.
+
+#Spots coordinates
+spots_list = []
+spot_number_list = []
+
+#signal to noise ratio
 ##deconvolution parameters
 do_dense_region_deconvolution = user_parameters['do_dense_region_deconvolution']
 alpha = user_parameters.get('alpha')
@@ -37,14 +46,6 @@ multichannel = user_parameters['mutichannel']
 #image
 image_raw = user_parameters['image']
 images_gen = prepare_image(image_raw, is_3D_stack, multichannel, is_time_stack)
-
-##One element per time step.
-
-#Spots coordinates
-spots_list = []
-spot_number_list = []
-
-#signal to noise ratio
 snr_median_list = []
 snr_mean_list = []
 snr_std_list = []
@@ -90,3 +91,15 @@ for step, image in enumerate(images_gen) :
     spotsSignal_std_list.append(spotsSignal_std)
     median_pixel_list.append(median_pixel)
     mean_pixel_list.append(mean_pixel)
+
+result_frame = pd.DataFrame({
+    'spot_number' : spot_number,
+    'snr_meadian' : snr_median_list,
+    'snr_mean' : snr_mean,
+    'snr_std' : snr_std,
+    'spot_median_signal' : spotsSignal_median_list,
+    'spot_mean_signal' : spotsSignal_mean_list,
+    'spot_std_signal' : spotsSignal_std_list,
+    'median_siganl' : median_pixel_list,
+    'mean_signal' : mean_pixel_list
+})

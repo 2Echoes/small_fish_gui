@@ -1,4 +1,5 @@
 import PySimpleGUI as sg
+import pandas as pd
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout
 from ..interface import open_image, check_format, FormatError
 
@@ -41,11 +42,12 @@ def ask_input_parameters() :
     return values
 
 
-def prompt(layout) :
-    layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
+def prompt(layout, add_ok_cancel=True) :
+    if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     window = sg.Window('small fish', layout=layout, margins=(10,10))
     event, values = window.read()
-    if event != 'Ok' : 
+
+    if event == 'Close' or event == '' : 
         window.close()
         quit()
     else : 
@@ -61,6 +63,9 @@ def input_image_prompt() :
         - 'time stack'
         - 'multichannel'
         - 'Dense regions deconvolution'
+
+    Returns Values
+
     """
     layout_image_path = path_layout(['image path'], header= "Image")
     layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'])
@@ -82,6 +87,18 @@ def input_image_prompt() :
     return values
 
 
+def output_image_prompt() :
+    layout = path_layout(['path'], header= "Output parameters :")
+    layout += bool_layout(['Excel', 'Feather'])
+    layout += [sg.Button('Cancel')]
+
+    event,values= prompt(layout)
+
+    if event == ('Cancel') : return False
+
+    else : return values
+
+
 def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
     """
     keys :
@@ -95,6 +112,9 @@ def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_de
         - 'spot_size{(z,y,x)}'
         - 'log_kernel_size{(z,y,x)}'
         - 'minimum_distance{(z,y,x)}'
+
+    Returns Values
+        
     """
     if is_3D_stack : dim = 3
     else : dim = 2
@@ -115,6 +135,20 @@ def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_de
 
     event, values = prompt(layout)
     return values
+
+
+def events(event_list) :
+    """
+    Return event chose from user
+    """
+    
+    layout = [
+        [sg.Text('Choose an action')],
+        [sg.Button(event) for event in event_list]
+    ]
+
+    event, values = prompt(layout, add_ok_cancel= False)
+    return event
 
 
 def _error_popup(error:Exception) :
