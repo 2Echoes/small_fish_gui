@@ -53,14 +53,19 @@ def tuple_layout(**tuples) :
 
     return layout
 
-def path_layout(keys= [], header=None) :
+def path_layout(keys= [],look_for_dir = False, header=None) :
+    """
+    If not look for dir then looks for file.
+    """
     if len(keys) == 0 : return []
     check_parameter(keys= list, header = (str, type(None)))
     for key in keys : check_parameter(key = str)
+    if look_for_dir : Browse = sg.FolderBrowse
+    else : Browse = sg.FileBrowse
 
     max_length = len(max(keys, key=len))
     layout = [
-        [sg.Text(pad_right(name, max_length, ' ')), sg.FileBrowse(key= name, initial_folder= os.getcwd())] for name in keys
+        [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, initial_folder= os.getcwd())] for name in keys
         ]
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)

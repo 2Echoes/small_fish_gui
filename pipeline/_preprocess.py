@@ -10,14 +10,12 @@ def prepare_image(image_stack, is_3D_stack, is_time_stack, multichannel, channel
     """
     
     if multichannel and is_time_stack :
-        image = image[:,channel_to_compute,:]
+        image = image_stack[:,channel_to_compute,:]
     elif multichannel :
-        image = image[channel_to_compute,:]
+        image = image_stack[channel_to_compute,:]
     
     if not is_time_stack : image_stack = [image_stack]
-
     for image in image_stack : 
-        
         if is_3D_stack : assert image.ndim == 3
         else : assert image.ndim == 2
         yield image

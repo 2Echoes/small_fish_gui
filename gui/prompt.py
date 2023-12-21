@@ -43,11 +43,10 @@ def ask_input_parameters() :
 
 
 def prompt(layout, add_ok_cancel=True) :
-    if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
+    if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Close')]]
     window = sg.Window('small fish', layout=layout, margins=(10,10))
     event, values = window.read()
-
-    if event == 'Close' or event == '' : 
+    if event == 'Close' or event == None : 
         window.close()
         quit()
     else : 
@@ -69,7 +68,7 @@ def input_image_prompt() :
     """
     layout_image_path = path_layout(['image path'], header= "Image")
     layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'])
-    layout_image_path += bool_layout(['Dense regions deconvolution', 'Napari correction', 'show detection results'], header= "Pipeline settings")
+    layout_image_path += bool_layout(['Dense regions deconvolution', 'Napari correction'], header= "Pipeline settings")
     event, values = prompt(layout_image_path)
     im_path = values['image path']
     is_3D_stack = values['3D stack']
@@ -80,7 +79,7 @@ def input_image_prompt() :
         check_format(image, is_3D_stack, is_time_stack, is_multichannel)
     except FormatError as error:
         sg.popup("Inconsistency between image format and options selected.\n Image shape : {0}".format(image.shape))
-        raise error
+        
 
     values.update({'image' : image})
 
@@ -88,11 +87,16 @@ def input_image_prompt() :
 
 
 def output_image_prompt() :
-    layout = path_layout(['path'], header= "Output parameters :")
-    layout += bool_layout(['Excel', 'Feather'])
-    layout += [sg.Button('Cancel')]
+    try :
+        layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
+        layout += parameters_layout(['filename'])
+        layout += bool_layout(['Excel', 'Feather'])
+        layout.append([sg.Button('Cancel')])
 
-    event,values= prompt(layout)
+        event,values= prompt(layout)
+    except Exception as error: 
+        sg.popup('Error when saving files : {0}'.format(error))
+        event = 'Cancel'
 
     if event == ('Cancel') : return False
 
@@ -137,13 +141,18 @@ def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_de
     return values
 
 
+def post_analysis_prompt() :
+    answer = events(['Save results','add_detection', 'colocalisation', 'open results in napari'])
+
+    return answer
+
+
 def events(event_list) :
     """
     Return event chose from user
     """
     
     layout = [
-        [sg.Text('Choose an action')],
         [sg.Button(event) for event in event_list]
     ]
 
