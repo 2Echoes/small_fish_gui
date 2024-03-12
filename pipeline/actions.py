@@ -138,17 +138,119 @@ def launch_segmentation(image) :
 
     layout = seg._segmentation_layout()
     event, values = prompt(layout)
-
     if event == 'Cancel' : return None, None
 
     #Extract parameters
-    model_name = values['model_name']
-    channels = [
-        values['cytoplasm channel'], values['nucleus channel']
-    ]
-    obj_diameter = values['object diameter']
+    values = seg._cast_segmentation_parameters(values)
+    cyto_model_name = values['cyto_model_name']
+    cyto_size = values['cytoplasm diameter']
+    cytoplasm_channel = values['cytoplasm channel']
+    nucleus_model_name = values['nucleus_model_name']
+    nucleus_size = values['nucleus diameter']
+    nucleus_channel = values['nucleus channel']
     path = values['saving path'] if values['saving path'] != '' else None
+    show_segmentation = values['show segmentation']
+    filename = values['filename'] if type(path) != type(None) else None
 
-    cytoplasm_label, nucleus_label = seg.cell_segmentation(image, model_name, channels, obj_diameter, output_path=path)
+    channels = [cytoplasm_channel, nucleus_channel]
+    #Checking integrity of parameters
+    available_channels = list(range(image.shape[0]))
+    relaunch= False
+
+    if type(cyto_model_name) != str or cyto_model_name == '':
+        sg.popup('Invalid cytopaslm model name.')
+        relaunch= True
+    if cytoplasm_channel not in available_channels :
+        sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+        relaunch= True
+        cytoplasm_channel = 0
+
+    if type(cyto_size) not in [int, float] :
+        sg.popup("Incorrect cytoplasm size.")
+        relaunch= True
+        cyto_size = 30
+
+    if type(nucleus_model_name) != str or nucleus_model_name == '':
+        sg.popup('Invalid nucleus model name.')
+        relaunch= True
+    if nucleus_channel not in available_channels :
+        sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
+        relaunch= True
+        nucleus_channel = 0
+    if type(nucleus_size) not in [int, float] :
+        sg.popup("Incorrect nucleus size.")
+        relaunch= True
+        nucleus_size = 30
+
+    #if incorrect parameters --> relaunch
+    while relaunch :
+        layout = seg._segmentation_layout(
+            cytoplasm_channel_preset= cytoplasm_channel,
+            nucleus_channel_preset= nucleus_channel,
+            cyto_diameter_preset= cyto_size,
+            nucleus_diameter_preset= nucleus_size,
+            saving_path_preset= path,
+            show_segmentation_preset=show_segmentation,
+            filename_preset=filename
+        )
+
+        event, values = prompt(layout)
+        if event == 'Cancel' : return None, None
+
+        #Extract parameters
+        values = seg._cast_segmentation_parameters(values)
+        cyto_model_name = values['cyto_model_name']
+        cyto_size = values['cytoplasm diameter']
+        cytoplasm_channel = values['cytoplasm channel']
+        nucleus_model_name = values['nucleus_model_name']
+        nucleus_size = values['nucleus diameter']
+        nucleus_channel = values['nucleus channel']
+        path = values['saving path'] if values['saving path'] != '' else None
+        show_segmentation = values['show segmentation']
+        filename = values['filename']
+
+        channels = [
+            cytoplasm_channel, nucleus_channel
+        ]
+        path = values['saving path'] if values['saving path'] != '' else None
+        
+        #Checking integrity of parameters
+        relaunch= False
+
+        if type(cyto_model_name) != str :
+            sg.popup('Invalid cytopaslm model name.')
+            relaunch= True
+        if cytoplasm_channel not in available_channels :
+            sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+            relaunch= True
+            cytoplasm_channel = 0
+
+        if type(cyto_size) not in [int, float] :
+            sg.popup("Incorrect cytoplasm size.")
+            relaunch= True
+            cyto_size = 30
+
+        if type(nucleus_model_name) != str :
+            sg.popup('Invalid nucleus model name.')
+            relaunch= True
+        if nucleus_channel not in available_channels :
+            sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
+            relaunch= True
+            nucleus_channel = 0
+        if type(nucleus_size) not in [int, float] :
+            sg.popup("Incorrect nucleus size.")
+            relaunch= True
+            nucleus_size = 30
+
+    cytoplasm_label, nucleus_label = seg.cell_segmentation(
+        image,
+        cyto_model_name= cyto_model_name,
+        cyto_diameter= cyto_size,
+        nucleus_model_name= nucleus_model_name,
+        nucleus_diameter= nucleus_size,
+        channels=channels,
+        show_segmentation=show_segmentation,
+        output_path=path + '/' + filename
+        )
 
     return cytoplasm_label, nucleus_label

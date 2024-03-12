@@ -53,7 +53,7 @@ def tuple_layout(**tuples) :
 
     return layout
 
-def path_layout(keys= [],look_for_dir = False, header=None) :
+def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) :
     """
     If not look for dir then looks for file.
     """
@@ -65,20 +65,20 @@ def path_layout(keys= [],look_for_dir = False, header=None) :
 
     max_length = len(max(keys, key=len))
     layout = [
-        [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, initial_folder= os.getcwd())] for name in keys
+        [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, initial_folder= preset)] for name in keys
         ]
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)
     return layout
 
-def bool_layout(parameters= [], header=None) :
+def bool_layout(parameters= [], header=None, preset=False) :
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header= (str, type(None)))
     for key in parameters : check_parameter(key = str)
 
     max_length = len(max(parameters, key=len))
     layout = [
-        [sg.Checkbox(pad_right(name, max_length, ' '), key= name)] for name in parameters
+        [sg.Checkbox(pad_right(name, max_length, ' '), key= name, default=preset)] for name in parameters
     ]
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)
