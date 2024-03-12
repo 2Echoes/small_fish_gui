@@ -13,10 +13,10 @@ def prepare_image(image_stack, is_3D_stack, is_time_stack, multichannel, channel
         image = image_stack[:,channel_to_compute,:]
     elif multichannel :
         image = image_stack[channel_to_compute,:]
-    
+        print(image.shape)
     if not is_time_stack : image_stack = [image_stack]
     for image in image_stack : 
-        if is_3D_stack : assert image.ndim == 3
+        if is_3D_stack : assert image.ndim >= 3
         else : assert image.ndim == 2
         yield image
 
@@ -91,7 +91,7 @@ def check_integrity(values: dict):
 
     #channel
     if values['multichannel'] :
-        ch = values['channel to compute']
+        ch = int(values['channel to compute'])
         if type(ch) == type(None) :
             _error_popup(ParameterInputError("Incorrect channel to compute parameter."))
         elif values['time stack'] :

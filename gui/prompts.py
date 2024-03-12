@@ -14,6 +14,8 @@ def ask_input_parameters() :
         - 'time stack'
         - 'multichannel'
         - 'Dense regions deconvolution'
+        - 'Segmentation
+        - 'Napari correction'
         - 'threshold'
         - 'time step'
         - 'channel to compute'
@@ -43,12 +45,15 @@ def ask_input_parameters() :
 
 
 def prompt(layout, add_ok_cancel=True) :
-    if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Close')]]
+    if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     window = sg.Window('small fish', layout=layout, margins=(10,10))
     event, values = window.read()
-    if event == 'Close' or event == None : 
+    if event == None : 
         window.close()
         quit()
+    elif event == 'Cancel' :
+        window.close()
+        return event,{}
     else : 
         window.close()
         return event, values
@@ -68,7 +73,7 @@ def input_image_prompt() :
     """
     layout_image_path = path_layout(['image path'], header= "Image")
     layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'])
-    layout_image_path += bool_layout(['Dense regions deconvolution', 'Napari correction'], header= "Pipeline settings")
+    layout_image_path += bool_layout(['Dense regions deconvolution', 'Segmentation', 'Napari correction'], header= "Pipeline settings")
     event, values = prompt(layout_image_path)
     im_path = values['image path']
     is_3D_stack = values['3D stack']

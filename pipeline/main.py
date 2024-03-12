@@ -1,5 +1,5 @@
 from ._preprocess import prepare_image
-from .actions import initiate_detection, launch_detection, hub
+from .actions import initiate_detection, launch_detection, hub, launch_segmentation
 
 #Open interface and ask user for parameters.
 user_parameters = initiate_detection()
@@ -11,10 +11,12 @@ channel_to_compute = user_parameters.get('channel to compute')
 is_time_stack = user_parameters['time stack']
 is_3D_stack = user_parameters['3D stack']
 multichannel = user_parameters['multichannel']
+do_segmentation = user_parameters['Segmentation'] and not is_time_stack
 
 #image
 image_raw = user_parameters['image']
 images_gen = prepare_image(image_raw, is_3D_stack=is_3D_stack, multichannel=multichannel, is_time_stack=is_time_stack)
+
 
 image, voxel_size, spots, result_frame = launch_detection(images_gen, user_parameters)
 results= [result_frame]

@@ -83,3 +83,29 @@ def bool_layout(parameters= [], header=None) :
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)
     return layout
+
+def combo_layout(values, key, header=None, read_only=True) :
+    """
+    drop-down list
+    """
+    if len(values) == 0 : return []
+    check_parameter(values= list, header= (str, type(None)))
+    layout = [
+        sg.Combo(values, readonly=read_only, key=key)
+    ]
+    if isinstance(header, str) :
+        layout = add_header(header, layout=layout)
+    return layout
+
+def radio_layout(values, header=None) :
+    """
+    Single choice buttons.
+    """
+    if len(values) == 0 : return []
+    check_parameter(values= list, header= (str, type(None)))
+    layout = [
+        [sg.Radio(value, group_id= 0) for value in values]
+    ]
+    if isinstance(header, str) :
+        layout = add_header(header, layout=layout)
+    return layout

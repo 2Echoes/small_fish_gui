@@ -1,4 +1,4 @@
-from ..gui.prompt import events, output_image_prompt, post_analysis_prompt, ask_input_parameters, _warning_popup, _error_popup
+from ..gui.prompts import output_image_prompt, post_analysis_prompt, ask_input_parameters, _error_popup, prompt
 from ..interface.output import save_results
 from ._preprocess import prepare_image, check_integrity, convert_parameters_types
 from .napari_wrapper import correct_spots
@@ -8,6 +8,7 @@ import bigfish.detection as detection
 import pandas as pd
 import numpy as np
 import PySimpleGUI as sg
+import small_fish.pipeline._segmentation as seg
 
 
 def hub(image, voxel_size, spots_memory, results) :
@@ -64,6 +65,8 @@ def initiate_detection() :
     user_parameters = convert_parameters_types(user_parameters)
     user_parameters = check_integrity(user_parameters)
 
+    if user_parameters['Segmentation'] and user_parameters['time stack'] : sg.popup('Segmentation is not supported for time stack. Segmentation will be turned off.')
+
     return user_parameters
 
 def launch_detection(images_gen, user_parameters: dict) :
@@ -101,6 +104,8 @@ def launch_detection(images_gen, user_parameters: dict) :
             fov_res['time'] = time_step * step
         else : fov_res['time'] = np.NaN
 
+        image = image[:,:,:,1]
+
         #detection
         spots, fov_res['threshold'] = detection.detect_spots(images= image, threshold=threshold, return_threshold= True, voxel_size=voxel_size, spot_radius= spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
         
@@ -128,3 +133,22 @@ def launch_detection(images_gen, user_parameters: dict) :
     result_frame = pd.DataFrame(res)
     
     return image, voxel_size, spots_list, result_frame
+
+def launch_segmentation(image) :
+
+    layout = seg._segmentation_layout()
+    event, values = prompt(layout)
+
+    if event == 'Cancel' : return None, None
+
+    #Extract parameters
+    model_name = values['model_name']
+    channels = [
+        values['cytoplasm channel'], values['nucleus channel']
+    ]
+    obj_diameter = values['object diameter']
+    path = values['saving path'] if values['saving path'] != '' else None
+
+    cytoplasm_label, nucleus_label = seg.cell_segmentation(image, model_name, channels, obj_diameter, output_path=path)
+
+    return cytoplasm_label, nucleus_label
