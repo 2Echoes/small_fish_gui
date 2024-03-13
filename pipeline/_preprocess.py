@@ -6,7 +6,7 @@ class ParameterInputError(Exception) :
     pass
 
 
-def prepare_image_detection(map, image_stack, is_3D_stack, is_time_stack, multichannel, channel_to_compute=0) :
+def prepare_image_detection(map, image_stack, channel_to_compute=0) :
     """
     Generator yielding one image at a time for analysis. 
     Generator will have only one image if not time stack. 
@@ -21,19 +21,15 @@ def prepare_image_detection(map, image_stack, is_3D_stack, is_time_stack, multic
         one frame per iteration [c,z,y,x]
     """
     
-    if multichannel and is_time_stack :
-        image = image_stack[:,channel_to_compute,:]
-    elif multichannel :
-        image = image_stack[channel_to_compute,:]
-        print(image.shape)
-    if not is_time_stack : image_stack = [image_stack]
-    for image in image_stack : 
-        if is_3D_stack : assert image.ndim >= 3
-        else : assert image.ndim == 2
-        yield image
+    image_stack = reorder_image_stack(map, image_stack) #
+    if len(image_stack.shape) == 5 : #is time stack
+        for image in image_stack :
+            yield image[channel_to_compute]
+    else :
+        yield image_stack[channel_to_compute]
 
 
-def prepare_image_segmentation(map, image_stack) :
+def reorder_image_stack(map, image_stack) :
     x = (map['x'],)
     y = (map['y'],)
     z = (map['z'],) if type(map.get('z')) != type(None) else ()

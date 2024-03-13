@@ -1,4 +1,4 @@
-from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, input_image_prompt, pipeline_parameters_promt, ask_cancel_segmentation
+from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation
 from ..interface.output import save_results
 from ._preprocess import check_integrity, convert_parameters_types
 from .napari_wrapper import correct_spots
@@ -41,6 +41,7 @@ def ask_input_parameters() :
 
     image_input_values = input_image_prompt()
     values.update(image_input_values)
+    if values['Segmentation'] and values['time stack'] : sg.popup('Segmentation is not supported for time stack. Segmentation will be turned off.')
     
     return values
 
@@ -93,23 +94,16 @@ def hub(image, voxel_size, spots_memory, results) :
     
     return image, voxel_size, spots_memory, results, end_process
     
-def initiate_detection() :
+def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
+    user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution)
     user_parameters = convert_parameters_types(user_parameters)
     user_parameters = check_integrity(user_parameters)
-
-    if user_parameters['Segmentation'] and user_parameters['time stack'] : sg.popup('Segmentation is not supported for time stack. Segmentation will be turned off.')
+    user_parameters['dim'] = 3 if user_parameters['3D stack'] else 2
 
     return user_parameters
 
-def launch_detection(image_input_values, images_gen) :
 
-    pipeline_parameters_values = pipeline_parameters_promt(
-        is_3D_stack=image_input_values['3D stack'], 
-        is_time_stack=image_input_values['time stack'], 
-        is_multichannel=image_input_values['multichannel'], 
-        do_dense_region_deconvolution=image_input_values['Dense regions deconvolution'])
-    image_input_values.update(pipeline_parameters_values)
-    image_input_values['dim'] = 3 if image_input_values['3D stack'] else 2
+def launch_detection(image_input_values, images_gen) :
     
     #Extract parameters
     voxel_size = image_input_values['voxel_size']

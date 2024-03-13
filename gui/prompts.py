@@ -73,7 +73,7 @@ def output_image_prompt() :
     else : return values
 
 
-def pipeline_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
+def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
     """
     keys :
         - 'threshold'
