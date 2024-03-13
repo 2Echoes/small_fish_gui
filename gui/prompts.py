@@ -3,54 +3,19 @@ import pandas as pd
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout
 from ..interface import open_image, check_format, FormatError
 
-def ask_input_parameters() :
-    """
-    Prompt user with interface allowing parameters setting for bigFish detection / deconvolution.
-    
-    Keys :
-        - 'image path'
-        - 'image'
-        - '3D stack'
-        - 'time stack'
-        - 'multichannel'
-        - 'Dense regions deconvolution'
-        - 'Segmentation
-        - 'Napari correction'
-        - 'threshold'
-        - 'time step'
-        - 'channel to compute'
-        - 'alpha'
-        - 'beta'
-        - 'gamma'
-        - 'voxel_size_{(z,y,x)}'
-        - 'spot_size{(z,y,x)}'
-        - 'log_kernel_size{(z,y,x)}'
-        - 'minimum_distance{(z,y,x)}'
-    """
-    
-    values = {}
-
-    image_input_values = input_image_prompt()
-    values.update(image_input_values)
-
-    pipeline_parameters_values = pipeline_parameters_promt(
-        is_3D_stack=image_input_values['3D stack'], 
-        is_time_stack=image_input_values['time stack'], 
-        is_multichannel=image_input_values['multichannel'], 
-        do_dense_region_deconvolution=image_input_values['Dense regions deconvolution'])
-    values.update(pipeline_parameters_values)
-    values['dim'] = 3 if values['3D stack'] else 2
-
-    return values
-
 
 def prompt(layout, add_ok_cancel=True) :
+    """
+    Default event : 'Ok', 'Cancel'
+    """
     if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     window = sg.Window('small fish', layout=layout, margins=(10,10))
     event, values = window.read()
     if event == None : 
-        window.close()
-        quit()
+        if ask_quit_small_fish() :
+            window.close()
+            quit()
+        
     elif event == 'Cancel' :
         window.close()
         return event,{}
@@ -164,6 +129,26 @@ def events(event_list) :
     event, values = prompt(layout, add_ok_cancel= False)
     return event
 
+
+def ask_cancel_segmentation() :
+    layout = [
+        [sg.Text("Cancel segmentation ?")],
+        [sg.Button('Yes'), sg.Button('No')]
+    ]
+
+    event, values = prompt(layout, add_ok_cancel= False)
+
+    return event == 'Yes'
+
+def ask_quit_small_fish() :
+    layout = [
+        [sg.Text("Quit small fish ?")],
+        [sg.Button('Yes'), sg.Button('No')]
+    ]
+
+    event, values = prompt(layout, add_ok_cancel= False)
+
+    return event == 'Yes'
 
 def _error_popup(error:Exception) :
     sg.popup('Error : ' + str(error))

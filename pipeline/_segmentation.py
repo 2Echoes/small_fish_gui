@@ -1,7 +1,6 @@
 from cellpose.core import use_gpu
 from ..gui.layout import parameters_layout, combo_layout, add_header, path_layout, bool_layout
 
-
 import cellpose.models as models
 import numpy as np
 import bigfish.segmentation as seg
@@ -14,31 +13,29 @@ import os
 
 USE_GPU = use_gpu()
 
-def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto_diameter, nucleus_diameter, output_path=None, show_segmentation=False) :
+def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto_diameter, nucleus_diameter) :
 
     nuc_channel = channels[1]
     cyto_channel = channels[0]
 
-    if image[cyto_channel].ndim > 3 :
+    if image[cyto_channel].ndim >= 3 :
         cyto = stack.maximum_projection(image[cyto_channel])
     else : 
         cyto = image[cyto_channel]
-    if image[nuc_channel].ndim > 3 :
+    if image[nuc_channel].ndim >= 3 :
         nuc = stack.maximum_projection(image[nuc_channel])
     else : 
         nuc = image[nuc_channel]
     
-    image = np.zeros(shape=(2,) + image.shape[1:])
+    image = np.zeros(shape=(2,) + cyto.shape)
     image[0] = cyto
     image[1] = nuc
+    image = np.moveaxis(image, source=(0,1,2), destination=(2,0,1))
+    print(image.shape)
 
     nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0])
     cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [0,1])
     cytoplasm_label, nuc_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
-
-    if show_segmentation or type(output_path) != type(None) :
-
-        plot.plot_segmentation_boundary(cyto, cytoplasm_label, nuc_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
 
     return cytoplasm_label, nuc_label
 
@@ -53,6 +50,7 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
         im,
         diameter= object_size_px,
         channels= channels,
+        do_3D= False,
         )[0]
     label = np.array(label, dtype= np.int64)
     label = seg.remove_disjoint(label)
@@ -62,7 +60,6 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
 def _segmentation_layout(cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
 
     models_list = models.get_user_models() + models.MODEL_NAMES
-    print("model_list : ",models_list)
     if len(models_list) == 0 : models_list = ['no model found']
     
     #Header : GPU availabality
@@ -88,6 +85,13 @@ def _segmentation_layout(cytoplasm_channel_preset=0, nucleus_channel_preset=0, c
     return layout
 
 def _cast_segmentation_parameters(values) :
+
+    if values['cyto_model_name'] == '' :
+        values['cyto_model_name'] = None
+
+    if values['nucleus_model_name'] == '' :
+        values['nucleus_model_name'] = None
+
     try : #cytoplasm channel
         values['cytoplasm channel'] = int(values['cytoplasm channel'])
     except ValueError :

@@ -1,15 +1,48 @@
-from ..gui.prompts import output_image_prompt, post_analysis_prompt, ask_input_parameters, _error_popup, prompt
+from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, input_image_prompt, pipeline_parameters_promt, ask_cancel_segmentation
 from ..interface.output import save_results
-from ._preprocess import prepare_image, check_integrity, convert_parameters_types
+from ._preprocess import check_integrity, convert_parameters_types
 from .napari_wrapper import correct_spots
 from .bigfish_wrappers import compute_snr_spots
+import bigfish.plot as plot
 import bigfish.detection as detection
+import bigfish.stack as stack
 
 import pandas as pd
+import os
 import numpy as np
 import PySimpleGUI as sg
 import small_fish.pipeline._segmentation as seg
 
+def ask_input_parameters() :
+    """
+    Prompt user with interface allowing parameters setting for bigFish detection / deconvolution.
+    
+    Keys :
+        - 'image path'
+        - '3D stack'
+        - 'time stack'
+        - 'multichannel'
+        - 'Dense regions deconvolution'
+        - 'Segmentation
+        - 'Napari correction'
+        - 'threshold'
+        - 'time step'
+        - 'channel to compute'
+        - 'alpha'
+        - 'beta'
+        - 'gamma'
+        - 'voxel_size_{(z,y,x)}'
+        - 'spot_size{(z,y,x)}'
+        - 'log_kernel_size{(z,y,x)}'
+        - 'minimum_distance{(z,y,x)}'
+    """
+    
+    values = {}
+
+    image_input_values = input_image_prompt()
+    values.update(image_input_values)
+    
+    return values
 
 def hub(image, voxel_size, spots_memory, results) :
     end_process = False
@@ -36,7 +69,7 @@ def hub(image, voxel_size, spots_memory, results) :
 
             #image
             image_raw = user_parameters['image']
-            images_gen = prepare_image(image_raw, is_3D_stack, multichannel, is_time_stack, channel_to_compute= channel_to_compute)
+            images_gen = None #TODO to correct after modifications
             spots, result_frame = launch_detection(images_gen, user_parameters)
 
             if is_time_stack : spots_memory += [spots]
@@ -61,7 +94,6 @@ def hub(image, voxel_size, spots_memory, results) :
     return image, voxel_size, spots_memory, results, end_process
     
 def initiate_detection() :
-    user_parameters = ask_input_parameters()
     user_parameters = convert_parameters_types(user_parameters)
     user_parameters = check_integrity(user_parameters)
 
@@ -69,23 +101,31 @@ def initiate_detection() :
 
     return user_parameters
 
-def launch_detection(images_gen, user_parameters: dict) :
+def launch_detection(image_input_values, images_gen) :
+
+    pipeline_parameters_values = pipeline_parameters_promt(
+        is_3D_stack=image_input_values['3D stack'], 
+        is_time_stack=image_input_values['time stack'], 
+        is_multichannel=image_input_values['multichannel'], 
+        do_dense_region_deconvolution=image_input_values['Dense regions deconvolution'])
+    image_input_values.update(pipeline_parameters_values)
+    image_input_values['dim'] = 3 if image_input_values['3D stack'] else 2
     
     #Extract parameters
-    voxel_size = user_parameters['voxel_size']
-    threshold = user_parameters.setdefault('threshold',None)
-    spot_size = user_parameters.get('spot_size')
-    log_kernel_size = user_parameters.get('log_kernel_size')
-    minimum_distance = user_parameters.get('minimum_distance')
-    use_napari =  user_parameters.setdefault('Napari correction', False)
-    time_step = user_parameters.get('time step')
+    voxel_size = image_input_values['voxel_size']
+    threshold = image_input_values.setdefault('threshold',None)
+    spot_size = image_input_values.get('spot_size')
+    log_kernel_size = image_input_values.get('log_kernel_size')
+    minimum_distance = image_input_values.get('minimum_distance')
+    use_napari =  image_input_values.setdefault('Napari correction', False)
+    time_step = image_input_values.get('time step')
 
     ##deconvolution parameters
-    do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
-    alpha = user_parameters.get('alpha')
-    beta = user_parameters.get('beta')
-    gamma = user_parameters.get('gamma')
-    deconvolution_kernel = user_parameters.get('deconvolution_kernel')
+    do_dense_region_deconvolution = image_input_values['Dense regions deconvolution']
+    alpha = image_input_values.get('alpha')
+    beta = image_input_values.get('beta')
+    gamma = image_input_values.get('gamma')
+    deconvolution_kernel = image_input_values.get('deconvolution_kernel')
 
     ##Initiate lists
     spots_list = []
@@ -135,55 +175,32 @@ def launch_detection(images_gen, user_parameters: dict) :
     return image, voxel_size, spots_list, result_frame
 
 def launch_segmentation(image) :
+    """
+    Ask user for necessary parameters and perform cell segmentation (cytoplasm + nucleus) with cellpose.
 
-    layout = seg._segmentation_layout()
-    event, values = prompt(layout)
-    if event == 'Cancel' : return None, None
+    Input
+    -----
+    Image : np.ndarray[c,z,y,x]
+        Image to use for segmentation.
 
-    #Extract parameters
-    values = seg._cast_segmentation_parameters(values)
-    cyto_model_name = values['cyto_model_name']
-    cyto_size = values['cytoplasm diameter']
-    cytoplasm_channel = values['cytoplasm channel']
-    nucleus_model_name = values['nucleus_model_name']
-    nucleus_size = values['nucleus diameter']
-    nucleus_channel = values['nucleus channel']
-    path = values['saving path'] if values['saving path'] != '' else None
-    show_segmentation = values['show segmentation']
-    filename = values['filename'] if type(path) != type(None) else None
+    Returns
+    -------
+        cytoplasm_label, nucleus_label
+    """
 
-    channels = [cytoplasm_channel, nucleus_channel]
-    #Checking integrity of parameters
+    #Default parameters
+    cyto_size = 30
+    cytoplasm_channel = 0
+    nucleus_size = 30
+    nucleus_channel = 0
+    path = os.getcwd()
+    show_segmentation = False
+    filename = 'cell_segmentation.png'
     available_channels = list(range(image.shape[0]))
-    relaunch= False
 
-    if type(cyto_model_name) != str or cyto_model_name == '':
-        sg.popup('Invalid cytopaslm model name.')
-        relaunch= True
-    if cytoplasm_channel not in available_channels :
-        sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
-        relaunch= True
-        cytoplasm_channel = 0
-
-    if type(cyto_size) not in [int, float] :
-        sg.popup("Incorrect cytoplasm size.")
-        relaunch= True
-        cyto_size = 30
-
-    if type(nucleus_model_name) != str or nucleus_model_name == '':
-        sg.popup('Invalid nucleus model name.')
-        relaunch= True
-    if nucleus_channel not in available_channels :
-        sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
-        relaunch= True
-        nucleus_channel = 0
-    if type(nucleus_size) not in [int, float] :
-        sg.popup("Incorrect nucleus size.")
-        relaunch= True
-        nucleus_size = 30
-
-    #if incorrect parameters --> relaunch
-    while relaunch :
+    #Ask user for parameters
+    #if incorrect parameters --> set relaunch to True
+    while True :
         layout = seg._segmentation_layout(
             cytoplasm_channel_preset= cytoplasm_channel,
             nucleus_channel_preset= nucleus_channel,
@@ -195,7 +212,13 @@ def launch_segmentation(image) :
         )
 
         event, values = prompt(layout)
-        if event == 'Cancel' : return None, None
+        if event == 'Cancel' :
+            cancel_segmentation = ask_cancel_segmentation()
+        else : 
+            cancel_segmentation = False
+        
+        if cancel_segmentation :
+            return None, None
 
         #Extract parameters
         values = seg._cast_segmentation_parameters(values)
@@ -207,18 +230,13 @@ def launch_segmentation(image) :
         nucleus_channel = values['nucleus channel']
         path = values['saving path'] if values['saving path'] != '' else None
         show_segmentation = values['show segmentation']
-        filename = values['filename']
-
-        channels = [
-            cytoplasm_channel, nucleus_channel
-        ]
-        path = values['saving path'] if values['saving path'] != '' else None
+        filename = values['filename'] if type(path) != type(None) else None
+        channels = [cytoplasm_channel, nucleus_channel]
         
-        #Checking integrity of parameters
         relaunch= False
-
+        #Checking integrity of parameters
         if type(cyto_model_name) != str :
-            sg.popup('Invalid cytopaslm model name.')
+            sg.popup('Invalid cytoplasm model name.')
             relaunch= True
         if cytoplasm_channel not in available_channels :
             sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
@@ -241,16 +259,40 @@ def launch_segmentation(image) :
             sg.popup("Incorrect nucleus size.")
             relaunch= True
             nucleus_size = 30
+        
+        if not relaunch : break
 
-    cytoplasm_label, nucleus_label = seg.cell_segmentation(
-        image,
-        cyto_model_name= cyto_model_name,
-        cyto_diameter= cyto_size,
-        nucleus_model_name= nucleus_model_name,
-        nucleus_diameter= nucleus_size,
-        channels=channels,
-        show_segmentation=show_segmentation,
-        output_path=path + '/' + filename
-        )
+    #Launching segmentation
+    
+    waiting_layout = [
+        [sg.Text("Running segmentation...")]
+    ]
+    window = sg.Window(
+        title= 'small_fish',
+        layout= waiting_layout,
+        grab_anywhere= True,
+        no_titlebar= True
+    )
+
+    window.read(timeout= 30, close= False)
+
+    try :
+        if type(path) != type(None) and filename != '':
+            output_path = path + '/' + filename
+        else :
+            output_path = None
+        cytoplasm_label, nucleus_label = seg.cell_segmentation(
+            image,
+            cyto_model_name= cyto_model_name,
+            cyto_diameter= cyto_size,
+            nucleus_model_name= nucleus_model_name,
+            nucleus_diameter= nucleus_size,
+            channels=channels,
+            )
+
+    finally  : window.close()
+    if show_segmentation or type(output_path) != type(None) :
+        plot.plot_segmentation_boundary(stack.maximum_projection(image[cytoplasm_channel]), cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
 
     return cytoplasm_label, nucleus_label
+
