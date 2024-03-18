@@ -203,7 +203,7 @@ def convert_parameters_types(values:dict) :
 
     return values
 
-def check_integrity(values: dict):
+def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, multichannel):
     """
     Checks that parameters given in input by user are fit to be used for bigfish detection.
     """
@@ -216,30 +216,27 @@ def check_integrity(values: dict):
         _error_popup(ParameterInputError("Either minimum_distance and 'log_kernel_size' must be correctly set\n OR 'spot_size' must be correctly set."))
     
     #Deconvolution integrity
-    if values['Dense regions deconvolution'] :
+    if do_dense_region_deconvolution :
         if not isinstance(values['alpha'], (float, int)) or not isinstance(values['beta'], (float, int)) :
             _error_popup(ParameterInputError("Incorrect alpha or beta parameters."))
+            return None
         if type(values['gamma']) == type(None) and not isinstance(values['deconvolution_kernel'], (list, tuple)):
             _warning_popup('No gamma found; image will not be denoised before deconvolution.')
             values['gamma'] = 0
     
     #time
-    if values['time stack'] :
+    if is_time_stack :
         if type(values['time stack']) == type(None) :
             _error_popup(ParameterInputError("Incorrect time_step."))
+            return None
         elif values['time stack'] == 0 :
             _error_popup(ParameterInputError("Incorrect time_step, must be > 0."))
+            return None
 
     #channel
-    if values['multichannel'] :
+    if multichannel :
         ch = int(values['channel to compute'])
         if type(ch) == type(None) :
             _error_popup(ParameterInputError("Incorrect channel to compute parameter."))
-        elif values['time stack'] :
-            shape = values['image'].shape
-            if shape[1] <= ch : _error_popup("channel to compute out of image range.")
-        else :
-            shape = values['image'].shape
-            if shape[0] <= ch : _error_popup("channel to compute out of image range.")
 
     return values

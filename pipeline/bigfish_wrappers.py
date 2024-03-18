@@ -116,8 +116,8 @@ def compute_snr_spots(image, spots, voxel_size, spot_radius):
     radius_background_ = tuple(i * 2 for i in radius_signal_)
 
     # ceil radii
-    radius_signal = np.ceil(radius_signal_).astype(np.int)
-    radius_background = np.ceil(radius_background_).astype(np.int)
+    radius_signal = np.ceil(radius_signal_).astype(int)
+    radius_background = np.ceil(radius_background_).astype(int)
 
     # loop over spots
     snr_spots = []

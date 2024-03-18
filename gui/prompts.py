@@ -1,21 +1,23 @@
 import PySimpleGUI as sg
-import pandas as pd
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout
 from ..interface import open_image, check_format, FormatError
+from .help import _fake_help
 
 
-def prompt(layout, add_ok_cancel=True) :
+def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') :
     """
     Default event : 'Ok', 'Cancel'
     """
     if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
+
+    
     window = sg.Window('small fish', layout=layout, margins=(10,10))
-    event, values = window.read()
+    event, values = window.read(timeout=timeout, timeout_key=timeout_key)
     if event == None : 
         if ask_quit_small_fish() :
             window.close()
             quit()
-        
+
     elif event == 'Cancel' :
         window.close()
         return event,{}
@@ -23,8 +25,39 @@ def prompt(layout, add_ok_cancel=True) :
         window.close()
         return event, values
 
+def prompt_with_help(layout) :
+    layout += [[sg.Button('Help')]]
+    layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
+    
+    window = sg.Window('small fish', layout=layout)
+    while True :
+        event, values = window.read()
+            
+        if event == None : 
+            if ask_quit_small_fish() :
+                window.close()
+                quit()
+            else : 
+                print("Non")
+                event, values = window.read()
 
-def input_image_prompt() :
+        elif event == 'Cancel' :
+            window.close()
+            return event,{}
+        elif event == 'Ok': 
+            window.close()
+            return event, values
+        elif event == 'Help' :
+            _fake_help()
+
+def input_image_prompt(
+        is_3D_stack_preset=False,
+        time_stack_preset=False,
+        multichannel_preset = False,
+        do_dense_regions_deconvolution_preset= False,
+        do_segmentation_preset= False,
+        do_Napari_correction= False,
+) :
     """
         Keys :
         - 'image path'
@@ -32,26 +65,34 @@ def input_image_prompt() :
         - 'time stack'
         - 'multichannel'
         - 'Dense regions deconvolution'
+        - 'Segmentation'
+        - 'Napari correction'
 
     Returns Values
 
     """
     layout_image_path = path_layout(['image path'], header= "Image")
-    layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'])
-    layout_image_path += bool_layout(['Dense regions deconvolution', 'Segmentation', 'Napari correction'], header= "Pipeline settings")
-    event, values = prompt(layout_image_path)
+    layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
+    layout_image_path += bool_layout(['Dense regions deconvolution', 'Segmentation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_segmentation_preset, do_Napari_correction], header= "Pipeline settings")
+    # event, values = prompt(layout_image_path)
+    event, values = prompt_with_help(layout_image_path)
+
+    if event == 'Cancel' :
+        quit()
+
     im_path = values['image path']
     is_3D_stack = values['3D stack']
     is_time_stack = values['time stack']
     is_multichannel = values['multichannel']
-    image = open_image(im_path)
-    try : 
+    try :
+        image = open_image(im_path)
         check_format(image, is_3D_stack, is_time_stack, is_multichannel)
+        values.update({'image' : image})
     except FormatError as error:
         sg.popup("Inconsistency between image format and options selected.\n Image shape : {0}".format(image.shape))
-        
+    except OSError as error :
+        sg.popup('Image format not supported.')
 
-    values.update({'image' : image})
 
     return values
 
@@ -108,6 +149,8 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
         layout += tuple_layout(deconvolution_kernel = tuple_shape)
 
     event, values = prompt(layout)
+    if is_3D_stack : values['dim'] = 3
+    else : values['dim'] = 2
     return values
 
 

@@ -71,14 +71,22 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
         layout = add_header(header, layout=layout)
     return layout
 
-def bool_layout(parameters= [], header=None, preset=False) :
+def bool_layout(parameters= [], header=None, preset=None) :
     if len(parameters) == 0 : return []
-    check_parameter(parameters= list, header= (str, type(None)))
+    check_parameter(parameters= list, header= (str, type(None)), preset=(type(None), list, tuple, bool))
     for key in parameters : check_parameter(key = str)
+    if type(preset) == type(None) :
+        preset = [False] * len(parameters)
+    elif type(preset) == bool :
+        preset = [preset] * len(parameters)
+    else : 
+        for key in preset : check_parameter(key = bool)
+
+
 
     max_length = len(max(parameters, key=len))
     layout = [
-        [sg.Checkbox(pad_right(name, max_length, ' '), key= name, default=preset)] for name in parameters
+        [sg.Checkbox(pad_right(name, max_length, ' '), key= name, default=box_preset)] for name, box_preset in zip(parameters,preset)
     ]
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)

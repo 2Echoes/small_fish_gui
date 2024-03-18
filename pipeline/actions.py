@@ -38,9 +38,28 @@ def ask_input_parameters() :
     """
     
     values = {}
+    image_input_values = {}
+    while True :
+        is_3D_preset = image_input_values.setdefault('3D stack', False)
+        is_time_preset = image_input_values.setdefault('time stack', False)
+        is_multichannel_preset = image_input_values.setdefault('multichannel', False)
+        denseregion_preset = image_input_values.setdefault('Dense regions deconvolution', False)
+        do_segmentation_preset = image_input_values.setdefault('Segmentation', False)
+        do_napari_preset = image_input_values.setdefault('Napari correction', False)
 
-    image_input_values = input_image_prompt()
+        image_input_values = input_image_prompt(
+            is_3D_stack_preset=is_3D_preset,
+            time_stack_preset=is_time_preset,
+            multichannel_preset=is_multichannel_preset,
+            do_dense_regions_deconvolution_preset=denseregion_preset,
+            do_segmentation_preset=do_segmentation_preset,
+            do_Napari_correction=do_napari_preset
+        )
+
+        if 'image' in image_input_values.keys() : 
+            break
     values.update(image_input_values)
+    values['dim'] = 3 if values['3D stack'] else 2
     if values['Segmentation'] and values['time stack'] : sg.popup('Segmentation is not supported for time stack. Segmentation will be turned off.')
     
     return values
@@ -97,8 +116,7 @@ def hub(image, voxel_size, spots_memory, results) :
 def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
     user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution)
     user_parameters = convert_parameters_types(user_parameters)
-    user_parameters = check_integrity(user_parameters)
-    user_parameters['dim'] = 3 if user_parameters['3D stack'] else 2
+    user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel)
 
     return user_parameters
 
@@ -137,8 +155,6 @@ def launch_detection(image_input_values, images_gen) :
         if isinstance(time_step, (float, int)) :
             fov_res['time'] = time_step * step
         else : fov_res['time'] = np.NaN
-
-        image = image[:,:,:,1]
 
         #detection
         spots, fov_res['threshold'] = detection.detect_spots(images= image, threshold=threshold, return_threshold= True, voxel_size=voxel_size, spot_radius= spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)

@@ -40,4 +40,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 __version__ = "0.0.1"
 
-from small_fish.pipeline import main
+import PySimpleGUI as sg
+try : 
+  from small_fish.pipeline import main
+except Exception as e:
+  sg.popup('{0}'.format(e))
+  raise e
