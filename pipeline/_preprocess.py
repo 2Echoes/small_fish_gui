@@ -187,7 +187,7 @@ def convert_parameters_types(values:dict) :
 
     #Parameters
     int_list = ['threshold', 'channel_to_compute']
-    float_list = ['time_step', 'alpha', 'beta', 'gamma']
+    float_list = ['time_step', 'alpha', 'beta', 'gamma', 'threshold penalty']
 
     for parameter in int_list :
         try :

@@ -31,7 +31,7 @@ def prompt_with_help(layout, help =None) :
     window = sg.Window('small fish', layout=layout)
     while True :
         event, values = window.read()
-        if ask_quit_small_fish() :
+        if event == None :
             window.close()
             quit()
 
@@ -131,7 +131,7 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
     else : dim = 2
 
     #Detection
-    detection_parameters = ['threshold']
+    detection_parameters = ['threshold', 'threshold penalty']
     if is_time_stack : detection_parameters += ['time step']
     if is_multichannel : detection_parameters += ['channel to compute']
     layout = parameters_layout(detection_parameters, header= 'Detection')
@@ -145,6 +145,7 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
         layout += tuple_layout(deconvolution_kernel = tuple_shape)
 
     event, values = prompt(layout)
+    if event == 'Cancel' : quit()
     if is_3D_stack : values['dim'] = 3
     else : values['dim'] = 2
     return values

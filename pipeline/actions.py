@@ -1,8 +1,10 @@
 from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation
 from ..interface.output import save_results
+from ..gui.animation import add_default_loading
 from ._preprocess import check_integrity, convert_parameters_types
 from .napari_wrapper import correct_spots
 from .bigfish_wrappers import compute_snr_spots
+from ._preprocess import ParameterInputError
 import bigfish.plot as plot
 import bigfish.detection as detection
 import bigfish.stack as stack
@@ -114,23 +116,30 @@ def hub(image, voxel_size, spots_memory, results) :
     return image, voxel_size, spots_memory, results, end_process
     
 def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
-    user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution)
-    user_parameters = convert_parameters_types(user_parameters)
-    user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel)
-
+    while True :
+        user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution)
+        try :
+            user_parameters = convert_parameters_types(user_parameters)
+            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel)
+        except ParameterInputError as error:
+            pass
+        else :
+            break
     return user_parameters
 
-
-def launch_detection(image_input_values, images_gen) :
+@add_default_loading
+def launch_detection(image_input_values: dict, images_gen) :
     
     #Extract parameters
     voxel_size = image_input_values['voxel_size']
-    threshold = image_input_values.setdefault('threshold',None)
+    threshold = image_input_values.get('threshold')
+    threshold_penalty = image_input_values.setdefault('threshold penalty', 1)
     spot_size = image_input_values.get('spot_size')
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
     use_napari =  image_input_values.setdefault('Napari correction', False)
     time_step = image_input_values.get('time step')
+    dim = image_input_values['dim']
 
     ##deconvolution parameters
     do_dense_region_deconvolution = image_input_values['Dense regions deconvolution']
@@ -157,7 +166,7 @@ def launch_detection(image_input_values, images_gen) :
         else : fov_res['time'] = np.NaN
 
         #detection
-        spots, fov_res['threshold'] = detection.detect_spots(images= image, threshold=threshold, return_threshold= True, voxel_size=voxel_size, spot_radius= spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
+        spots, fov_res['threshold'] = detection.detect_spots(images= image, threshold=threshold * threshold_penalty, return_threshold= True, voxel_size=voxel_size, spot_radius= spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
         
         if use_napari : spots = correct_spots(image, [spots], voxel_size)[0]
         if do_dense_region_deconvolution :
@@ -167,8 +176,13 @@ def launch_detection(image_input_values, images_gen) :
         fov_res['spot_number'] = len(spots)
         snr_res = compute_snr_spots(image, spots, voxel_size, spot_size)
         
-        Z,Y,X = list(zip(*spots))
-        spots_values = image[Z,Y,X]
+        if dim == 3 :
+            Z,Y,X = list(zip(*spots))
+            spots_values = image[Z,Y,X]
+        else :
+            Y,X = list(zip(*spots))
+            spots_values = image[Y,X]
+
         fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.median(spots_values), np.mean(spots_values), np.std(spots_values)
         fov_res['median_pixel'] = np.median(image)
         fov_res['mean_pixel'] = np.mean(image)
