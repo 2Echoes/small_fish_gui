@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout
 from ..interface import open_image, check_format, FormatError
-from .help import _fake_help
+from .help_module import ask_help
 
 
 def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') :
@@ -14,9 +14,8 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') 
     window = sg.Window('small fish', layout=layout, margins=(10,10))
     event, values = window.read(timeout=timeout, timeout_key=timeout_key)
     if event == None : 
-        if ask_quit_small_fish() :
-            window.close()
-            quit()
+        window.close()
+        quit()
 
     elif event == 'Cancel' :
         window.close()
@@ -25,21 +24,16 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') 
         window.close()
         return event, values
 
-def prompt_with_help(layout) :
+def prompt_with_help(layout, help =None) :
     layout += [[sg.Button('Help')]]
     layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     
     window = sg.Window('small fish', layout=layout)
     while True :
         event, values = window.read()
-            
-        if event == None : 
-            if ask_quit_small_fish() :
-                window.close()
-                quit()
-            else : 
-                print("Non")
-                event, values = window.read()
+        if ask_quit_small_fish() :
+            window.close()
+            quit()
 
         elif event == 'Cancel' :
             window.close()
@@ -48,7 +42,7 @@ def prompt_with_help(layout) :
             window.close()
             return event, values
         elif event == 'Help' :
-            _fake_help()
+            ask_help(chapter= help)
 
 def input_image_prompt(
         is_3D_stack_preset=False,
@@ -75,7 +69,7 @@ def input_image_prompt(
     layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
     layout_image_path += bool_layout(['Dense regions deconvolution', 'Segmentation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_segmentation_preset, do_Napari_correction], header= "Pipeline settings")
     # event, values = prompt(layout_image_path)
-    event, values = prompt_with_help(layout_image_path)
+    event, values = prompt_with_help(layout_image_path, help= 'general')
 
     if event == 'Cancel' :
         quit()
@@ -91,6 +85,8 @@ def input_image_prompt(
     except FormatError as error:
         sg.popup("Inconsistency between image format and options selected.\n Image shape : {0}".format(image.shape))
     except OSError as error :
+        sg.popup('Image format not supported.')
+    except ValueError as error :
         sg.popup('Image format not supported.')
 
 

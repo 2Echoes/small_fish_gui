@@ -30,11 +30,11 @@ def prepare_image_detection(map, image_stack, channel_to_compute=0) :
 
 
 def reorder_image_stack(map, image_stack) :
-    x = (map['x'],)
-    y = (map['y'],)
-    z = (map['z'],) if type(map.get('z')) != type(None) else ()
-    c = (map['c'],) if type(map.get('c')) != type(None) else ()
-    t = (map['t'],) if type(map.get('t')) != type(None) else ()
+    x = (int(map['x']),)
+    y = (int(map['y']),)
+    z = (int(map['z']),) if type(map.get('z')) != type(None) else ()
+    c = (int(map['c']),) if type(map.get('c')) != type(None) else ()
+    t = (int(map['t']),) if type(map.get('t')) != type(None) else ()
 
     source = t+c+z+y+x
 
@@ -164,6 +164,8 @@ def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
     elif event == 'Change mapping' :
         map = _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map=map)
     else : raise AssertionError('Unforseen event')
+
+    return map
 
 def convert_parameters_types(values:dict) :
     """

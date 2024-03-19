@@ -1,4 +1,4 @@
-from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation
+from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation
 from ..interface.output import save_results
 from ._preprocess import check_integrity, convert_parameters_types
 from .napari_wrapper import correct_spots
@@ -221,7 +221,7 @@ def launch_segmentation(image) :
             filename_preset=filename
         )
 
-        event, values = prompt(layout)
+        event, values = prompt_with_help(layout, help='segmentation')
         if event == 'Cancel' :
             cancel_segmentation = ask_cancel_segmentation()
         else : 
