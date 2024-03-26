@@ -1,34 +1,136 @@
-import napari
+
 import numpy as np
+import scipy.ndimage as ndi
+import napari
+
+from napari.utils.events import Event
+from napari.layers import Points
 from bigfish.stack import check_parameter
-from math import ceil
 from ..utils import compute_anisotropy_coef
+from ._colocalisation import spots_multicolocalisation
 
-def correct_spots(image, list_spots, voxel_size= (1,1,1)):
+class Points_callback :
+    """
+    Custom class to handle points number evolution during Napari run.
+    """
+    
+    def __init__(self, points, next_id) -> None:
+        self.points = points
+        self.next_id = next_id
+        self._set_callback()
+    
+    def __str__(self) -> str:
+        string = 'Points_callback object state :\ncurrent_points_number : {0}\ncurrnet_id : {1}'.format(self.current_points_number, self.next_id)
+        return string
+    
+    def get_points(self) :
+        return self.points
+    
+    def get_next_id(self) : 
+        return self.next_id
+    
+    def _set_callback(self) :
+        def callback(event:Event) :
 
-    check_parameter(image= np.ndarray, list_spots = list, voxel_size= (tuple,list))
+            old_points = self.get_points()
+            new_points:Points = event.source.data
+            features = event.source.features
+            
+            current_point_number = len(old_points)
+            next_id = self.get_next_id()
+            new_points_number = len(new_points)
 
+            if new_points_number > current_point_number :
+                features.at[new_points_number - 1, "id"] = next_id
+                self.next_id += 1
+
+            #preparing next callback
+            print(features)
+            self.points = new_points
+            self._set_callback()
+        self.callback = callback
+
+def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, min_spot_number, shape) :
+    if len(new_clusters) == 0 : return new_clusters
+    if len(spots) == 0 : return new_clusters
+    assert len(new_clusters[0]) == 4 or len(new_clusters[0]) == 5, "Wrong number of coordinates for clusters should not happen."
+    
+    
+    print("len de clusters : ", len(new_clusters))
+    
+    # Update spots clusters
+    if len(voxel_size) == 3 :
+        new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:3], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
+    elif len(voxel_size) == 2 :
+        new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:2], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
+
+    # delete too small clusters
+        new_clusters = np.delete(new_clusters, new_clusters[:,-2] < min_spot_number, 0)
+
+    return new_clusters
+
+def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_size=None, min_spot_number=0, cell_label= None, nucleus_label= None):
+    """
+    Open Napari viewer for user to visualize and corrects spots, clusters.
+
+    Returns
+    -------
+        new_spots,new_clusters
+    """
+    check_parameter(image= np.ndarray, voxel_size= (tuple,list))
+    dim = len(voxel_size)
+
+    print("spots : ", len(spots))
+    print("clusters : ", len(clusters))
+    
     scale = compute_anisotropy_coef(voxel_size)
     try :
-        Viewer = napari.Viewer(ndisplay=3, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
+        Viewer = napari.Viewer(ndisplay=2, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
         Viewer.add_image(image, scale=scale)
 
         #color prepartion
         face_colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'white']
-        if len(list_spots) > len(face_colors) :
-            face_colors *= ceil(len(list_spots) / len(face_colors))
         
-        for num, spots in enumerate(list_spots) :
-            color = face_colors[num]
-            check_parameter(spots = (np.ndarray, list))
-            Viewer.add_points(spots, size = 5, scale=scale, face_color= color, opacity= 0.33)
+        Viewer.add_points(spots, size = 5, scale=scale, face_color= 'red', opacity= 0.33, symbol= 'o', name= 'single spots') # spots
+        if type(clusters) != type(None) : Viewer.add_points(clusters[:,:dim], size = 10, scale=scale, face_color= 'blue', opacity= 0.7, symbol= 'diamond', name= 'foci', features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, feature_defaults= {"spot_number" : 0, "id" : -1}) # cluster
+        if type(cell_label) != type(None) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
+        if type(nucleus_label) != type(None) : Viewer.add_labels(nucleus_label, scale=scale, opacity= 0.2, blending= 'additive')
         
-        Viewer.show(block= True)
-        corrected_spots_list = [np.array(layer.data, dtype= int) for layer in Viewer.layers[1:]]
+        #prepare cluster update
+
+        next_cluster_id = clusters[-1,-1] + 1
+        _callback = Points_callback(points=clusters[:dim], next_id=next_cluster_id)
+        if type(clusters) != type(None) : points_callback = Viewer.layers[2].events.data.connect((_callback, 'callback'))
+        Viewer.show(block=False)
+        napari.run()
+        
+
+        new_spots = np.array(Viewer.layers[1].data, dtype= int)
+        print(
+            "\nmetadata : ", Viewer.layers[1].metadata,
+            "\ndata : ", Viewer.layers[1].data,
+            "\nfeatures : ", Viewer.layers[1].features
+        )
+        if type(clusters) != type(None) : 
+            new_clusters = np.concatenate([
+                np.array(Viewer.layers[2].data, dtype= int),
+                np.array(Viewer.layers[2].features, dtype= int)
+            ],
+            axis= 1)
+
+            new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, min_spot_number=min_spot_number, shape=image.shape)
+
     except Exception as error :
-        corrected_spots_list = list_spots
+        new_spots = spots
+        new_clusters = clusters
         raise error
 
     finally :
-        Viewer.close()
-    return corrected_spots_list
+        print("new_spots : ", len(new_spots))
+        print("new_clusters : ", len(new_clusters))
+        print(new_clusters)
+
+
+    return new_spots, new_clusters
+
+

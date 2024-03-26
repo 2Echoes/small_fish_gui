@@ -1,12 +1,12 @@
 import numpy as np
+import pandas as pd
 import PySimpleGUI as sg
 from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt
 
 class ParameterInputError(Exception) :
     pass
 
-
-def prepare_image_detection(map, image_stack, channel_to_compute=0) :
+def prepare_image_detection(map, image_stack) :
     """
     Generator yielding one image at a time for analysis. 
     Generator will have only one image if not time stack. 
@@ -24,10 +24,9 @@ def prepare_image_detection(map, image_stack, channel_to_compute=0) :
     image_stack = reorder_image_stack(map, image_stack) #
     if len(image_stack.shape) == 5 : #is time stack
         for image in image_stack :
-            yield image[channel_to_compute]
+            yield image
     else :
-        yield image_stack[channel_to_compute]
-
+        yield image_stack
 
 def reorder_image_stack(map, image_stack) :
     x = (int(map['x']),)
@@ -186,7 +185,7 @@ def convert_parameters_types(values:dict) :
         else : values[tuple_parameter] = tuple_values
 
     #Parameters
-    int_list = ['threshold', 'channel_to_compute']
+    int_list = ['threshold', 'channel_to_compute', 'min number of spots', 'cluster size']
     float_list = ['time_step', 'alpha', 'beta', 'gamma', 'threshold penalty']
 
     for parameter in int_list :
@@ -205,23 +204,22 @@ def convert_parameters_types(values:dict) :
 
     return values
 
-def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, multichannel):
+def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, multichannel,map, shape):
     """
     Checks that parameters given in input by user are fit to be used for bigfish detection.
     """
 
     #voxel_size
-    if type(values['voxel_size']) == type(None) : _error_popup(ParameterInputError('Incorrect voxel size parameter.'))
+    if type(values['voxel_size']) == type(None) : raise ParameterInputError('Incorrect voxel size parameter.')
     
     #detection integrity :
     if not isinstance(values['spot_size'], (tuple, list)) and not(isinstance(values['minimum_distance'], (tuple, list)) and isinstance(values['log_kernel_size'], (tuple, list))) :
-        _error_popup(ParameterInputError("Either minimum_distance and 'log_kernel_size' must be correctly set\n OR 'spot_size' must be correctly set."))
+       raise ParameterInputError("Either minimum_distance and 'log_kernel_size' must be correctly set\n OR 'spot_size' must be correctly set.")
     
     #Deconvolution integrity
     if do_dense_region_deconvolution :
         if not isinstance(values['alpha'], (float, int)) or not isinstance(values['beta'], (float, int)) :
-            _error_popup(ParameterInputError("Incorrect alpha or beta parameters."))
-            return None
+            raise ParameterInputError("Incorrect alpha or beta parameters.")
         if type(values['gamma']) == type(None) and not isinstance(values['deconvolution_kernel'], (list, tuple)):
             _warning_popup('No gamma found; image will not be denoised before deconvolution.')
             values['gamma'] = 0
@@ -229,16 +227,37 @@ def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, 
     #time
     if is_time_stack :
         if type(values['time stack']) == type(None) :
-            _error_popup(ParameterInputError("Incorrect time_step."))
-            return None
+            raise ParameterInputError("Incorrect time_step.")
         elif values['time stack'] == 0 :
-            _error_popup(ParameterInputError("Incorrect time_step, must be > 0."))
-            return None
+            raise ParameterInputError("Incorrect time_step, must be > 0.")
 
     #channel
     if multichannel :
-        ch = int(values['channel to compute'])
-        if type(ch) == type(None) :
-            _error_popup(ParameterInputError("Incorrect channel to compute parameter."))
+        try :
+            ch = int(values['channel to compute'])
+        except Exception :
+            raise ParameterInputError("Incorrect channel to compute parameter.")
+        ch_len = shape[int(map['c'])]
+        if ch >= ch_len :
+            raise ParameterInputError("Channel to compute is out of range for image.\nPlease select from {0}".format(list(range(ch_len))))
+        values['channel to compute'] = ch
 
     return values
+
+
+def reorder_shape(shape, map) :
+    x = [int(map['x']),]
+    y = [int(map['y']),]
+    z = [int(map['z']),] if type(map.get('z')) != type(None) else []
+    c = [int(map['c']),] if type(map.get('c')) != type(None) else []
+    t = [int(map['t']),] if type(map.get('t')) != type(None) else []
+
+    source = t + c + z + y + x
+
+    new_shape = tuple(
+        np.array(shape)[source]
+    )
+
+    print("new_shape : ", new_shape)
+
+    return new_shape

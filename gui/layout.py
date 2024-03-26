@@ -17,7 +17,7 @@ def pad_right(string, length, pad_char) :
     else : return string + pad_char* (length - len(string))
     
 
-def parameters_layout(parameters:'list[str]' = [], header= None, default_values=None) :
+def parameters_layout(parameters:'list[str]' = [], header= None, default_values=None, size=5) :
 
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header = (str, type(None)))
@@ -26,11 +26,11 @@ def parameters_layout(parameters:'list[str]' = [], header= None, default_values=
     if isinstance(default_values, (list, tuple)) :
         if len(default_values) != len(parameters) : raise ValueError("if default values specified it must be of equal length as parameters.")
         layout= [
-            [sg.Text("{0}".format(pad_right(parameter, max_length, ' '))), sg.InputText(size= 5, key= parameter, default_text= value)] for parameter,value in zip(parameters,default_values)
+            [sg.Text("{0}".format(pad_right(parameter, max_length, ' '))), sg.InputText(size= size, key= parameter, default_text= value)] for parameter,value in zip(parameters,default_values)
         ]
     else :
         layout= [
-            [sg.Text("{0}".format(pad_right(parameter, max_length, ' '))), sg.InputText(size= 5, key= parameter)] for parameter in parameters
+            [sg.Text("{0}".format(pad_right(parameter, max_length, ' '))), sg.InputText(size= size, key= parameter)] for parameter in parameters
         ]
     if isinstance(header, str) :
         layout = add_header(header, layout)

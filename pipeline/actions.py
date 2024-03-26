@@ -1,21 +1,28 @@
-from ..gui.prompts import output_image_prompt, post_analysis_prompt, _error_popup, prompt, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation
+from ..gui.prompts import output_image_prompt, _error_popup, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation, hub_prompt, coloc_prompt
 from ..interface.output import save_results
 from ..gui.animation import add_default_loading
 from ._preprocess import check_integrity, convert_parameters_types
-from .napari_wrapper import correct_spots
+from .napari_wrapper import correct_spots, _update_clusters
 from .bigfish_wrappers import compute_snr_spots
-from ._preprocess import ParameterInputError
+from ._preprocess import ParameterInputError, map_channels, prepare_image_detection, reorder_shape
+from ._detection import compute_auto_threshold, cluster_detection
+from ._colocalisation import spots_multicolocalisation, spots_colocalisation
+from ._custom_errors import MissMatchError
+from numpy import NaN
 import bigfish.plot as plot
 import bigfish.detection as detection
 import bigfish.stack as stack
+import bigfish.multistack as multistack
+import bigfish.classification as classification
 
-import pandas as pd
 import os
+import pandas as pd
 import numpy as np
 import PySimpleGUI as sg
 import small_fish.pipeline._segmentation as seg
 
-def ask_input_parameters() :
+
+def ask_input_parameters(ask_for_segmentation=True) :
     """
     Prompt user with interface allowing parameters setting for bigFish detection / deconvolution.
     
@@ -46,6 +53,7 @@ def ask_input_parameters() :
         is_time_preset = image_input_values.setdefault('time stack', False)
         is_multichannel_preset = image_input_values.setdefault('multichannel', False)
         denseregion_preset = image_input_values.setdefault('Dense regions deconvolution', False)
+        do_clustering_preset = image_input_values.setdefault('Cluster computation', False)
         do_segmentation_preset = image_input_values.setdefault('Segmentation', False)
         do_napari_preset = image_input_values.setdefault('Napari correction', False)
 
@@ -54,149 +62,282 @@ def ask_input_parameters() :
             time_stack_preset=is_time_preset,
             multichannel_preset=is_multichannel_preset,
             do_dense_regions_deconvolution_preset=denseregion_preset,
+            do_clustering_preset= do_clustering_preset,
             do_segmentation_preset=do_segmentation_preset,
-            do_Napari_correction=do_napari_preset
+            do_Napari_correction=do_napari_preset,
+            ask_for_segmentation= ask_for_segmentation
         )
+        if type(image_input_values) == type(None) :
+            return image_input_values
 
-        if 'image' in image_input_values.keys() : 
+        if 'image' in image_input_values.keys() :
+            image_input_values['shape'] = image_input_values['image'].shape 
             break
+
+
     values.update(image_input_values)
     values['dim'] = 3 if values['3D stack'] else 2
+    values['filename'] = os.path.basename(values['image path'])
     if values['Segmentation'] and values['time stack'] : sg.popup('Segmentation is not supported for time stack. Segmentation will be turned off.')
     
     return values
 
-def hub(image, voxel_size, spots_memory, results) :
-    end_process = False
-    next_action = post_analysis_prompt()
+def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell_label, nucleus_label) :
+    event, values = hub_prompt(results, segmentation_done)
     try :
-        if next_action == 'Save results' :
+        if event == 'Save results' :
             dic = output_image_prompt()
             if isinstance(dic, dict) :
                 path = dic['folder']
                 filename = dic['filename']
                 do_excel = dic['Excel']
                 do_feather = dic['Feather']
-                sucess = save_results(results, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather)
-                if sucess : sg.popup("Sucessfully saved at {0}.".format(path))
+                sucess1 = save_results(results, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather)
+                sucess2 = save_results(cell_results, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather)
+                sucess3 = save_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather)
+                if sucess1 and sucess2 and sucess3 : sg.popup("Sucessfully saved at {0}.".format(path))
+                else : sg.popup("Please check at least one box : Excel/Feather")
 
-        elif next_action == 'add_detection' :
-            user_parameters = initiate_detection()
-            channel_to_compute = user_parameters.get('channel to compute')
+        elif event == 'Add detection' :
+            
+            #Ask user
+            user_parameters = ask_input_parameters(ask_for_segmentation= False)
 
-            ##booleans
+            if type(user_parameters) == type(None) :
+               return results, cell_results, coloc_df, acquisition_id
+            
+            #Extract parameters
             is_time_stack = user_parameters['time stack']
             is_3D_stack = user_parameters['3D stack']
-            multichannel = user_parameters['mutichannel']
-
-            #image
+            multichannel = user_parameters['multichannel']
+            do_segmentation = user_parameters['Segmentation'] and not is_time_stack
+            do_clustering = user_parameters['Cluster computation']
+            do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
             image_raw = user_parameters['image']
-            images_gen = None #TODO to correct after modifications
-            spots, result_frame = launch_detection(images_gen, user_parameters)
+            map = map_channels(image_raw, is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, multichannel=multichannel)
+            user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map)
+            
+            #Detection preparation
+            detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape)
+            
+            if type(detection_parameters) != type(None) :
+                user_parameters.update(detection_parameters)
+            else :
+                return results, cell_results, coloc_df, acquisition_id
+            
+            time_step = user_parameters.get('time step')
+            use_napari = user_parameters['Napari correction']
+            channel_to_compute = user_parameters.get('channel to compute')
+            images_gen = prepare_image_detection(map, image_raw)
 
-            if is_time_stack : spots_memory += [spots]
-            else : spots_memory += spots
-            results += [result_frame]
-            end_process = False
+            #Detection
+            acquisition_id +=1
+            res, cell_res = launch_features_computation(
+                acquisition_id=acquisition_id,
+                images_gen=images_gen,
+                user_parameters=user_parameters,
+                multichannel=multichannel,
+                channel_to_compute=channel_to_compute,
+                is_time_stack=is_time_stack,
+                time_step=time_step,
+                use_napari=use_napari,
+                cell_label=cell_label,
+                nucleus_label=nucleus_label
+            )
 
-        elif next_action == 'colocalisation' :
-            pass
+            results = pd.concat([results, res])
+            cell_results = pd.concat([cell_results, cell_res])
+            
+        elif event == 'Compute colocalisation' :
+            print('Compute colocalisation')
+            result_tables = values.setdefault('result_table', [])
+            colocalisation_distance = initiate_colocalisation(result_tables)
 
-        elif next_action == 'open results in napari' :
-            print("opening results in napari...")
-            print("spots : ",type(spots_memory[0]))
-            spots_memory = correct_spots(image, spots_memory, voxel_size)
+            if colocalisation_distance == False :
+                pass
+            else :
+                res_coloc = launch_colocalisation(result_tables, result_dataframe=results, colocalisation_distance=colocalisation_distance)
 
-        else :
-            end_process = True
+                coloc_df = pd.concat([
+                    coloc_df,
+                    res_coloc
+                ],
+                axis= 0)
 
     except Exception as error :
         _error_popup(error)
     
-    return image, voxel_size, spots_memory, results, end_process
+    return results, cell_results, coloc_df, acquisition_id
     
-def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution) :
+def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, map, shape) :
     while True :
-        user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution)
+        user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution, do_clustering=do_clustering)
+        if type(user_parameters) == type(None) : return user_parameters
         try :
             user_parameters = convert_parameters_types(user_parameters)
-            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel)
+            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel,map, shape)
         except ParameterInputError as error:
-            pass
+            sg.popup(error)
         else :
             break
     return user_parameters
 
 @add_default_loading
-def launch_detection(image_input_values: dict, images_gen) :
-    
+def launch_detection(image, image_input_values: dict, time_stack=False) :
+    """
+    Performs spots detection
+    """
     #Extract parameters
     voxel_size = image_input_values['voxel_size']
     threshold = image_input_values.get('threshold')
     threshold_penalty = image_input_values.setdefault('threshold penalty', 1)
+    print('threshold penalty : ', threshold_penalty)
     spot_size = image_input_values.get('spot_size')
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
-    use_napari =  image_input_values.setdefault('Napari correction', False)
-    time_step = image_input_values.get('time step')
-    dim = image_input_values['dim']
 
+    #detection
+    threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size)
+    spots = detection.detect_spots(
+        images= image,
+        threshold=threshold * threshold_penalty,
+        return_threshold= False,
+        voxel_size=voxel_size,
+        spot_radius= spot_size,
+        log_kernel_size=log_kernel_size,
+        minimum_distance=minimum_distance
+        )
+        
+    return spots, threshold * threshold_penalty
+
+@add_default_loading
+def launch_dense_region_deconvolution(image, spots, image_input_values: dict,) :
+    """
+    Performs spot decomposition
+
+    Returns
+    -------
+        spots : np.ndarray
+            Array(nb_spot, dim) (dim is either 3 or 2)
+        fov_res : dict
+            keys : spot_number, spotsSignal_median, spotsSignal_mean, spotsSignal_std, median_pixel, mean_pixel, snr_median, snr_mean, snr_std, cell_medianbackground_mean, cell_medianbackground_std, cell_meanbackground_mean, cell_meanbackground_std, cell_stdbackground_mean, cell_stdbackground_std
+    """
+    
+    ##Initiate lists
+    voxel_size = image_input_values['voxel_size']
+    spot_size = image_input_values.get('spot_size')
     ##deconvolution parameters
-    do_dense_region_deconvolution = image_input_values['Dense regions deconvolution']
     alpha = image_input_values.get('alpha')
     beta = image_input_values.get('beta')
     gamma = image_input_values.get('gamma')
     deconvolution_kernel = image_input_values.get('deconvolution_kernel')
+    dim = image_input_values['dim']
+        
+    spots, dense_regions, ref_spot = detection.decompose_dense(image=image, spots=spots, voxel_size=voxel_size, spot_radius=spot_size, kernel_size=deconvolution_kernel, alpha=alpha, beta=beta, gamma=gamma)
+    del dense_regions, ref_spot
 
-    ##Initiate lists
-    spots_list = []
+    return spots
+
+@add_default_loading
+def launch_post_detection(image, spots, image_input_values: dict,) :
+    fov_res = {}
+    dim = image_input_values['dim']
+    voxel_size = image_input_values['voxel_size']
+    spot_size = image_input_values.get('spot_size')
+
+    #features
+    fov_res['spot_number'] = len(spots)
+    snr_res = compute_snr_spots(image, spots, voxel_size, spot_size)
+        
+    if dim == 3 :
+        Z,Y,X = list(zip(*spots))
+        spots_values = image[Z,Y,X]
+    else :
+        Y,X = list(zip(*spots))
+        spots_values = image[Y,X]
+
+    fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.median(spots_values), np.mean(spots_values), np.std(spots_values)
+    fov_res['median_pixel'] = np.median(image)
+    fov_res['mean_pixel'] = np.mean(image)
+
+    #appending results
+    fov_res.update(snr_res)
+
+    return spots, fov_res
+
+@add_default_loading
+def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, nucleus_label, user_parameters, time_stamp) :
+
+    #Extract parameters
+    dim = user_parameters['dim']
+    do_clustering = user_parameters['Cluster computation']
+    voxel_size = user_parameters['voxel_size']
+
+    other_coords = {'clusters_coords' : clusters} if len(clusters) > 0 else None
     
-    res = {}
-    #TODO 
-    # for time stack auto threshold : compute threshold from random sample of frame -> pbwrap
-    # Use meta data to pre fill voxel size and spot_size to 150 100 100
-    # Add Help button with bigfish doc
-    for step, image in enumerate(images_gen) :
-        fov_res = {}
+    cells_results = multistack.extract_cell(
+        cell_label=cell_label,
+        ndim=dim,
+        nuc_label=nucleus_label,
+        rna_coord=spots,
+        others_coord=other_coords,
+        image=image
+    )
+
+    features_names = ['acquisition_id', 'cell_id', 'time', 'cell_bbox'] + classification.get_features_name(
+        names_features_centrosome=False,
+        names_features_area=True,
+        names_features_dispersion=True,
+        names_features_distance=True,
+        names_features_foci=do_clustering and len(clusters) > 0,
+        names_features_intranuclear=True,
+        names_features_protrusion=True,
+        names_features_topography=True
+    )
+
+    result_frame = pd.DataFrame()
+
+    for cell in cells_results :
+
+        #Extract cell results
+        cell_id = cell['cell_id']
+        cell_mask = cell['cell_mask']
+        nuc_mask = cell ['nuc_mask']
+        cell_bbox = cell['bbox'] # (min_y, min_x, max_y, max_x)
+        rna_coords = cell['rna_coord']
+        foci_coords = cell.get('clusters_coords')
+        signal = cell['image']
+
+        features = classification.compute_features(
+            cell_mask=cell_mask,
+            nuc_mask=nuc_mask,
+            ndim=dim,
+            rna_coord= rna_coords,
+            foci_coord=foci_coords,
+            voxel_size_yx= float(voxel_size[-1]),
+            smfish=signal,
+            centrosome_coord=None,
+            compute_centrosome=False,
+            compute_area=True,
+            compute_dispersion=True,
+            compute_distance=True,
+            compute_foci= do_clustering and len(clusters) > 0,
+            compute_intranuclear=True,
+            compute_protrusion=True,
+            compute_topography=True
+        )
+
+        features = list(features)
+        features = [acquisition_id, cell_id, time_stamp, cell_bbox] + features
         
-        #initial time is t = 0.
-        print("Starting step {0}".format(step))
-        if isinstance(time_step, (float, int)) :
-            fov_res['time'] = time_step * step
-        else : fov_res['time'] = np.NaN
-
-        #detection
-        spots, fov_res['threshold'] = detection.detect_spots(images= image, threshold=threshold * threshold_penalty, return_threshold= True, voxel_size=voxel_size, spot_radius= spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
-        
-        if use_napari : spots = correct_spots(image, [spots], voxel_size)[0]
-        if do_dense_region_deconvolution :
-            spots, dense_regions, ref_spot = detection.decompose_dense(image=image, spots=spots, voxel_size=voxel_size, spot_radius=spot_size, kernel_size=deconvolution_kernel, alpha=alpha, beta=beta, gamma=gamma)
-
-        #features
-        fov_res['spot_number'] = len(spots)
-        snr_res = compute_snr_spots(image, spots, voxel_size, spot_size)
-        
-        if dim == 3 :
-            Z,Y,X = list(zip(*spots))
-            spots_values = image[Z,Y,X]
-        else :
-            Y,X = list(zip(*spots))
-            spots_values = image[Y,X]
-
-        fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.median(spots_values), np.mean(spots_values), np.std(spots_values)
-        fov_res['median_pixel'] = np.median(image)
-        fov_res['mean_pixel'] = np.mean(image)
-
-        #appending results
-        fov_res.update(snr_res)
-
-        for name, value in fov_res.items() :
-            current_state = res.setdefault(name, [])
-            res[name] = current_state + [value]
-
-    result_frame = pd.DataFrame(res)
+        result_frame = pd.concat([
+            result_frame,
+            pd.DataFrame(columns = features_names, data= (features,)),
+        ],
+        axis= 0
+        )
     
-    return image, voxel_size, spots_list, result_frame
+    return result_frame
 
 def launch_segmentation(image) :
     """
@@ -287,7 +428,6 @@ def launch_segmentation(image) :
         if not relaunch : break
 
     #Launching segmentation
-    
     waiting_layout = [
         [sg.Text("Running segmentation...")]
     ]
@@ -316,7 +456,247 @@ def launch_segmentation(image) :
 
     finally  : window.close()
     if show_segmentation or type(output_path) != type(None) :
-        plot.plot_segmentation_boundary(stack.maximum_projection(image[cytoplasm_channel]), cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
+        if image[cytoplasm_channel].ndim == 3 :
+            im_proj = stack.maximum_projection(image[cytoplasm_channel])
+        else : im_proj = image[cytoplasm_channel]
+        plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
 
     return cytoplasm_label, nucleus_label
 
+@add_default_loading
+def launch_clustering(spots, user_parameters): 
+
+    voxel_size = user_parameters['voxel_size']
+    nb_min_spots = user_parameters['min number of spots']
+    cluster_size = user_parameters['cluster size']
+
+    clusters = cluster_detection(
+        spots=spots,
+        voxel_size=voxel_size,
+        radius=cluster_size,
+        nb_min_spots=nb_min_spots,
+        keys_to_compute= 'clusters'
+    )['clusters']
+
+    return clusters
+
+def launch_features_computation(
+        acquisition_id,
+        images_gen,
+        user_parameters,
+        multichannel,
+        channel_to_compute,
+        is_time_stack,
+        time_step,
+        use_napari,
+        cell_label= None,
+        nucleus_label = None
+        ) :
+    """
+    Main call for features computation :
+    --> spot dection
+    --> dense regions deconv
+    --> cluster (opt)
+    --> spot correction
+    --> general features computations
+    --> cell extractions
+    --> cell features computations
+    
+    """
+    
+    do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
+    do_clustering = user_parameters['Cluster computation']
+    dim = user_parameters['dim']
+    
+    result = pd.DataFrame()
+    result_cell_frame = pd.DataFrame()
+    for step, image in enumerate(images_gen) :    
+        frame_results = {}
+        if is_time_stack :
+            time = step * user_parameters['time step']
+        else : time = NaN
+
+        if multichannel : 
+            print(channel_to_compute)
+            print("type : ", type(channel_to_compute))
+            print(image.shape)
+            image = image[channel_to_compute]
+
+        if is_time_stack : #initial time is t = 0.
+            print("Starting step {0}".format(step))
+            if isinstance(time_step, (float, int)) :
+                frame_results['time'] = time_step * step
+            else : frame_results['time'] = NaN
+        else : frame_results['time'] = NaN
+
+        spots, threshold  = launch_detection(image, user_parameters, time_stack= is_time_stack)
+        #TODO : for time stack auto threshold, compute threshold from random sample of frame -> pbwrap
+        
+        if do_dense_region_deconvolution : 
+            spots = launch_dense_region_deconvolution(image, spots, user_parameters)
+        
+        if do_clustering : 
+            clusters = launch_clustering(spots, user_parameters) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
+            clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], min_spot_number= user_parameters['min number of spots'], shape=image.shape)
+
+        else : clusters = np.empty(shape=(0,0))
+
+        spots, temp_dict = launch_post_detection(image, spots, user_parameters)
+
+        if use_napari : 
+            spots, clusters = correct_spots(
+                image, 
+                spots, 
+                user_parameters['voxel_size'],
+                clusters=clusters,
+                cluster_size= user_parameters.get('cluster size'),
+                min_spot_number= user_parameters.setdefault('min number of spots', 0),
+                cell_label=cell_label,
+                nucleus_label=nucleus_label
+                )
+            
+        if do_clustering : 
+            frame_results['cluster_number'] = len(clusters)
+            if dim == 3 :
+                frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3]
+            else :
+                frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[2]
+        
+        if type(cell_label) != type(None) and type(nucleus_label) != type(None): 
+            cell_result_dframe = launch_cell_extraction(
+                acquisition_id=acquisition_id,
+                spots=spots,
+                clusters=clusters,
+                image=image,
+                cell_label= cell_label,
+                nucleus_label=nucleus_label,
+                user_parameters=user_parameters,
+                time_stamp=time
+            )
+        else :
+            cell_result_dframe = pd.DataFrame()
+
+        frame_results['acquisition_id'] = acquisition_id
+        if type(cell_label) != type(None) and type(nucleus_label) != type(None):
+            frame_results['cell_number'] = len(cell_result_dframe) 
+        else : 
+            frame_results['cell_number'] = NaN
+        frame_results['spots'] = spots
+        frame_results.update(temp_dict)
+        frame_results.update(user_parameters)
+        frame_results['threshold'] = threshold
+
+        frame_results = pd.DataFrame(columns= frame_results.keys(), data= (frame_results.values(),))
+
+        result: pd.DataFrame = pd.concat([result, frame_results])
+        result_cell_frame: pd.DataFrame = pd.concat([result_cell_frame, cell_result_dframe])
+
+    return result, result_cell_frame
+
+def initiate_colocalisation(result_tables) :
+    if len(result_tables) != 2 : 
+        sg.popup("Please select 2 acquisitions for colocalisation (Ctrl + click in the table)")
+        return False
+    else : 
+        while True :
+            colocalisation_distance = coloc_prompt()
+            if colocalisation_distance == False : return False
+            try : 
+                colocalisation_distance = int(colocalisation_distance)
+            except Exception :
+                sg.popup("Incorrect colocalisation distance")
+            else :
+                break
+        return colocalisation_distance
+
+@add_default_loading
+def launch_colocalisation(result_tables, result_dataframe, colocalisation_distance) :
+    """
+
+    Target :
+
+    - acquisition_couple
+    - colocalisation_distance
+    - spot1_total
+    - spot2_total
+    - fraction_spot1_coloc_spots
+    - fraction_spot2_coloc_spots
+    - fraction_spot1_coloc_clusters
+    - fraction_spot2_coloc_spots
+
+    """
+
+    acquisition1 = result_dataframe.iloc[result_tables[0]]
+    acquisition2 = result_dataframe.iloc[result_tables[1]]
+
+    voxel_size1 = acquisition1.at['voxel_size']
+    voxel_size2 = acquisition2.at['voxel_size']
+    shape1 = acquisition1.at['reordered_shape']
+    shape2 = acquisition2.at['reordered_shape']
+
+    if voxel_size1 != voxel_size2 : 
+        raise MissMatchError("voxel size 1 different than voxel size 2")
+    else :
+        voxel_size = voxel_size1
+
+    if shape1 != shape2 :
+        print(shape1)
+        print(shape2) 
+        raise MissMatchError("shape 1 different than shape 2")
+    else :
+        shape = shape1
+        print(shape1)
+        print(shape2)
+
+    acquisition_couple = (acquisition1.at['acquisition_id'], acquisition2.at['acquisition_id'])
+
+    spots1 = acquisition1['spots']
+    spots2 = acquisition2['spots']
+
+    spot1_total = len(spots1)
+    spot2_total = len(spots2)
+
+    try :
+        fraction_spots1_coloc_spots2 = spots_colocalisation(image_shape=shape, spot_list1=spots1, spot_list2=spots2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
+        fraction_spots2_coloc_spots1 = spots_colocalisation(image_shape=shape, spot_list1=spots2, spot_list2=spots2, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
+    except MissMatchError as e :
+        sg.popup(str(e))
+        fraction_spots1_coloc_spots2 = NaN
+        fraction_spots2_coloc_spots1 = NaN
+
+    if 'clusters' in acquisition1.index :
+        try : 
+            clusters1 = acquisition1['clusters'][:,:len(voxel_size)]
+            fraction_spots2_coloc_cluster1 = spots_colocalisation(image_shape=shape, spot_list1=spots2, spot_list2=clusters1, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
+        except MissMatchError as e :
+            sg.popup(str(e))
+            fraction_spots2_coloc_cluster1 = NaN
+
+    else : fraction_spots2_coloc_cluster1 = NaN
+
+    if 'clusters' in acquisition2.index :
+        try :
+            clusters2 = acquisition2['clusters'][:,:len(voxel_size)]
+            fraction_spots1_coloc_cluster2 = spots_colocalisation(image_shape=shape, spot_list1=spots1, spot_list2=clusters2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
+        except MissMatchError as e :
+            sg.popup(str(e))
+            fraction_spots1_coloc_cluster2 = NaN
+
+    else : fraction_spots1_coloc_cluster2 = NaN
+
+    coloc_df = pd.DataFrame({
+        "acquisition_couple" : [acquisition_couple],
+        "acquisition_id_1" : [acquisition_couple[0]],
+        "acquisition_id_2" : [acquisition_couple[1]],
+        "colocalisation_distance" : [colocalisation_distance],
+        "spot1_total" : [spot1_total],
+        "spot2_total" : [spot2_total],
+        'fraction_spots1_coloc_spots2' : [fraction_spots1_coloc_spots2],
+        'fraction_spots2_coloc_spots1' : [fraction_spots2_coloc_spots1],
+        'fraction_spots2_coloc_cluster1' : [fraction_spots2_coloc_cluster1],
+        'fraction_spots1_coloc_cluster2' : [fraction_spots1_coloc_cluster2],
+    })
+
+    print(coloc_df.loc[:,['fraction_spots1_coloc_spots2','fraction_spots2_coloc_spots1', 'fraction_spots2_coloc_cluster1', 'fraction_spots1_coloc_cluster2']])
+
+    return coloc_df

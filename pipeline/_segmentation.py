@@ -4,12 +4,10 @@ from ..gui.layout import parameters_layout, combo_layout, add_header, path_layou
 import cellpose.models as models
 import numpy as np
 import bigfish.segmentation as seg
-import bigfish.plot as plot
 import bigfish.multistack as multistack
 import bigfish.stack as stack
 import PySimpleGUI as sg
 import os
-
 
 USE_GPU = use_gpu()
 
@@ -34,8 +32,8 @@ def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto
     print(image.shape)
 
     nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0])
-    cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [0,1])
-    cytoplasm_label, nuc_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
+    cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2])
+    nuc_label, cytoplasm_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
 
     return cytoplasm_label, nuc_label
 
@@ -80,7 +78,7 @@ def _segmentation_layout(cytoplasm_channel_preset=0, nucleus_channel_preset=0, c
     #Control plots
     layout += [bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)]
     layout += [path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)]
-    layout += [parameters_layout(['filename'], default_values=[filename_preset])]
+    layout += [parameters_layout(['filename'], default_values=[filename_preset], size= 25)]
 
     return layout
 

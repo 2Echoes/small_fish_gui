@@ -1,10 +1,4 @@
 import PySimpleGUI as sg
+import small_fish.gui.prompts as p
 
-layout = [
-    [sg.InputText(default_text= 'Hello enter something please', key='answer')],
-    [sg.Button('Ok')]      
-          ]
-
-window = sg.Window('Testing', layout=layout)
-output = window.read()
-print(output)
+p.hub_prompt([{},{},{"cell_number" : 100, "spot_number" : 1000},{},{},{'cell_number' : 10},{}])
