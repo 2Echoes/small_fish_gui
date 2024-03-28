@@ -59,7 +59,7 @@ def _reconstruct_spot_signal(image_shape, spot_list: list, dim=3):
     if dim == 3 :
         Z, Y, X = list(zip(*unique_list))
         signal[Z,Y,X] = counts
-    if dim == 2 :
+    elif dim == 2 :
         Y, X = list(zip(*unique_list))
         signal[Y,X] = counts
     else : 

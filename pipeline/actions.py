@@ -273,7 +273,12 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
     do_clustering = user_parameters['Cluster computation']
     voxel_size = user_parameters['voxel_size']
 
-    other_coords = {'clusters_coords' : clusters} if len(clusters) > 0 else None
+    if do_clustering : other_coords = {'clusters_coords' : clusters} if len(clusters) > 0 else None
+    else : other_coords = None
+    if do_clustering : do_clustering = len(clusters) > 0
+
+    if image.ndim == 3 :
+        image = stack.maximum_projection(image)
     
     cells_results = multistack.extract_cell(
         cell_label=cell_label,
@@ -289,7 +294,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
         names_features_area=True,
         names_features_dispersion=True,
         names_features_distance=True,
-        names_features_foci=do_clustering and len(clusters) > 0,
+        names_features_foci=do_clustering,
         names_features_intranuclear=True,
         names_features_protrusion=True,
         names_features_topography=True
@@ -539,7 +544,7 @@ def launch_features_computation(
             clusters = launch_clustering(spots, user_parameters) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
             clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], min_spot_number= user_parameters['min number of spots'], shape=image.shape)
 
-        else : clusters = np.empty(shape=(0,0))
+        else : clusters = None
 
         spots, temp_dict = launch_post_detection(image, spots, user_parameters)
 
@@ -582,6 +587,7 @@ def launch_features_computation(
         else : 
             frame_results['cell_number'] = NaN
         frame_results['spots'] = spots
+        frame_results['clusters'] = clusters
         frame_results.update(temp_dict)
         frame_results.update(user_parameters)
         frame_results['threshold'] = threshold
@@ -658,7 +664,7 @@ def launch_colocalisation(result_tables, result_dataframe, colocalisation_distan
 
     try :
         fraction_spots1_coloc_spots2 = spots_colocalisation(image_shape=shape, spot_list1=spots1, spot_list2=spots2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
-        fraction_spots2_coloc_spots1 = spots_colocalisation(image_shape=shape, spot_list1=spots2, spot_list2=spots2, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
+        fraction_spots2_coloc_spots1 = spots_colocalisation(image_shape=shape, spot_list1=spots2, spot_list2=spots1, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
     except MissMatchError as e :
         sg.popup(str(e))
         fraction_spots1_coloc_spots2 = NaN
