@@ -183,10 +183,12 @@ def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_reg
     return user_parameters
 
 @add_default_loading
-def launch_detection(image, image_input_values: dict, time_stack=False) :
+def launch_detection(image, image_input_values: dict, time_stack_gen=None) :
+
     """
     Performs spots detection
     """
+    
     #Extract parameters
     voxel_size = image_input_values['voxel_size']
     threshold = image_input_values.get('threshold')
@@ -196,8 +198,16 @@ def launch_detection(image, image_input_values: dict, time_stack=False) :
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
 
-    #detection
-    threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size)
+    if type(threshold) == type(None) : 
+        #detection
+        if type(time_stack_gen) != type(None) :
+            image_sample = time_stack_gen()
+        else :
+            image_sample = image
+    
+        threshold = compute_auto_threshold(image_sample, voxel_size=voxel_size, spot_radius=spot_size)
+    
+    
     spots = detection.detect_spots(
         images= image,
         threshold=threshold * threshold_penalty,

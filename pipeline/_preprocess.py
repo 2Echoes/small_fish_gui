@@ -226,9 +226,9 @@ def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, 
     
     #time
     if is_time_stack :
-        if type(values['time stack']) == type(None) :
+        if type(values['time step']) == type(None) :
             raise ParameterInputError("Incorrect time_step.")
-        elif values['time stack'] == 0 :
+        elif values['time step'] == 0 :
             raise ParameterInputError("Incorrect time_step, must be > 0.")
 
     #channel
