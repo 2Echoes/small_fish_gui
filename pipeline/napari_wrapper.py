@@ -77,12 +77,23 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     -------
         new_spots,new_clusters
     """
+    print("type clusters ",type(clusters))
     check_parameter(image= np.ndarray, voxel_size= (tuple,list))
     dim = len(voxel_size)
 
-    print("spots : ", len(spots))
-    print("clusters : ", len(clusters))
-    
+    if dim == 3 and type(cell_label) != type(None) :
+        cell_label = np.repeat(
+            cell_label[np.newaxis],
+            repeats= len(image),
+            axis=0
+        )
+    if dim == 3 and type(nucleus_label) != type(None) :
+        nucleus_label = np.repeat(
+            nucleus_label[np.newaxis],
+            repeats= len(image),
+            axis=0
+        )
+
     scale = compute_anisotropy_coef(voxel_size)
     try :
         Viewer = napari.Viewer(ndisplay=2, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
@@ -91,16 +102,17 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         #color prepartion
         face_colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'white']
         
-        Viewer.add_points(spots, size = 5, scale=scale, face_color= 'red', opacity= 0.33, symbol= 'o', name= 'single spots') # spots
+        Viewer.add_points(spots, size = 5, scale=scale, face_color= 'red', opacity= 0.33, symbol= 'ring', name= 'single spots') # spots
         if type(clusters) != type(None) : Viewer.add_points(clusters[:,:dim], size = 10, scale=scale, face_color= 'blue', opacity= 0.7, symbol= 'diamond', name= 'foci', features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, feature_defaults= {"spot_number" : 0, "id" : -1}) # cluster
         if type(cell_label) != type(None) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
         if type(nucleus_label) != type(None) : Viewer.add_labels(nucleus_label, scale=scale, opacity= 0.2, blending= 'additive')
         
         #prepare cluster update
 
-        next_cluster_id = clusters[-1,-1] + 1
-        _callback = Points_callback(points=clusters[:dim], next_id=next_cluster_id)
-        if type(clusters) != type(None) : points_callback = Viewer.layers[2].events.data.connect((_callback, 'callback'))
+        if type(clusters) != type(None) : 
+            next_cluster_id = clusters[-1,-1] + 1 if len(clusters) > 0 else 1
+            _callback = Points_callback(points=clusters[:dim], next_id=next_cluster_id)
+            points_callback = Viewer.layers[2].events.data.connect((_callback, 'callback'))
         Viewer.show(block=False)
         napari.run()
         
@@ -111,25 +123,21 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
             "\ndata : ", Viewer.layers[1].data,
             "\nfeatures : ", Viewer.layers[1].features
         )
-        if type(clusters) != type(None) : 
-            new_clusters = np.concatenate([
-                np.array(Viewer.layers[2].data, dtype= int),
-                np.array(Viewer.layers[2].features, dtype= int)
-            ],
-            axis= 1)
+        if type(clusters) != type(None) :
+            if len(clusters) > 0 : 
+                new_clusters = np.concatenate([
+                    np.array(Viewer.layers[2].data, dtype= int),
+                    np.array(Viewer.layers[2].features, dtype= int)
+                ],
+                axis= 1)
 
-            new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, min_spot_number=min_spot_number, shape=image.shape)
+                new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, min_spot_number=min_spot_number, shape=image.shape)
+        else : new_clusters = None
 
     except Exception as error :
         new_spots = spots
         new_clusters = clusters
         raise error
-
-    finally :
-        print("new_spots : ", len(new_spots))
-        print("new_clusters : ", len(new_clusters))
-        print(new_clusters)
-
 
     return new_spots, new_clusters
 

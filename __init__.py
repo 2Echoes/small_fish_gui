@@ -38,11 +38,11 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-__version__ = "0.0.1"
+__version__ = "0.5.0"
 
-import PySimpleGUI as sg
-try : 
-  from small_fish.pipeline import main
-except Exception as e:
-  sg.popup('{0}'.format(e))
-  raise e
+# import PySimpleGUI as sg
+# try : 
+#   from small_fish.pipeline import main
+# except Exception as e:
+#   sg.popup('{0}'.format(e))
+#   raise e
