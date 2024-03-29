@@ -37,14 +37,15 @@ def prompt_with_help(layout, help =None) :
             window.close()
             quit()
 
-        elif event == 'Cancel' :
-            window.close()
-            return event,{}
         elif event == 'Ok': 
             window.close()
             return event, values
         elif event == 'Help' :
             ask_help(chapter= help)
+        
+        else:
+            window.close()
+            return event,{}
 
 def input_image_prompt(
         is_3D_stack_preset=False,
@@ -87,6 +88,10 @@ def input_image_prompt(
     is_time_stack = values['time stack']
     is_multichannel = values['multichannel']
     if not ask_for_segmentation : values['Segmentation'] = False
+
+    if is_time_stack :
+        sg.popup("Sorry time stack images are not yet supported.")
+        return values
     
     try :
         image = open_image(im_path)
@@ -144,23 +149,31 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
 
     #Detection
     detection_parameters = ['threshold', 'threshold penalty']
-    if is_time_stack : detection_parameters += ['time step']
-    if is_multichannel : detection_parameters += ['channel to compute']
-    layout = parameters_layout(detection_parameters, header= 'Detection')
+    opt= [True, True]
+    if is_time_stack : 
+        detection_parameters += ['time step']
+        opt += [False]
+    if is_multichannel : 
+        detection_parameters += ['channel to compute']
+        opt += [False]
+    layout = [[sg.Text("Green parameters", text_color= 'green'), sg.Text(" are optional parameters.")]]
+    layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt)
+    
     if dim == 2 : tuple_shape = ('y','x')
     else : tuple_shape = ('z','y','x')
-    layout += tuple_layout(voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
+    opt = {'voxel_size' : False, 'spot_size' : False, 'log_kernel_size' : True, 'minimum_distance' : True}
+    layout += tuple_layout(opt=opt, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
 
     #Deconvolution
     if do_dense_region_deconvolution :
         layout += parameters_layout(['alpha', 'beta', 'gamma'], default_values= [0.5, 1, 5], header= 'Dense regions deconvolution')
-        layout += tuple_layout(deconvolution_kernel = tuple_shape)
+        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, deconvolution_kernel = tuple_shape)
     
     #Clustering
     if do_clustering :
         layout += parameters_layout(['cluster size', 'min number of spots'], default_values=[400, 5])
 
-    event, values = prompt(layout)
+    event, values = prompt_with_help(layout, help='detection')
     if event == 'Cancel' : return None
     if is_3D_stack : values['dim'] = 3
     else : values['dim'] = 2
@@ -227,15 +240,13 @@ def hub_prompt(fov_results_list:list, do_segmentation=False) :
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
-        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Save results'), sg.Button('Help')]
+        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Save results')]
     ]
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))
 
     while True : 
         event, values = window.read()
-        print(event)
-        print(values)
         if event == None : quit()
         elif event == 'Help' : pass
         else : 

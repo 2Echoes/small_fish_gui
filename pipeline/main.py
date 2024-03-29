@@ -8,7 +8,7 @@ if type(user_parameters) == type(None) : quit()
 acquisition_id= 0
 
 #Extract parameters
-is_time_stack = user_parameters['time stack']
+is_time_stack = user_parameters.setdefault('time stack', False)
 is_3D_stack = user_parameters['3D stack']
 multichannel = user_parameters['multichannel']
 do_segmentation = user_parameters['Segmentation'] and not is_time_stack

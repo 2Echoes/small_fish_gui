@@ -544,7 +544,7 @@ def launch_features_computation(
             else : frame_results['time'] = NaN
         else : frame_results['time'] = NaN
 
-        spots, threshold  = launch_detection(image, user_parameters, time_stack= is_time_stack)
+        spots, threshold  = launch_detection(image, user_parameters)
         #TODO : for time stack auto threshold, compute threshold from random sample of frame -> pbwrap
         
         if do_dense_region_deconvolution : 

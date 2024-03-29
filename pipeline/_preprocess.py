@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import PySimpleGUI as sg
-from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt
+from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt, prompt_with_help
 
 class ParameterInputError(Exception) :
     pass
@@ -128,7 +128,7 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
         if multichannel : layout += [parameters_layout(['c'], default_values=[c])]
         if is_time_stack : layout += [parameters_layout(['t'], default_values=[t])]
 
-        event, map = prompt(layout)
+        event, map = prompt_with_help(layout,help= 'mapping')
         if event == 'Cancel' : quit()
 
         #Check integrity
@@ -150,17 +150,17 @@ def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
     layout = [
         [sg.Text("Image shape : {0}".format(shape))],
         [sg.Text('Dimensions mapping was set to :')],
-        [sg.Text('x : {0}, y : {1}, z : {2}, c : {3}, t : {4}'.format(
+        [sg.Text('x : {0} \ny : {1} \nz : {2} \nc : {3} \nt : {4}'.format(
             map['x'], map['y'], map.get('z'), map.get("c"), map.get('t')
         ))],
-        [sg.Button('Ok'), sg.Button('Change mapping')]
+        [sg.Button('Change mapping')]
     ]
 
-    event, values = prompt(layout, add_ok_cancel= False)
+    event, values = prompt_with_help(layout, help='mapping')
 
     if event == 'Ok' :
         return map
-    elif event == 'Change mapping' :
+    elif event == 'Change mapping' or event == 'Cancel':
         map = _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map=map)
     else : raise AssertionError('Unforseen event')
 

@@ -1,9 +1,9 @@
 from cellpose.core import use_gpu
+from skimage.measure import label
 from ..gui.layout import parameters_layout, combo_layout, add_header, path_layout, bool_layout
 
 import cellpose.models as models
 import numpy as np
-import bigfish.segmentation as seg
 import bigfish.multistack as multistack
 import bigfish.stack as stack
 import PySimpleGUI as sg
@@ -51,7 +51,7 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
         do_3D= False,
         )[0]
     label = np.array(label, dtype= np.int64)
-    label = seg.remove_disjoint(label)
+    label = remove_disjoint(label)
     
     return label
 
@@ -111,3 +111,70 @@ def _cast_segmentation_parameters(values) :
         pass
     
     return values
+
+def remove_disjoint(image):
+    """
+    *CODE FROM BIG-FISH (LICENCE IN __INIT__.PY) IMPORTED TO AVOID IMPORT ERROR WHEN BIGFISH SEGMENTATION MODULE INITIALISES : try to import deprecated module for python 3.8
+
+    For each instances with disconnected parts, keep the larger one.
+
+    Parameters
+    ----------
+    image : np.ndarray, np.int, np.uint or bool
+        Labelled image with shape (z, y, x) or (y, x).
+
+    Returns
+    -------
+    image_cleaned : np.ndarray, np.int or np.uint
+        Cleaned image with shape (z, y, x) or (y, x).
+
+    """
+    # check parameters
+    stack.check_array(
+        image,
+        ndim=[2, 3],
+        dtype=[np.uint8, np.uint16, np.int32, np.int64, bool])
+
+    # handle boolean array
+    cast_to_bool = False
+    if image.dtype == bool:
+        cast_to_bool = bool
+        image = image.astype(np.uint8)
+
+    # initialize cleaned labels
+    image_cleaned = np.zeros_like(image)
+
+    # loop over instances
+    max_label = image.max()
+    for i in range(1, max_label + 1):
+
+        # get instance mask
+        mask = image == i
+
+        # check if an instance is labelled with this value
+        if mask.sum() == 0:
+            continue
+
+        # get an index for each disconnected part of the instance
+        labelled_mask = label(mask)
+        indices = sorted(list(set(labelled_mask.ravel())))
+        if 0 in indices:
+            indices = indices[1:]
+
+        # keep the largest part of the instance
+        max_area = 0
+        mask_instance = None
+        for j in indices:
+            mask_part_j = labelled_mask == j
+            area_j = mask_part_j.sum()
+            if area_j > max_area:
+                max_area = area_j
+                mask_instance = mask_part_j
+
+        # add instance in the final label
+        image_cleaned[mask_instance] = i
+
+    if cast_to_bool:
+        image_cleaned = image_cleaned.astype(bool)
+
+    return image_cleaned
