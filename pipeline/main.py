@@ -41,7 +41,6 @@ while True and use_napari:
         quit()
 
     time_step = user_parameters.get('time step')
-    use_napari = user_parameters['Napari correction']
     channel_to_compute = user_parameters.get('channel to compute')
     images_gen = prepare_image_detection(map, image_raw)
 
@@ -85,4 +84,4 @@ while True :
         "cell_result_df\n", cell_result_df,
         "coloc_df\n", coloc_df,
         )
-    result_df, cell_result_df, coloc_df, acquisition_id = hub(acquisition_id, result_df, cell_result_df, coloc_df, segmentation_done=do_segmentation, cell_label=cytoplasm_label, nucleus_label=nucleus_label)
+    result_df, cell_result_df, coloc_df, acquisition_id, user_parameters = hub(acquisition_id, result_df, cell_result_df, coloc_df, segmentation_done=do_segmentation, user_parameters=user_parameters, cell_label=cytoplasm_label, nucleus_label=nucleus_label)

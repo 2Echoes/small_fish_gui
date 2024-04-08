@@ -1,7 +1,7 @@
 from ..gui.prompts import output_image_prompt, _error_popup, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation, hub_prompt, coloc_prompt, ask_detection_confirmation
 from ..interface.output import save_results
 from ..gui.animation import add_default_loading
-from ._preprocess import check_integrity, convert_parameters_types
+from ._preprocess import check_integrity, convert_parameters_types, reorder_image_stack
 from .napari_wrapper import correct_spots, _update_clusters
 from .bigfish_wrappers import compute_snr_spots
 from ._preprocess import ParameterInputError, map_channels, prepare_image_detection, reorder_shape
@@ -82,7 +82,7 @@ def ask_input_parameters(ask_for_segmentation=True) :
     
     return values
 
-def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell_label, nucleus_label) :
+def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user_parameters, cell_label, nucleus_label) :
     event, values = hub_prompt(results, segmentation_done)
     try :
         if event == 'Save results' :
@@ -99,9 +99,14 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell
                 else : sg.popup("Please check at least one box : Excel/Feather")
 
         elif event == 'Add detection' :
+
+            if acquisition_id == -1 :
+                ask_for_segmentation = True
+            else : 
+                ask_for_segmentation = False
             
             #Ask user
-            user_parameters = ask_input_parameters(ask_for_segmentation= False)
+            user_parameters.update(ask_input_parameters(ask_for_segmentation= ask_for_segmentation))
 
             if type(user_parameters) == type(None) :
                return results, cell_results, coloc_df, acquisition_id
@@ -116,7 +121,20 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell
             image_raw = user_parameters['image']
             map = map_channels(image_raw, is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, multichannel=multichannel)
             user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map)
+            use_napari = user_parameters['Napari correction']
             
+            if ask_for_segmentation and do_segmentation :
+                #Segmentation
+                if do_segmentation and not is_time_stack:
+                    im_seg = reorder_image_stack(map, image_raw)
+                    cytoplasm_label, nucleus_label = launch_segmentation(im_seg)
+
+                else :
+                    cytoplasm_label, nucleus_label = None,None
+
+                if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
+                    do_segmentation = False
+
             #Detection preparation
             while True and use_napari:
                 detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape, user_parameters)
@@ -178,11 +196,18 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell
                     res_coloc
                 ],
                 axis= 0)
+        
+        elif event == "Reset results" :
+            print("restart")
+            results = pd.DataFrame()
+            cell_results = pd.DataFrame()
+            coloc_df = pd.DataFrame()
+            acquisition_id = -1
 
     except Exception as error :
         _error_popup(error)
     
-    return results, cell_results, coloc_df, acquisition_id
+    return results, cell_results, coloc_df, acquisition_id, user_parameters
     
 def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, map, shape, default_dict={}) :
     while True :

@@ -231,13 +231,17 @@ def _warning_popup(warning:str) :
 
 def _sumup_df(results: pd.DataFrame) :
 
-    res = results.loc[:,['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute', 'time']]
+    if len(results) > 0 :
+        res = results.loc[:,['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute', 'time']]
+    else :
+        res = pd.DataFrame(columns= ['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute', 'time'])
 
     return res
 
 def hub_prompt(fov_results_list:list, do_segmentation=False) :
 
     sumup_df = _sumup_df(fov_results_list)
+    
     if do_segmentation :
         segmentation_object = sg.Text('Segmentation was performed', font='8', text_color= 'green')
     else :
@@ -246,7 +250,7 @@ def hub_prompt(fov_results_list:list, do_segmentation=False) :
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
-        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Save results')]
+        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Save results'), sg.Button('Reset results')]
     ]
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))
