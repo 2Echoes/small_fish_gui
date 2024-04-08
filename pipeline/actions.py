@@ -1,4 +1,4 @@
-from ..gui.prompts import output_image_prompt, _error_popup, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation, hub_prompt, coloc_prompt
+from ..gui.prompts import output_image_prompt, _error_popup, prompt_with_help, input_image_prompt, detection_parameters_promt, ask_cancel_segmentation, hub_prompt, coloc_prompt, ask_detection_confirmation
 from ..interface.output import save_results
 from ..gui.animation import add_default_loading
 from ._preprocess import check_integrity, convert_parameters_types
@@ -86,7 +86,7 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell
     event, values = hub_prompt(results, segmentation_done)
     try :
         if event == 'Save results' :
-            dic = output_image_prompt()
+            dic = output_image_prompt(filename=results.iloc[0].at['filename'])
             if isinstance(dic, dict) :
                 path = dic['folder']
                 filename = dic['filename']
@@ -118,31 +118,46 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell
             user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map)
             
             #Detection preparation
-            detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape)
-            
-            if type(detection_parameters) != type(None) :
-                user_parameters.update(detection_parameters)
-            else :
-                return results, cell_results, coloc_df, acquisition_id
-            
-            time_step = user_parameters.get('time step')
-            use_napari = user_parameters['Napari correction']
-            channel_to_compute = user_parameters.get('channel to compute')
-            images_gen = prepare_image_detection(map, image_raw)
+            while True and use_napari:
+                detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape, user_parameters)
+
+                if type(detection_parameters) != type(None) :
+                    user_parameters.update(detection_parameters) 
+                else : #If user click cancel will close small fish
+                    quit()
+
+                time_step = user_parameters.get('time step')
+                use_napari = user_parameters['Napari correction']
+                channel_to_compute = user_parameters.get('channel to compute')
+                images_gen = prepare_image_detection(map, image_raw)
+
+                image, user_parameters, spots, clusters, frame_results = launch_detection(
+                    images_gen=images_gen,
+                    user_parameters=user_parameters,
+                    multichannel=multichannel,
+                    channel_to_compute=channel_to_compute,
+                    is_time_stack=is_time_stack,
+                    time_step=time_step,
+                    use_napari=use_napari,
+                    cell_label=cell_label,
+                    nucleus_label=nucleus_label
+                )
+                if ask_detection_confirmation(user_parameters.get('threshold')) :
+                    acquisition_id +=1
+                    break
 
             #Detection
-            acquisition_id +=1
             res, cell_res = launch_features_computation(
-                acquisition_id=acquisition_id,
-                images_gen=images_gen,
-                user_parameters=user_parameters,
-                multichannel=multichannel,
-                channel_to_compute=channel_to_compute,
-                is_time_stack=is_time_stack,
-                time_step=time_step,
-                use_napari=use_napari,
-                cell_label=cell_label,
-                nucleus_label=nucleus_label
+            acquisition_id=acquisition_id,
+            image=image,
+            dim=image.ndim,
+            spots=spots,
+            clusters=clusters,
+            nucleus_label = nucleus_label,
+            cell_label= cell_label,
+            user_parameters=user_parameters,
+            frame_results=frame_results,
+            do_clustering=do_clustering
             )
 
             results = pd.concat([results, res])
@@ -169,9 +184,17 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, cell
     
     return results, cell_results, coloc_df, acquisition_id
     
-def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, map, shape) :
+def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, map, shape, default_dict={}) :
     while True :
-        user_parameters = detection_parameters_promt(is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, is_multichannel=is_multichannel, do_dense_region_deconvolution=do_dense_region_deconvolution, do_clustering=do_clustering)
+        user_parameters = detection_parameters_promt(
+            is_3D_stack=is_3D_stack,
+            is_time_stack=is_time_stack,
+            is_multichannel=is_multichannel,
+            do_dense_region_deconvolution=do_dense_region_deconvolution,
+            do_clustering=do_clustering,
+            default_dict=default_dict
+            )
+        
         if type(user_parameters) == type(None) : return user_parameters
         try :
             user_parameters = convert_parameters_types(user_parameters)
@@ -183,7 +206,7 @@ def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_reg
     return user_parameters
 
 @add_default_loading
-def launch_detection(image, image_input_values: dict, time_stack_gen=None) :
+def _launch_detection(image, image_input_values: dict, time_stack_gen=None) :
 
     """
     Performs spots detection
@@ -205,12 +228,12 @@ def launch_detection(image, image_input_values: dict, time_stack_gen=None) :
         else :
             image_sample = image
     
-        threshold = compute_auto_threshold(image_sample, voxel_size=voxel_size, spot_radius=spot_size)
-    
+        threshold = compute_auto_threshold(image_sample, voxel_size=voxel_size, spot_radius=spot_size) * threshold_penalty
+        print("auto threshold result : ", threshold)
     
     spots = detection.detect_spots(
         images= image,
-        threshold=threshold * threshold_penalty,
+        threshold=threshold,
         return_threshold= False,
         voxel_size=voxel_size,
         spot_radius= spot_size,
@@ -218,7 +241,7 @@ def launch_detection(image, image_input_values: dict, time_stack_gen=None) :
         minimum_distance=minimum_distance
         )
         
-    return spots, threshold * threshold_penalty
+    return spots, threshold
 
 @add_default_loading
 def launch_dense_region_deconvolution(image, spots, image_input_values: dict,) :
@@ -495,8 +518,7 @@ def launch_clustering(spots, user_parameters):
 
     return clusters
 
-def launch_features_computation(
-        acquisition_id,
+def launch_detection(
         images_gen,
         user_parameters,
         multichannel,
@@ -521,10 +543,7 @@ def launch_features_computation(
     
     do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
     do_clustering = user_parameters['Cluster computation']
-    dim = user_parameters['dim']
-    
-    result = pd.DataFrame()
-    result_cell_frame = pd.DataFrame()
+
     for step, image in enumerate(images_gen) :    
         frame_results = {}
         if is_time_stack :
@@ -544,8 +563,7 @@ def launch_features_computation(
             else : frame_results['time'] = NaN
         else : frame_results['time'] = NaN
 
-        spots, threshold  = launch_detection(image, user_parameters)
-        #TODO : for time stack auto threshold, compute threshold from random sample of frame -> pbwrap
+        spots, threshold  = _launch_detection(image, user_parameters)
         
         if do_dense_region_deconvolution : 
             spots = launch_dense_region_deconvolution(image, spots, user_parameters)
@@ -556,7 +574,8 @@ def launch_features_computation(
 
         else : clusters = None
 
-        spots, temp_dict = launch_post_detection(image, spots, user_parameters)
+        spots, post_detection_dict = launch_post_detection(image, spots, user_parameters)
+        post_detection_dict['threshold'] = threshold
 
         if use_napari : 
             spots, clusters = correct_spots(
@@ -569,44 +588,54 @@ def launch_features_computation(
                 cell_label=cell_label,
                 nucleus_label=nucleus_label
                 )
-            
-        if do_clustering : 
-            frame_results['cluster_number'] = len(clusters)
-            if dim == 3 :
-                frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3]
-            else :
-                frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[2]
         
-        if type(cell_label) != type(None) and type(nucleus_label) != type(None): 
-            cell_result_dframe = launch_cell_extraction(
-                acquisition_id=acquisition_id,
-                spots=spots,
-                clusters=clusters,
-                image=image,
-                cell_label= cell_label,
-                nucleus_label=nucleus_label,
-                user_parameters=user_parameters,
-                time_stamp=time
-            )
+        user_parameters.update(post_detection_dict)
+    
+    return image, user_parameters, spots, clusters, frame_results
+            
+
+def launch_features_computation(acquisition_id, image, dim, spots, clusters, nucleus_label, cell_label, user_parameters, frame_results, do_clustering) :
+
+    dim = user_parameters['dim']
+    result = pd.DataFrame()
+    result_cell_frame = pd.DataFrame()
+            
+    if do_clustering : 
+        frame_results['cluster_number'] = len(clusters)
+        if dim == 3 :
+            frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3]
         else :
-            cell_result_dframe = pd.DataFrame()
+            frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[2]
+    
+    if type(cell_label) != type(None) and type(nucleus_label) != type(None): 
+        cell_result_dframe = launch_cell_extraction(
+            acquisition_id=acquisition_id,
+            spots=spots,
+            clusters=clusters,
+            image=image,
+            cell_label= cell_label,
+            nucleus_label=nucleus_label,
+            user_parameters=user_parameters,
+            time_stamp=user_parameters.get('time')
+        )
+    else :
+        cell_result_dframe = pd.DataFrame()
 
-        frame_results['acquisition_id'] = acquisition_id
-        if type(cell_label) != type(None) and type(nucleus_label) != type(None):
-            frame_results['cell_number'] = len(cell_result_dframe) 
-        else : 
-            frame_results['cell_number'] = NaN
-        frame_results['spots'] = spots
-        frame_results['clusters'] = clusters
-        frame_results.update(temp_dict)
-        frame_results.update(user_parameters)
-        frame_results['threshold'] = threshold
+    frame_results['acquisition_id'] = acquisition_id
+    if type(cell_label) != type(None) and type(nucleus_label) != type(None):
+        frame_results['cell_number'] = len(cell_result_dframe) 
+    else : 
+        frame_results['cell_number'] = NaN
+    frame_results['spots'] = spots
+    frame_results['clusters'] = clusters
+    frame_results.update(user_parameters)
+    frame_results['threshold'] = user_parameters['threshold']
 
-        frame_results = pd.DataFrame(columns= frame_results.keys(), data= (frame_results.values(),))
+    frame_results = pd.DataFrame(columns= frame_results.keys(), data= (frame_results.values(),))
 
-        result: pd.DataFrame = pd.concat([result, frame_results])
-        result_cell_frame: pd.DataFrame = pd.concat([result_cell_frame, cell_result_dframe])
-
+    result: pd.DataFrame = pd.concat([result, frame_results])
+    result_cell_frame: pd.DataFrame = pd.concat([result_cell_frame, cell_result_dframe])
+        
     return result, result_cell_frame
 
 def initiate_colocalisation(result_tables) :

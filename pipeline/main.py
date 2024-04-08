@@ -1,5 +1,6 @@
 from ._preprocess import prepare_image_detection, reorder_image_stack, map_channels, reorder_shape
-from .actions import initiate_detection, hub, launch_segmentation, ask_input_parameters, launch_features_computation
+from .actions import initiate_detection, hub, launch_segmentation, ask_input_parameters, launch_features_computation, launch_detection
+from ..gui import ask_detection_confirmation
 import pandas as pd
 
 #Open interface and ask user for parameters.
@@ -14,6 +15,7 @@ multichannel = user_parameters['multichannel']
 do_segmentation = user_parameters['Segmentation'] and not is_time_stack
 do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
 do_clustering = user_parameters['Cluster computation']
+use_napari = user_parameters['Napari correction']
 image_raw = user_parameters['image']
 map = map_channels(image_raw, is_3D_stack=is_3D_stack, is_time_stack=is_time_stack, multichannel=multichannel)
 user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map)
@@ -30,18 +32,32 @@ if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
     do_segmentation = False
 
 #Detection
-detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape)
+while True and use_napari:
+    detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape, user_parameters)
 
-if type(detection_parameters) != type(None) :
-    user_parameters.update(detection_parameters) 
-else : #If user click cancel will close small fish
-    quit()
+    if type(detection_parameters) != type(None) :
+        user_parameters.update(detection_parameters) 
+    else : #If user click cancel will close small fish
+        quit()
 
-time_step = user_parameters.get('time step')
-use_napari = user_parameters['Napari correction']
-channel_to_compute = user_parameters.get('channel to compute')
-images_gen = prepare_image_detection(map, image_raw)
+    time_step = user_parameters.get('time step')
+    use_napari = user_parameters['Napari correction']
+    channel_to_compute = user_parameters.get('channel to compute')
+    images_gen = prepare_image_detection(map, image_raw)
 
+    image, user_parameters, spots, clusters, frame_results = launch_detection(
+        images_gen=images_gen,
+        user_parameters=user_parameters,
+        multichannel=multichannel,
+        channel_to_compute=channel_to_compute,
+        is_time_stack=is_time_stack,
+        time_step=time_step,
+        use_napari=use_napari,
+        cell_label=cytoplasm_label,
+        nucleus_label=nucleus_label
+    )
+    if ask_detection_confirmation(user_parameters.get('threshold')) :
+        break
 
 result_df = pd.DataFrame()
 cell_result_df = pd.DataFrame()
@@ -49,15 +65,15 @@ coloc_df = pd.DataFrame()
 
 res, cell_res = launch_features_computation(
     acquisition_id=acquisition_id,
-    images_gen=images_gen,
+    image=image,
+    dim=image.ndim,
+    spots=spots,
+    clusters=clusters,
+    nucleus_label = nucleus_label,
+    cell_label= cytoplasm_label,
     user_parameters=user_parameters,
-    multichannel=multichannel,
-    channel_to_compute=channel_to_compute,
-    is_time_stack=is_time_stack,
-    time_step=time_step,
-    use_napari=use_napari,
-    cell_label=cytoplasm_label,
-    nucleus_label=nucleus_label
+    frame_results=frame_results,
+    do_clustering=do_clustering
 )
 
 result_df = pd.concat([result_df, res])

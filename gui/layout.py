@@ -42,7 +42,7 @@ def parameters_layout(parameters:'list[str]' = [], header= None, default_values=
         layout = add_header(header, layout)
     return layout
 
-def tuple_layout(opt=None, **tuples) :
+def tuple_layout(opt=None, default_dict={}, **tuples) :
     """
     tuples example : voxel_size = ['z','y','x']; will ask a tuple with 3 element default to 'z', 'y' 'x'.
     """
@@ -63,7 +63,7 @@ def tuple_layout(opt=None, **tuples) :
     max_size = len(max(tuples.keys(), key=len))
     
     layout = [
-        [sg.Text(pad_right(tup, max_size, ' '), text_color= 'green' if opt[option] else None)] + [sg.InputText(elmnt,key= '{0}_{1}'.format(tup, elmnt), size= 5) for elmnt in tuples[tup]] for tup,option in zip(tuples,opt)
+        [sg.Text(pad_right(tup, max_size, ' '), text_color= 'green' if opt[option] else None)] + [sg.InputText(default_text=default_dict.setdefault('{0}_{1}'.format(tup,elmnt), elmnt),key= '{0}_{1}'.format(tup, elmnt), size= 5) for elmnt in tuples[tup]] for tup,option in zip(tuples,opt)
     ]
 
     return layout

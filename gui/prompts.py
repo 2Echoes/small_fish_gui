@@ -107,10 +107,10 @@ def input_image_prompt(
 
     return values
 
-def output_image_prompt() :
+def output_image_prompt(filename) :
     try :
         layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
-        layout += parameters_layout(['filename'], size=25)
+        layout += parameters_layout(["filename"], default_values= [filename + "_quantification"], size=25)
         layout += bool_layout(['Excel', 'Feather'])
         layout.append([sg.Button('Cancel')])
 
@@ -123,7 +123,7 @@ def output_image_prompt() :
 
     else : return values
 
-def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering) :
+def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, default_dict) :
     """
 
     keys :
@@ -149,29 +149,35 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
 
     #Detection
     detection_parameters = ['threshold', 'threshold penalty']
+    default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
     opt= [True, True]
     if is_time_stack : 
         detection_parameters += ['time step']
         opt += [False]
+        default_detection += [default_dict.setdefault('time step', 1)]
     if is_multichannel : 
         detection_parameters += ['channel to compute']
         opt += [False]
+        default_detection += [default_dict.setdefault('channel to compute', '')]
     layout = [[sg.Text("Green parameters", text_color= 'green'), sg.Text(" are optional parameters.")]]
-    layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt)
+    layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt, default_values=default_detection)
     
     if dim == 2 : tuple_shape = ('y','x')
     else : tuple_shape = ('z','y','x')
     opt = {'voxel_size' : False, 'spot_size' : False, 'log_kernel_size' : True, 'minimum_distance' : True}
-    layout += tuple_layout(opt=opt, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
+
+    layout += tuple_layout(opt=opt, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
 
     #Deconvolution
     if do_dense_region_deconvolution :
-        layout += parameters_layout(['alpha', 'beta', 'gamma'], default_values= [0.5, 1, 5], header= 'Dense regions deconvolution')
-        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, deconvolution_kernel = tuple_shape)
+        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1), default_dict.setdefault('gamma',5)]
+        layout += parameters_layout(['alpha', 'beta', 'gamma'], default_values= default_dense_regions_deconvolution, header= 'Dense regions deconvolution')
+        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
     
     #Clustering
     if do_clustering :
-        layout += parameters_layout(['cluster size', 'min number of spots'], default_values=[400, 5])
+        default_clustering = [default_dict.setdefault('cluster size',400), default_dict.setdefault('min number of spots', 5)]
+        layout += parameters_layout(['cluster size', 'min number of spots'], default_values=default_clustering)
 
     event, values = prompt_with_help(layout, help='detection')
     if event == 'Cancel' : return None
@@ -263,3 +269,17 @@ def coloc_prompt() :
     if event == 'Ok' :
         return values['colocalisation distance']
     else : return False
+
+def ask_detection_confirmation(used_threshold) :
+    layout = [
+        [sg.Text("Proceed with current detection ?", font= 'bold 10')],
+        [sg.Text("Threshold : {0}".format(used_threshold))],
+        [sg.Button("Ok"), sg.Button("Restart detection")]
+    ]
+
+    event, value = prompt(layout, add_ok_cancel=False)
+
+    if event == 'Restart detection' :
+        return False
+    else :
+        return True
