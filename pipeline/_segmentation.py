@@ -11,29 +11,33 @@ import os
 
 USE_GPU = use_gpu()
 
-def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto_diameter, nucleus_diameter) :
+def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto_diameter, nucleus_diameter, do_only_nuc=False) :
 
     nuc_channel = channels[1]
-    cyto_channel = channels[0]
+    if not do_only_nuc : 
+        cyto_channel = channels[0]
+        if image[cyto_channel].ndim >= 3 :
+            cyto = stack.maximum_projection(image[cyto_channel])
+        else : 
+            cyto = image[cyto_channel]
 
-    if image[cyto_channel].ndim >= 3 :
-        cyto = stack.maximum_projection(image[cyto_channel])
-    else : 
-        cyto = image[cyto_channel]
     if image[nuc_channel].ndim >= 3 :
         nuc = stack.maximum_projection(image[nuc_channel])
     else : 
         nuc = image[nuc_channel]
     
-    image = np.zeros(shape=(2,) + cyto.shape)
-    image[0] = cyto
-    image[1] = nuc
-    image = np.moveaxis(image, source=(0,1,2), destination=(2,0,1))
-    print(image.shape)
+    if not do_only_nuc :
+        image = np.zeros(shape=(2,) + cyto.shape)
+        image[0] = cyto
+        image[1] = nuc
+        image = np.moveaxis(image, source=(0,1,2), destination=(2,0,1))
 
     nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0])
-    cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2])
-    nuc_label, cytoplasm_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
+    if not do_only_nuc :
+        cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2])
+        nuc_label, cytoplasm_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
+    else :
+        cytoplasm_label = nuc_label
 
     return cytoplasm_label, nuc_label
 
@@ -55,7 +59,7 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
     
     return label
 
-def _segmentation_layout(cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
+def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
 
     models_list = models.get_user_models() + models.MODEL_NAMES
     if len(models_list) == 0 : models_list = ['no model found']
@@ -65,15 +69,16 @@ def _segmentation_layout(cytoplasm_channel_preset=0, nucleus_channel_preset=0, c
     
     #cytoplasm parameters
     layout += [add_header("Cell Segmentation", [sg.Text("Choose cellpose model for cytoplasm: \n")]),
-              [combo_layout(models_list, key='cyto_model_name')]
+              [combo_layout(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
                         ]
     layout += [parameters_layout(['cytoplasm channel', 'cytoplasm diameter'], default_values= [cytoplasm_channel_preset, cyto_diameter_preset])]
     #Nucleus parameters
     layout += [
             add_header("Nucleus segmentation",[sg.Text("Choose cellpose model for nucleus: \n")]),
-              combo_layout(models_list, key='nucleus_model_name')
+              combo_layout(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
                 ]
     layout += [parameters_layout(['nucleus channel', 'nucleus diameter'], default_values= [nucleus_channel_preset, nucleus_diameter_preset])]
+    layout += [bool_layout(["Segment only nuclei"])]
     
     #Control plots
     layout += [bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)]

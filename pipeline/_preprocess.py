@@ -204,7 +204,7 @@ def convert_parameters_types(values:dict) :
 
     return values
 
-def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, multichannel,map, shape):
+def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, multichannel,segmentation_done, map, shape):
     """
     Checks that parameters given in input by user are fit to be used for bigfish detection.
     """
@@ -233,11 +233,19 @@ def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, 
 
     #channel
     if multichannel :
+        ch_len = shape[int(map['c'])]
+        if segmentation_done :
+            try : nuc_signal_ch = int(values['nucleus channel signal'])
+            except Exception :
+                raise ParameterInputError("Incorrect channel for nucleus signal measure.")
+            if nuc_signal_ch > ch_len :
+                raise ParameterInputError("Nucleus signal channel is out of range for image.\nPlease select from {0}".format(list(range(ch_len))))
+            values['nucleus channel signal'] = nuc_signal_ch
+
         try :
             ch = int(values['channel to compute'])
         except Exception :
             raise ParameterInputError("Incorrect channel to compute parameter.")
-        ch_len = shape[int(map['c'])]
         if ch >= ch_len :
             raise ParameterInputError("Channel to compute is out of range for image.\nPlease select from {0}".format(list(range(ch_len))))
         values['channel to compute'] = ch

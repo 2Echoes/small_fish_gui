@@ -123,7 +123,7 @@ def output_image_prompt(filename) :
 
     else : return values
 
-def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, default_dict) :
+def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, default_dict: dict) :
     """
 
     keys :
@@ -178,6 +178,10 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
     if do_clustering :
         default_clustering = [default_dict.setdefault('cluster size',400), default_dict.setdefault('min number of spots', 5)]
         layout += parameters_layout(['cluster size', 'min number of spots'], default_values=default_clustering)
+
+    if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
+        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict['nucleus_channel'])]
+        layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
     event, values = prompt_with_help(layout, help='detection')
     if event == 'Cancel' : return None

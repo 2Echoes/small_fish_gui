@@ -127,7 +127,7 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
                 #Segmentation
                 if do_segmentation and not is_time_stack:
                     im_seg = reorder_image_stack(map, image_raw)
-                    cytoplasm_label, nucleus_label = launch_segmentation(im_seg)
+                    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
 
                 else :
                     cytoplasm_label, nucleus_label = None,None
@@ -137,7 +137,7 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
 
             #Detection preparation
             while True and use_napari:
-                detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape, user_parameters)
+                detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, user_parameters['segmentation_done'], map, image_raw.shape, user_parameters)
 
                 if type(detection_parameters) != type(None) :
                     user_parameters.update(detection_parameters) 
@@ -149,7 +149,7 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
                 channel_to_compute = user_parameters.get('channel to compute')
                 images_gen = prepare_image_detection(map, image_raw)
 
-                image, user_parameters, spots, clusters, frame_results = launch_detection(
+                image, nucleus_signal, user_parameters, spots, clusters, frame_results = launch_detection(
                     images_gen=images_gen,
                     user_parameters=user_parameters,
                     multichannel=multichannel,
@@ -168,6 +168,7 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
             res, cell_res = launch_features_computation(
             acquisition_id=acquisition_id,
             image=image,
+            nucleus_signal = nucleus_signal,
             dim=image.ndim,
             spots=spots,
             clusters=clusters,
@@ -203,13 +204,14 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
             cell_results = pd.DataFrame()
             coloc_df = pd.DataFrame()
             acquisition_id = -1
+            user_parameters['segmentation_done'] = False
 
     except Exception as error :
         _error_popup(error)
     
     return results, cell_results, coloc_df, acquisition_id, user_parameters
     
-def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, map, shape, default_dict={}) :
+def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, map, shape, default_dict={}) :
     while True :
         user_parameters = detection_parameters_promt(
             is_3D_stack=is_3D_stack,
@@ -217,13 +219,15 @@ def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_reg
             is_multichannel=is_multichannel,
             do_dense_region_deconvolution=do_dense_region_deconvolution,
             do_clustering=do_clustering,
+            do_segmentation=do_segmentation,
+            segmentation_done= segmentation_done,
             default_dict=default_dict
             )
         
         if type(user_parameters) == type(None) : return user_parameters
         try :
             user_parameters = convert_parameters_types(user_parameters)
-            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel,map, shape)
+            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel, segmentation_done, map, shape)
         except ParameterInputError as error:
             sg.popup(error)
         else :
@@ -324,7 +328,7 @@ def launch_post_detection(image, spots, image_input_values: dict,) :
     return spots, fov_res
 
 @add_default_loading
-def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, nucleus_label, user_parameters, time_stamp) :
+def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signal, cell_label, nucleus_label, user_parameters, time_stamp,) :
 
     #Extract parameters
     dim = user_parameters['dim']
@@ -337,6 +341,8 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
 
     if image.ndim == 3 :
         image = stack.maximum_projection(image)
+    if nucleus_signal.ndim == 3 :
+        nucleus_signal = stack.maximum_projection(nucleus_signal)
     
     cells_results = multistack.extract_cell(
         cell_label=cell_label,
@@ -347,6 +353,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
         image=image
     )
 
+    #BigFish features
     features_names = ['acquisition_id', 'cell_id', 'time', 'cell_bbox'] + classification.get_features_name(
         names_features_centrosome=False,
         names_features_area=True,
@@ -354,9 +361,12 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
         names_features_distance=True,
         names_features_foci=do_clustering,
         names_features_intranuclear=True,
-        names_features_protrusion=True,
+        names_features_protrusion=False,
         names_features_topography=True
     )
+
+    #Nucleus features : area is computed in bigfish
+    features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
 
     result_frame = pd.DataFrame()
 
@@ -367,6 +377,8 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
         cell_mask = cell['cell_mask']
         nuc_mask = cell ['nuc_mask']
         cell_bbox = cell['bbox'] # (min_y, min_x, max_y, max_x)
+        min_y, min_x, max_y, max_x = cell['bbox'] # (min_y, min_x, max_y, max_x)
+        nuc_signal = nucleus_signal[min_y:max_y, min_x:max_x]
         rna_coords = cell['rna_coord']
         foci_coords = cell.get('clusters_coords')
         signal = cell['image']
@@ -386,11 +398,14 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
             compute_distance=True,
             compute_foci= do_clustering and len(clusters) > 0,
             compute_intranuclear=True,
-            compute_protrusion=True,
+            compute_protrusion=False,
             compute_topography=True
         )
 
         features = list(features)
+        print("nuc signal shape : ", nuc_signal.shape)
+        features += [np.mean(nuc_signal), np.median(nuc_signal), np.max(nuc_signal), np.min(nuc_signal)]
+
         features = [acquisition_id, cell_id, time_stamp, cell_bbox] + features
         
         result_frame = pd.concat([
@@ -402,7 +417,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, cell_label, n
     
     return result_frame
 
-def launch_segmentation(image) :
+def launch_segmentation(image: np.ndarray, user_parameters: dict) :
     """
     Ask user for necessary parameters and perform cell segmentation (cytoplasm + nucleus) with cellpose.
 
@@ -417,26 +432,30 @@ def launch_segmentation(image) :
     """
 
     #Default parameters
-    cyto_size = 30
-    cytoplasm_channel = 0
-    nucleus_size = 30
-    nucleus_channel = 0
+    cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
+    cyto_size = user_parameters.setdefault('cyto_size', 30)
+    cytoplasm_channel = user_parameters.setdefault('cytoplasm_channel', 0)
+    nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
+    nucleus_size = user_parameters.setdefault('nucleus_size', 30)
+    nucleus_channel = user_parameters.setdefault('nucleus_channel', 0)
     path = os.getcwd()
     show_segmentation = False
-    filename = 'cell_segmentation.png'
+    filename = user_parameters['filename'] + '_cell_segmentation.png'
     available_channels = list(range(image.shape[0]))
 
     #Ask user for parameters
     #if incorrect parameters --> set relaunch to True
     while True :
         layout = seg._segmentation_layout(
+            cytoplasm_model_preset = cyto_model_name,
             cytoplasm_channel_preset= cytoplasm_channel,
+            nucleus_model_preset = nucleus_model_name,
             nucleus_channel_preset= nucleus_channel,
             cyto_diameter_preset= cyto_size,
             nucleus_diameter_preset= nucleus_size,
             saving_path_preset= path,
             show_segmentation_preset=show_segmentation,
-            filename_preset=filename
+            filename_preset=filename,
         )
 
         event, values = prompt_with_help(layout, help='segmentation')
@@ -450,6 +469,7 @@ def launch_segmentation(image) :
 
         #Extract parameters
         values = seg._cast_segmentation_parameters(values)
+        do_only_nuc = values['Segment only nuclei']
         cyto_model_name = values['cyto_model_name']
         cyto_size = values['cytoplasm diameter']
         cytoplasm_channel = values['cytoplasm channel']
@@ -463,30 +483,32 @@ def launch_segmentation(image) :
         
         relaunch= False
         #Checking integrity of parameters
-        if type(cyto_model_name) != str :
+        if type(cyto_model_name) != str  and not do_only_nuc:
             sg.popup('Invalid cytoplasm model name.')
+            cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
             relaunch= True
-        if cytoplasm_channel not in available_channels :
+        if cytoplasm_channel not in available_channels and not do_only_nuc:
             sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
             relaunch= True
-            cytoplasm_channel = 0
+            cytoplasm_channel = user_parameters.setdefault('cytoplasm_channel',0)
 
-        if type(cyto_size) not in [int, float] :
+        if type(cyto_size) not in [int, float] and not do_only_nuc:
             sg.popup("Incorrect cytoplasm size.")
             relaunch= True
-            cyto_size = 30
+            cyto_size = user_parameters.setdefault('cyto_size', 30)
 
         if type(nucleus_model_name) != str :
             sg.popup('Invalid nucleus model name.')
+            nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
             relaunch= True
         if nucleus_channel not in available_channels :
             sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
             relaunch= True
-            nucleus_channel = 0
+            nucleus_channel = user_parameters.setdefault('nucleus_channel', 0)
         if type(nucleus_size) not in [int, float] :
             sg.popup("Incorrect nucleus size.")
             relaunch= True
-            nucleus_size = 30
+            nucleus_size = user_parameters.setdefault('nucleus_size', 30)
         
         if not relaunch : break
 
@@ -498,7 +520,7 @@ def launch_segmentation(image) :
         title= 'small_fish',
         layout= waiting_layout,
         grab_anywhere= True,
-        no_titlebar= True
+        no_titlebar= False
     )
 
     window.read(timeout= 30, close= False)
@@ -515,16 +537,19 @@ def launch_segmentation(image) :
             nucleus_model_name= nucleus_model_name,
             nucleus_diameter= nucleus_size,
             channels=channels,
+            do_only_nuc=do_only_nuc
             )
 
     finally  : window.close()
     if show_segmentation or type(output_path) != type(None) :
-        if image[cytoplasm_channel].ndim == 3 :
-            im_proj = stack.maximum_projection(image[cytoplasm_channel])
+        if do_only_nuc : im_proj = image[nucleus_channel]
         else : im_proj = image[cytoplasm_channel]
+        if im_proj.ndim == 3 :
+            im_proj = stack.maximum_projection(im_proj)
         plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
 
-    return cytoplasm_label, nucleus_label
+    user_parameters.update(values)
+    return cytoplasm_label, nucleus_label, user_parameters
 
 @add_default_loading
 def launch_clustering(spots, user_parameters): 
@@ -579,7 +604,14 @@ def launch_detection(
             print(channel_to_compute)
             print("type : ", type(channel_to_compute))
             print(image.shape)
+            nucleus_signal_channel = user_parameters.get('nucleus channel signal')
+            nucleus_signal = image[nucleus_signal_channel]
+            other_image = [image[c] for c in range(image.shape[0])]
+            del other_image[channel_to_compute]
             image = image[channel_to_compute]
+        else : 
+            other_image = []
+            nucleus_signal = image
 
         if is_time_stack : #initial time is t = 0.
             print("Starting step {0}".format(step))
@@ -611,15 +643,16 @@ def launch_detection(
                 cluster_size= user_parameters.get('cluster size'),
                 min_spot_number= user_parameters.setdefault('min number of spots', 0),
                 cell_label=cell_label,
-                nucleus_label=nucleus_label
+                nucleus_label=nucleus_label,
+                other_images=other_image
                 )
         
         user_parameters.update(post_detection_dict)
     
-    return image, user_parameters, spots, clusters, frame_results
+    return image, nucleus_signal, user_parameters, spots, clusters, frame_results
             
 
-def launch_features_computation(acquisition_id, image, dim, spots, clusters, nucleus_label, cell_label, user_parameters, frame_results, do_clustering) :
+def launch_features_computation(acquisition_id, image, nucleus_signal, dim, spots, clusters, nucleus_label, cell_label, user_parameters, frame_results, do_clustering) :
 
     dim = user_parameters['dim']
     result = pd.DataFrame()
@@ -638,6 +671,7 @@ def launch_features_computation(acquisition_id, image, dim, spots, clusters, nuc
             spots=spots,
             clusters=clusters,
             image=image,
+            nucleus_signal=nucleus_signal,
             cell_label= cell_label,
             nucleus_label=nucleus_label,
             user_parameters=user_parameters,

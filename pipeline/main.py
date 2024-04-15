@@ -23,17 +23,20 @@ user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map
 #Segmentation
 if do_segmentation and not is_time_stack:
     im_seg = reorder_image_stack(map, image_raw)
-    cytoplasm_label, nucleus_label = launch_segmentation(im_seg)
+    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
 
 else :
     cytoplasm_label, nucleus_label = None,None
 
 if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
     do_segmentation = False
+    user_parameters['segmentation_done'] = False
+
+else : user_parameters['segmentation_done'] = True
 
 #Detection
 while True and use_napari:
-    detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, map, image_raw.shape, user_parameters)
+    detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, user_parameters['segmentation_done'], map, image_raw.shape, user_parameters)
 
     if type(detection_parameters) != type(None) :
         user_parameters.update(detection_parameters) 
@@ -44,7 +47,7 @@ while True and use_napari:
     channel_to_compute = user_parameters.get('channel to compute')
     images_gen = prepare_image_detection(map, image_raw)
 
-    image, user_parameters, spots, clusters, frame_results = launch_detection(
+    image, nucleus_signal, user_parameters, spots, clusters, frame_results = launch_detection(
         images_gen=images_gen,
         user_parameters=user_parameters,
         multichannel=multichannel,
@@ -65,6 +68,7 @@ coloc_df = pd.DataFrame()
 res, cell_res = launch_features_computation(
     acquisition_id=acquisition_id,
     image=image,
+    nucleus_signal = nucleus_signal,
     dim=image.ndim,
     spots=spots,
     clusters=clusters,

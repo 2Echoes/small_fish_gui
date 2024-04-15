@@ -107,14 +107,18 @@ def bool_layout(parameters= [], header=None, preset=None) :
         layout = add_header(header, layout=layout)
     return layout
 
-def combo_layout(values, key, header=None, read_only=True) :
+def combo_layout(values, key, header=None, read_only=True, default_value=None) :
     """
     drop-down list
     """
     if len(values) == 0 : return []
     check_parameter(values= list, header= (str, type(None)))
+    if type(default_value) == type(None) :
+        default_value = values[0]
+    elif default_value not in values :
+        default_value = values[0]
     layout = [
-        sg.Combo(values, readonly=read_only, key=key)
+        sg.Combo(values, default_value=default_value, readonly=read_only, key=key)
     ]
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)

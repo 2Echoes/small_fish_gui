@@ -10,6 +10,12 @@ class FormatError(Exception):
 def open_image(full_path:str) :
     if full_path.endswith('.czi') : im = imread(full_path)
     else : im = read_image(full_path)
+
+    reshape = []
+    for axis in im.shape :
+        if axis != 1 : reshape.append(axis)
+    im = im.reshape(reshape)
+
     return im
 
 

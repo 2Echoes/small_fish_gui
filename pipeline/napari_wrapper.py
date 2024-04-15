@@ -69,7 +69,7 @@ def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cl
 
     return new_clusters
 
-def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_size=None, min_spot_number=0, cell_label= None, nucleus_label= None):
+def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_size=None, min_spot_number=0, cell_label= None, nucleus_label= None, other_images =[]):
     """
     Open Napari viewer for user to visualize and corrects spots, clusters.
 
@@ -97,14 +97,14 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     scale = compute_anisotropy_coef(voxel_size)
     try :
         Viewer = napari.Viewer(ndisplay=2, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
-        Viewer.add_image(image, scale=scale)
+        Viewer.add_image(image, scale=scale, name= "rna signal", blending= 'additive', colormap='red')
+        other_colors = ['green', 'blue', 'gray', 'cyan', 'bop orange', 'bop purple'] * ((len(other_images)-1 // 7) + 1)
+        for im, color in zip(other_images, other_colors) : Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color)
+        layer_offset = len(other_images)
 
-        #color prepartion
-        face_colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange', 'white']
-        
         Viewer.add_points(spots, size = 5, scale=scale, face_color= 'red', opacity= 0.33, symbol= 'ring', name= 'single spots') # spots
         if type(clusters) != type(None) : Viewer.add_points(clusters[:,:dim], size = 10, scale=scale, face_color= 'blue', opacity= 0.7, symbol= 'diamond', name= 'foci', features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, feature_defaults= {"spot_number" : 0, "id" : -1}) # cluster
-        if type(cell_label) != type(None) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
+        if type(cell_label) != type(None) and (cell_label != nucleus_label).all() : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
         if type(nucleus_label) != type(None) : Viewer.add_labels(nucleus_label, scale=scale, opacity= 0.2, blending= 'additive')
         
         #prepare cluster update
@@ -112,22 +112,22 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         if type(clusters) != type(None) : 
             next_cluster_id = clusters[-1,-1] + 1 if len(clusters) > 0 else 1
             _callback = Points_callback(points=clusters[:dim], next_id=next_cluster_id)
-            points_callback = Viewer.layers[2].events.data.connect((_callback, 'callback'))
+            points_callback = Viewer.layers[2 + layer_offset].events.data.connect((_callback, 'callback'))
         Viewer.show(block=False)
         napari.run()
         
 
-        new_spots = np.array(Viewer.layers[1].data, dtype= int)
+        new_spots = np.array(Viewer.layers[1 + layer_offset].data, dtype= int)
         print(
-            "\nmetadata : ", Viewer.layers[1].metadata,
-            "\ndata : ", Viewer.layers[1].data,
-            "\nfeatures : ", Viewer.layers[1].features
+            "\nmetadata : ", Viewer.layers[1 + layer_offset].metadata,
+            "\ndata : ", Viewer.layers[1 + layer_offset].data,
+            "\nfeatures : ", Viewer.layers[1 + layer_offset].features
         )
         if type(clusters) != type(None) :
             if len(clusters) > 0 : 
                 new_clusters = np.concatenate([
-                    np.array(Viewer.layers[2].data, dtype= int),
-                    np.array(Viewer.layers[2].features, dtype= int)
+                    np.array(Viewer.layers[2 + layer_offset].data, dtype= int),
+                    np.array(Viewer.layers[2 + layer_offset].features, dtype= int)
                 ],
                 axis= 1)
 
