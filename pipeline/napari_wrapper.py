@@ -102,13 +102,12 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         for im, color in zip(other_images, other_colors) : Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color)
         layer_offset = len(other_images)
 
-        Viewer.add_points(spots, size = 5, scale=scale, face_color= 'red', opacity= 0.33, symbol= 'ring', name= 'single spots') # spots
+        Viewer.add_points(spots, size = 5, scale=scale, face_color= 'green', opacity= 1, symbol= 'ring', name= 'single spots') # spots
         if type(clusters) != type(None) : Viewer.add_points(clusters[:,:dim], size = 10, scale=scale, face_color= 'blue', opacity= 0.7, symbol= 'diamond', name= 'foci', features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, feature_defaults= {"spot_number" : 0, "id" : -1}) # cluster
-        if type(cell_label) != type(None) and (cell_label != nucleus_label).all() : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
+        if type(cell_label) != type(None) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
         if type(nucleus_label) != type(None) : Viewer.add_labels(nucleus_label, scale=scale, opacity= 0.2, blending= 'additive')
         
         #prepare cluster update
-
         if type(clusters) != type(None) : 
             next_cluster_id = clusters[-1,-1] + 1 if len(clusters) > 0 else 1
             _callback = Points_callback(points=clusters[:dim], next_id=next_cluster_id)

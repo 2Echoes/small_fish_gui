@@ -180,7 +180,7 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
         layout += parameters_layout(['cluster size', 'min number of spots'], default_values=default_clustering)
 
     if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
-        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict['nucleus_channel'])]
+        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
         layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
     event, values = prompt_with_help(layout, help='detection')

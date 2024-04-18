@@ -35,7 +35,8 @@ if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
 else : user_parameters['segmentation_done'] = True
 
 #Detection
-while True and use_napari:
+
+while True :
     detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, user_parameters['segmentation_done'], map, image_raw.shape, user_parameters)
 
     if type(detection_parameters) != type(None) :
@@ -58,7 +59,9 @@ while True and use_napari:
         cell_label=cytoplasm_label,
         nucleus_label=nucleus_label
     )
-    if ask_detection_confirmation(user_parameters.get('threshold')) :
+    if use_napari :
+        if ask_detection_confirmation(user_parameters.get('threshold')) : break
+    else :
         break
 
 result_df = pd.DataFrame()
@@ -88,4 +91,13 @@ while True :
         "cell_result_df\n", cell_result_df,
         "coloc_df\n", coloc_df,
         )
-    result_df, cell_result_df, coloc_df, acquisition_id, user_parameters = hub(acquisition_id, result_df, cell_result_df, coloc_df, segmentation_done=do_segmentation, user_parameters=user_parameters, cell_label=cytoplasm_label, nucleus_label=nucleus_label)
+    result_df, cell_result_df, coloc_df, acquisition_id, user_parameters = hub(
+        acquisition_id, 
+        result_df, 
+        cell_result_df, 
+        coloc_df, 
+        segmentation_done=do_segmentation, 
+        user_parameters=user_parameters, 
+        cell_label=cytoplasm_label, 
+        nucleus_label=nucleus_label
+        )
