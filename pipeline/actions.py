@@ -87,7 +87,12 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
     event, values = hub_prompt(results, segmentation_done)
     try :
         if event == 'Save results' :
-            dic = output_image_prompt(filename=results.iloc[0].at['filename'])
+            if len(results) != 0 :
+                dic = output_image_prompt(filename=results.iloc[0].at['filename'])
+
+            else :
+                dic = None 
+
             if isinstance(dic, dict) :
                 path = dic['folder']
                 filename = dic['filename']
@@ -137,13 +142,11 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
                     do_segmentation = False
 
             #Detection preparation
-            while True and use_napari:
+            while True :
                 detection_parameters = initiate_detection(is_3D_stack, is_time_stack, multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, user_parameters['segmentation_done'], map, image_raw.shape, user_parameters)
 
                 if type(detection_parameters) != type(None) :
                     user_parameters.update(detection_parameters) 
-                else : #If user click cancel will close small fish
-                    quit()
 
                 time_step = user_parameters.get('time step')
                 use_napari = user_parameters['Napari correction']
@@ -161,8 +164,12 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
                     cell_label=cell_label,
                     nucleus_label=nucleus_label
                 )
-                if ask_detection_confirmation(user_parameters.get('threshold')) :
-                    acquisition_id +=1
+                if use_napari:
+                    if ask_detection_confirmation(user_parameters.get('threshold')) :
+                        acquisition_id +=1
+                        break
+                else :
+                    acquisition_id += 1
                     break
 
             #Detection
@@ -208,7 +215,8 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
             user_parameters['segmentation_done'] = False
 
     except Exception as error :
-        _error_popup(error)
+        sg.popup(str(error))
+
     
     return results, cell_results, coloc_df, acquisition_id, user_parameters
     

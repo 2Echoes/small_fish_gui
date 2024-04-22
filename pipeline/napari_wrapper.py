@@ -104,7 +104,7 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
 
         Viewer.add_points(spots, size = 5, scale=scale, face_color= 'green', opacity= 1, symbol= 'ring', name= 'single spots') # spots
         if type(clusters) != type(None) : Viewer.add_points(clusters[:,:dim], size = 10, scale=scale, face_color= 'blue', opacity= 0.7, symbol= 'diamond', name= 'foci', features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, feature_defaults= {"spot_number" : 0, "id" : -1}) # cluster
-        if type(cell_label) != type(None) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
+        if type(cell_label) != type(None) and np.array_equal(nucleus_label, cell_label) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
         if type(nucleus_label) != type(None) : Viewer.add_labels(nucleus_label, scale=scale, opacity= 0.2, blending= 'additive')
         
         #prepare cluster update
