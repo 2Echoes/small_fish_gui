@@ -83,7 +83,6 @@ def ask_input_parameters(ask_for_segmentation=True) :
     return values
 
 def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user_parameters, cell_label, nucleus_label) :
-    print(user_parameters.get('cyto_model_name'))
     event, values = hub_prompt(results, segmentation_done)
     try :
         if event == 'Save results' :
@@ -112,7 +111,11 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
                 ask_for_segmentation = False
             
             #Ask user
-            user_parameters.update(ask_input_parameters(ask_for_segmentation= ask_for_segmentation))
+            input_parameters = ask_input_parameters(ask_for_segmentation= ask_for_segmentation)
+            if type(input_parameters) == type(None) : #True when cancel is clicked
+                return results, cell_results, coloc_df, acquisition_id, user_parameters
+            else :
+                user_parameters.update()
 
             if type(user_parameters) == type(None) :
                return results, cell_results, coloc_df, acquisition_id
@@ -133,12 +136,12 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
                 #Segmentation
                 if do_segmentation and not is_time_stack:
                     im_seg = reorder_image_stack(map, image_raw)
-                    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
+                    cell_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
 
                 else :
-                    cytoplasm_label, nucleus_label = None,None
+                    cell_label, nucleus_label = None,None
 
-                if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
+                if type(cell_label) == type(None) or type(nucleus_label) == type(None) :
                     do_segmentation = False
 
             #Detection preparation
@@ -216,10 +219,11 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
 
     except Exception as error :
         sg.popup(str(error))
-
+        raise error
     
     return results, cell_results, coloc_df, acquisition_id, user_parameters
     
+
 def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, map, shape, default_dict={}) :
     while True :
         user_parameters = detection_parameters_promt(
@@ -443,10 +447,10 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
     while True : # Loop if show_segmentation 
         #Default parameters
         cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
-        cyto_size = user_parameters.setdefault('cyto size', 180)
+        cyto_size = user_parameters.setdefault('cytoplasm diameter', 180)
         cytoplasm_channel = user_parameters.setdefault('cytoplasm channel', 0)
         nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
-        nucleus_size = user_parameters.setdefault('nucleus size', 130)
+        nucleus_size = user_parameters.setdefault('nucleus diameter', 130)
         nucleus_channel = user_parameters.setdefault('nucleus channel', 0)
         path = os.getcwd()
         show_segmentation = False
@@ -576,8 +580,8 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
 
     user_parameters.update(values)
     print("after segmentation : ", user_parameters.get('cyto_model_name'))
-    print("after segmentation : ", user_parameters.get('cyto_model_name'))
-    print("after segmentation : ", user_parameters.get('nucleus_channel'))
+    print("after segmentation : ", user_parameters.get('nucleus_model_name'))
+    print("after segmentation : ", user_parameters.get('nucleus channel'))
     return cytoplasm_label, nucleus_label, user_parameters
 
 @add_default_loading

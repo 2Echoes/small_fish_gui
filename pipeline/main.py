@@ -91,6 +91,7 @@ while True :
         "cell_result_df\n", cell_result_df,
         "coloc_df\n", coloc_df,
         )
+    
     result_df, cell_result_df, coloc_df, acquisition_id, user_parameters = hub(
         acquisition_id, 
         result_df, 
