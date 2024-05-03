@@ -4,29 +4,42 @@ import PySimpleGUI as sg
 from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt, prompt_with_help
 
 class ParameterInputError(Exception) :
+    """
+    Raised when user inputs an incorrect parameter.
+    """
     pass
 
-def prepare_image_detection(map, image_stack) :
+class MappingError(ValueError) :
     """
-    Generator yielding one image at a time for analysis. 
-    Generator will have only one image if not time stack. 
-    Re-arrange axis to [t,c,z,y,x]
-    y,x are detected being the biggest dimensions
-    c is detected being the smallest dimmension
-    It can be hard to distinguish t and z : t will be the 1st element left in the list and z the 2nd. As in images formats t is usually the first dimension.
+    Raised when user inputs an incorrect image mapping.
+    """
+    def __init__(self, map ,*args: object) -> None:
+        super().__init__(*args)
+        self.map = map
 
-    Output
-    ------
-    Generator['np.ndarray']
-        one frame per iteration [c,z,y,x]
+    def get_map(self) :
+        return self.map
+
+def prepare_image_detection(map, user_parameters) :
     """
+    Return monochannel image for ready for spot detection; 
+    if image is already monochannel, nothing happens.
+    else : image is the image on which detection is performed, other_image are the other layer to show in Napari Viewer.
+    """
+    image = user_parameters['image']
+    image = reorder_image_stack(map, image) #
+    assert len(image.shape) != 5 , "Time stack not supported, should never be True"
     
-    image_stack = reorder_image_stack(map, image_stack) #
-    if len(image_stack.shape) == 5 : #is time stack
-        for image in image_stack :
-            yield image
+    if user_parameters['multichannel'] :
+        channel_to_compute = user_parameters['channel to compute']
+        image: np.ndarray = image[channel_to_compute]
+        other_image = image.copy()
+        del other_image[channel_to_compute]
+
     else :
-        yield image_stack
+        other_image = []
+
+    return image, other_image
 
 def reorder_image_stack(map, image_stack) :
     x = (int(map['x']),)
@@ -44,14 +57,6 @@ def reorder_image_stack(map, image_stack) :
     )
 
     return image_stack
-
-class MappingError(ValueError) :
-    def __init__(self, map ,*args: object) -> None:
-        super().__init__(*args)
-        self.map = map
-
-    def get_map(self) :
-        return self.map
 
 def map_channels(image: np.ndarray, is_3D_stack, is_time_stack, multichannel) :
     

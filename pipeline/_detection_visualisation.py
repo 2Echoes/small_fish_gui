@@ -1,3 +1,7 @@
+"""
+Contains Napari wrappers to visualise and correct spots/clusters.
+"""
+
 
 import numpy as np
 import scipy.ndimage as ndi

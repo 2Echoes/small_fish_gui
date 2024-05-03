@@ -1,8 +1,8 @@
 import PySimpleGUI as sg
 import os
-from inspect import getsourcefile
-from os.path import abspath
 from ..utils import check_parameter
+import cellpose.models as models
+from cellpose.core import use_gpu
 
 sg.theme('DarkAmber')
 
@@ -135,4 +135,34 @@ def radio_layout(values, header=None) :
     ]
     if isinstance(header, str) :
         layout = add_header(header, layout=layout)
+    return layout
+
+def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
+    
+    USE_GPU = use_gpu()
+
+    models_list = models.get_user_models() + models.MODEL_NAMES
+    if len(models_list) == 0 : models_list = ['no model found']
+    
+    #Header : GPU availabality
+    layout = [[sg.Text("GPU is currently "), sg.Text('ON', text_color= 'green') if USE_GPU else sg.Text('OFF', text_color= 'red')]]
+    
+    #cytoplasm parameters
+    layout += [add_header("Cell Segmentation", [sg.Text("Choose cellpose model for cytoplasm: \n")]),
+              [combo_layout(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
+                        ]
+    layout += [parameters_layout(['cytoplasm channel', 'cytoplasm diameter'], default_values= [cytoplasm_channel_preset, cyto_diameter_preset])]
+    #Nucleus parameters
+    layout += [
+            add_header("Nucleus segmentation",[sg.Text("Choose cellpose model for nucleus: \n")]),
+              combo_layout(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
+                ]
+    layout += [parameters_layout(['nucleus channel', 'nucleus diameter'], default_values= [nucleus_channel_preset, nucleus_diameter_preset])]
+    layout += [bool_layout(["Segment only nuclei"])]
+    
+    #Control plots
+    layout += [bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)]
+    layout += [path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)]
+    layout += [parameters_layout(['filename'], default_values=[filename_preset], size= 25)]
+
     return layout

@@ -1,15 +1,166 @@
+"""
+Contains cellpose wrappers to segmentate images.
+"""
+
 from cellpose.core import use_gpu
 from skimage.measure import label
-from ..gui.layout import parameters_layout, combo_layout, add_header, path_layout, bool_layout
+from ..gui.layout import _segmentation_layout
+from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
 
 import cellpose.models as models
 import numpy as np
 import bigfish.multistack as multistack
 import bigfish.stack as stack
+import bigfish.plot as plot
 import PySimpleGUI as sg
 import os
 
-USE_GPU = use_gpu()
+def launch_segmentation(image: np.ndarray, user_parameters: dict) :
+    """
+    Ask user for necessary parameters and perform cell segmentation (cytoplasm + nucleus) with cellpose.
+
+    Input
+    -----
+    Image : np.ndarray[c,z,y,x]
+        Image to use for segmentation.
+
+    Returns
+    -------
+        cytoplasm_label, nucleus_label
+    """
+
+    while True : # Loop if show_segmentation 
+        #Default parameters
+        cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
+        cyto_size = user_parameters.setdefault('cytoplasm diameter', 180)
+        cytoplasm_channel = user_parameters.setdefault('cytoplasm channel', 0)
+        nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
+        nucleus_size = user_parameters.setdefault('nucleus diameter', 130)
+        nucleus_channel = user_parameters.setdefault('nucleus channel', 0)
+        path = os.getcwd()
+        show_segmentation = False
+        filename = user_parameters['filename'] + '_cell_segmentation.png'
+        available_channels = list(range(image.shape[0]))
+
+
+    #Ask user for parameters
+    #if incorrect parameters --> set relaunch to True
+        while True :
+            layout = _segmentation_layout(
+                cytoplasm_model_preset = cyto_model_name,
+                cytoplasm_channel_preset= cytoplasm_channel,
+                nucleus_model_preset = nucleus_model_name,
+                nucleus_channel_preset= nucleus_channel,
+                cyto_diameter_preset= cyto_size,
+                nucleus_diameter_preset= nucleus_size,
+                saving_path_preset= path,
+                show_segmentation_preset=show_segmentation,
+                filename_preset=filename,
+            )
+
+            event, values = prompt_with_help(layout, help='segmentation')
+            if event == 'Cancel' :
+                cancel_segmentation = ask_cancel_segmentation()
+
+                if cancel_segmentation :
+                    return None, None
+                else : 
+                    continue
+
+            #Extract parameters
+            values = _cast_segmentation_parameters(values)
+            do_only_nuc = values['Segment only nuclei']
+            cyto_model_name = values['cyto_model_name']
+            cyto_size = values['cytoplasm diameter']
+            cytoplasm_channel = values['cytoplasm channel']
+            nucleus_model_name = values['nucleus_model_name']
+            nucleus_size = values['nucleus diameter']
+            nucleus_channel = values['nucleus channel']
+            path = values['saving path'] if values['saving path'] != '' else None
+            show_segmentation = values['show segmentation']
+            filename = values['filename'] if type(path) != type(None) else None
+            channels = [cytoplasm_channel, nucleus_channel]
+
+            relaunch= False
+            #Checking integrity of parameters
+            if type(cyto_model_name) != str  and not do_only_nuc:
+                sg.popup('Invalid cytoplasm model name.')
+                cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
+                relaunch= True
+            if cytoplasm_channel not in available_channels and not do_only_nuc:
+                sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+                relaunch= True
+                cytoplasm_channel = user_parameters.setdefault('cytoplasm_channel',0)
+
+            if type(cyto_size) not in [int, float] and not do_only_nuc:
+                sg.popup("Incorrect cytoplasm size.")
+                relaunch= True
+                cyto_size = user_parameters.setdefault('cyto_size', 30)
+
+            if type(nucleus_model_name) != str :
+                sg.popup('Invalid nucleus model name.')
+                nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
+                relaunch= True
+            if nucleus_channel not in available_channels :
+                sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
+                relaunch= True
+                nucleus_channel = user_parameters.setdefault('nucleus_channel', 0)
+            if type(nucleus_size) not in [int, float] :
+                sg.popup("Incorrect nucleus size.")
+                relaunch= True
+                nucleus_size = user_parameters.setdefault('nucleus_size', 30)
+
+            if not relaunch : break
+
+        #Launching segmentation
+        waiting_layout = [
+            [sg.Text("Running segmentation...")]
+        ]
+        window = sg.Window(
+            title= 'small_fish',
+            layout= waiting_layout,
+            grab_anywhere= True,
+            no_titlebar= False
+        )
+
+        window.read(timeout= 30, close= False)
+
+        try :
+            if type(path) != type(None) and filename != '':
+                output_path = path + '/' + filename
+            else :
+                output_path = None
+            cytoplasm_label, nucleus_label = cell_segmentation(
+                image,
+                cyto_model_name= cyto_model_name,
+                cyto_diameter= cyto_size,
+                nucleus_model_name= nucleus_model_name,
+                nucleus_diameter= nucleus_size,
+                channels=channels,
+                do_only_nuc=do_only_nuc
+                )
+
+        finally  : window.close()
+        if show_segmentation or type(output_path) != type(None) :
+            if do_only_nuc : im_proj = image[nucleus_channel]
+            else : im_proj = image[cytoplasm_channel]
+            if im_proj.ndim == 3 :
+                im_proj = stack.maximum_projection(im_proj)
+            plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
+        if show_segmentation :
+            layout = [
+                [sg.Text("Proceed with current segmentation ?")],
+                [sg.Button("Yes"), sg.Button("No")]
+            ]
+            
+            event, values = prompt(layout=layout, add_ok_cancel=False)
+            if event == "Yes" :
+                break
+        else :
+            break
+
+    user_parameters.update(values)
+    return cytoplasm_label, nucleus_label, user_parameters
 
 def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto_diameter, nucleus_diameter, do_only_nuc=False) :
 
@@ -44,7 +195,7 @@ def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto
 def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
 
     model = models.CellposeModel(
-        gpu= USE_GPU,
+        gpu= use_gpu(),
         model_type= model_name,
     )
 
@@ -58,34 +209,6 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
     label = remove_disjoint(label)
     
     return label
-
-def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
-
-    models_list = models.get_user_models() + models.MODEL_NAMES
-    if len(models_list) == 0 : models_list = ['no model found']
-    
-    #Header : GPU availabality
-    layout = [[sg.Text("GPU is currently "), sg.Text('ON', text_color= 'green') if USE_GPU else sg.Text('OFF', text_color= 'red')]]
-    
-    #cytoplasm parameters
-    layout += [add_header("Cell Segmentation", [sg.Text("Choose cellpose model for cytoplasm: \n")]),
-              [combo_layout(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
-                        ]
-    layout += [parameters_layout(['cytoplasm channel', 'cytoplasm diameter'], default_values= [cytoplasm_channel_preset, cyto_diameter_preset])]
-    #Nucleus parameters
-    layout += [
-            add_header("Nucleus segmentation",[sg.Text("Choose cellpose model for nucleus: \n")]),
-              combo_layout(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
-                ]
-    layout += [parameters_layout(['nucleus channel', 'nucleus diameter'], default_values= [nucleus_channel_preset, nucleus_diameter_preset])]
-    layout += [bool_layout(["Segment only nuclei"])]
-    
-    #Control plots
-    layout += [bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)]
-    layout += [path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)]
-    layout += [parameters_layout(['filename'], default_values=[filename_preset], size= 25)]
-
-    return layout
 
 def _cast_segmentation_parameters(values) :
 

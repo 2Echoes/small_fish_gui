@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 import pandas as pd
-import numpy as np
-from .layout import path_layout, parameters_layout, bool_layout, tuple_layout
+import os
+from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_layout, add_header
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
 
@@ -108,16 +108,37 @@ def input_image_prompt(
     return values
 
 def output_image_prompt(filename) :
-    try :
+    while True :
         layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
         layout += parameters_layout(["filename"], default_values= [filename + "_quantification"], size=25)
         layout += bool_layout(['Excel', 'Feather'])
         layout.append([sg.Button('Cancel')])
 
         event,values= prompt(layout)
-    except Exception as error: 
-        sg.popup('Error when saving files : {0}'.format(error))
-        event = 'Cancel'
+
+        values['filename'] = values['filename'].replace(".xlsx","")
+        values['filename'] = values['filename'].replace(".feather","")
+        excel_filename = values['filename'] + ".xlsx"
+        feather_filename = values['filename'] + ".feather"
+
+        if not values['Excel'] and not values['Feather'] :
+            sg.popup("Please check at least one box : Excel/Feather")
+            relaunch = True
+        elif not os.path.isdir(values['folder']) :
+            sg.popup("Incorrect folder")
+            relaunch = True
+        elif os.path.isfile(values['folder'] + excel_filename) and values['Excel']:
+            if ask_replace_file(excel_filename) :
+                pass
+            else :
+                relaunch = True
+        elif os.path.isfile(values['folder'] + feather_filename) and values['Feather']:
+            if ask_replace_file(feather_filename) :
+                pass
+            else :
+                relaunch = True
+
+        if not relaunch : break
 
     if event == ('Cancel') : return None
 
@@ -206,6 +227,16 @@ def events(event_list) :
     event, values = prompt(layout, add_ok_cancel= False)
     return event
 
+def ask_replace_file(filename:str) :
+    layout = [
+        [sg.Text("{0} already exists, replace ?")],
+        [sg.Button('Yes'), sg.Button('No')]
+    ]
+
+    event, values = prompt(layout, add_ok_cancel= False)
+
+    return event == 'Yes'
+
 def ask_cancel_segmentation() :
     layout = [
         [sg.Text("Cancel segmentation ?")],
@@ -236,9 +267,9 @@ def _warning_popup(warning:str) :
 def _sumup_df(results: pd.DataFrame) :
 
     if len(results) > 0 :
-        res = results.loc[:,['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute', 'time']]
+        res = results.loc[:,['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute']]
     else :
-        res = pd.DataFrame(columns= ['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute', 'time'])
+        res = pd.DataFrame(columns= ['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute'])
 
     return res
 
@@ -288,6 +319,19 @@ def ask_detection_confirmation(used_threshold) :
     event, value = prompt(layout, add_ok_cancel=False)
 
     if event == 'Restart detection' :
+        return False
+    else :
+        return True
+    
+def ask_cancel_detection() :
+    layout =[
+        [sg.Text("Cancel new detection and return to main window ?", font= 'bold 10')]
+        [sg.Button("Yes"), sg.Button("No")]
+    ]
+
+    event, value = prompt(layout, add_ok_cancel=False)
+
+    if event == 'No' :
         return False
     else :
         return True

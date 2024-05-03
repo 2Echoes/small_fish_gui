@@ -1,8 +1,11 @@
+from ._custom_errors import MissMatchError
+from ..gui import coloc_prompt, add_default_loading
+
 import numpy as np
+import pandas as pd
+import PySimpleGUI as sg
 from scipy.ndimage import distance_transform_edt
 from scipy.signal import fftconvolve
-
-from ._custom_errors import MissMatchError
 
 def reconstruct_boolean_signal(image_shape, spot_list: list):
     signal = np.zeros(image_shape, dtype= bool)
@@ -136,8 +139,6 @@ def spots_colocalisation(image_shape, spot_list1:list, spot_list2:list, distance
     else : 
         image_shape = image_shape[-2:]
 
-    print("shape of signal to reconstruct : ", image_shape)
-
     signal2 = reconstruct_boolean_signal(image_shape, spot_list2)
     mask = np.logical_not(signal2)
     distance_map = distance_transform_edt(mask, sampling= voxel_size)
@@ -150,3 +151,116 @@ def spots_colocalisation(image_shape, spot_list1:list, spot_list2:list, distance
         count = (distance_map[Y,X] <= distance).sum()
 
     return count
+
+
+   
+
+
+
+def initiate_colocalisation(result_tables) :
+    if len(result_tables) != 2 : 
+        sg.popup("Please select 2 acquisitions for colocalisation (Ctrl + click in the table)")
+        return False
+    else : 
+        while True :
+            colocalisation_distance = coloc_prompt()
+            if colocalisation_distance == False : return False
+            try : 
+                colocalisation_distance = int(colocalisation_distance)
+            except Exception :
+                sg.popup("Incorrect colocalisation distance")
+            else :
+                break
+        return colocalisation_distance
+
+@add_default_loading
+def launch_colocalisation(result_tables, result_dataframe, colocalisation_distance) :
+    """
+
+    Target :
+
+    - acquisition_couple
+    - colocalisation_distance
+    - spot1_total
+    - spot2_total
+    - fraction_spot1_coloc_spots
+    - fraction_spot2_coloc_spots
+    - fraction_spot1_coloc_clusters
+    - fraction_spot2_coloc_spots
+
+    """
+
+    acquisition1 = result_dataframe.iloc[result_tables[0]]
+    acquisition2 = result_dataframe.iloc[result_tables[1]]
+
+    voxel_size1 = acquisition1.at['voxel_size']
+    voxel_size2 = acquisition2.at['voxel_size']
+    shape1 = acquisition1.at['reordered_shape']
+    shape2 = acquisition2.at['reordered_shape']
+
+    if voxel_size1 != voxel_size2 : 
+        raise MissMatchError("voxel size 1 different than voxel size 2")
+    else :
+        voxel_size = voxel_size1
+
+    if shape1 != shape2 :
+        print(shape1)
+        print(shape2) 
+        raise MissMatchError("shape 1 different than shape 2")
+    else :
+        shape = shape1
+        print(shape1)
+        print(shape2)
+
+    acquisition_couple = (acquisition1.at['acquisition_id'], acquisition2.at['acquisition_id'])
+
+    spots1 = acquisition1['spots']
+    spots2 = acquisition2['spots']
+
+    spot1_total = len(spots1)
+    spot2_total = len(spots2)
+
+    try :
+        fraction_spots1_coloc_spots2 = spots_colocalisation(image_shape=shape, spot_list1=spots1, spot_list2=spots2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
+        fraction_spots2_coloc_spots1 = spots_colocalisation(image_shape=shape, spot_list1=spots2, spot_list2=spots1, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
+    except MissMatchError as e :
+        sg.popup(str(e))
+        fraction_spots1_coloc_spots2 = np.NaN
+        fraction_spots2_coloc_spots1 = np.NaN
+
+    if 'clusters' in acquisition1.index :
+        try : 
+            clusters1 = acquisition1['clusters'][:,:len(voxel_size)]
+            fraction_spots2_coloc_cluster1 = spots_colocalisation(image_shape=shape, spot_list1=spots2, spot_list2=clusters1, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
+        except MissMatchError as e :
+            sg.popup(str(e))
+            fraction_spots2_coloc_cluster1 = np.NaN
+
+    else : fraction_spots2_coloc_cluster1 = np.NaN
+
+    if 'clusters' in acquisition2.index :
+        try :
+            clusters2 = acquisition2['clusters'][:,:len(voxel_size)]
+            fraction_spots1_coloc_cluster2 = spots_colocalisation(image_shape=shape, spot_list1=spots1, spot_list2=clusters2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
+        except MissMatchError as e :
+            sg.popup(str(e))
+            fraction_spots1_coloc_cluster2 = np.NaN
+
+    else : fraction_spots1_coloc_cluster2 = np.NaN
+
+    coloc_df = pd.DataFrame({
+        "acquisition_couple" : [acquisition_couple],
+        "acquisition_id_1" : [acquisition_couple[0]],
+        "acquisition_id_2" : [acquisition_couple[1]],
+        "colocalisation_distance" : [colocalisation_distance],
+        "spot1_total" : [spot1_total],
+        "spot2_total" : [spot2_total],
+        'fraction_spots1_coloc_spots2' : [fraction_spots1_coloc_spots2],
+        'fraction_spots2_coloc_spots1' : [fraction_spots2_coloc_spots1],
+        'fraction_spots2_coloc_cluster1' : [fraction_spots2_coloc_cluster1],
+        'fraction_spots1_coloc_cluster2' : [fraction_spots1_coloc_cluster2],
+    })
+
+    print(coloc_df.loc[:,['fraction_spots1_coloc_spots2','fraction_spots2_coloc_spots1', 'fraction_spots2_coloc_cluster1', 'fraction_spots1_coloc_cluster2']])
+
+    return coloc_df

@@ -1,3 +1,8 @@
+"""
+Signal to noise wrapper from BigFish code.
+"""
+
+
 # ### SNR ###
 import bigfish.stack as stack
 import numpy as np
