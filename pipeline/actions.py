@@ -115,7 +115,7 @@ def hub(acquisition_id, results, cell_results, coloc_df, segmentation_done, user
             if type(input_parameters) == type(None) : #True when cancel is clicked
                 return results, cell_results, coloc_df, acquisition_id, user_parameters
             else :
-                user_parameters.update()
+                user_parameters.update(input_parameters)
 
             if type(user_parameters) == type(None) :
                return results, cell_results, coloc_df, acquisition_id
