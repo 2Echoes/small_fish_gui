@@ -6,7 +6,6 @@ from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
 from ._detection_visualisation import correct_spots, _update_clusters
-from .detection import compute_auto_threshold, cluster_detection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
 
@@ -256,23 +255,28 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
 
     return res
 
-def initiate_detection(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, map, shape, default_dict={}) :
+def initiate_detection(user_parameters, segmentation_done, map, shape) :
+    is_3D_stack= user_parameters['3D stack']
+    is_multichannel = user_parameters['multichannel']
+    do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
+    do_clustering = user_parameters['Cluster computation']
+    do_segmentation = user_parameters['Segmentation']
+    
     while True :
         user_parameters = detection_parameters_promt(
             is_3D_stack=is_3D_stack,
-            is_time_stack=is_time_stack,
             is_multichannel=is_multichannel,
             do_dense_region_deconvolution=do_dense_region_deconvolution,
             do_clustering=do_clustering,
             do_segmentation=do_segmentation,
             segmentation_done= segmentation_done,
-            default_dict=default_dict
+            default_dict=user_parameters
             )
         
         if type(user_parameters) == type(None) : return user_parameters
         try :
             user_parameters = convert_parameters_types(user_parameters)
-            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_time_stack, is_multichannel, segmentation_done, map, shape)
+            user_parameters = check_integrity(user_parameters, do_dense_region_deconvolution, is_multichannel, segmentation_done, map, shape)
         except ParameterInputError as error:
             sg.popup(error)
         else :
@@ -290,7 +294,6 @@ def _launch_detection(image, image_input_values: dict, time_stack_gen=None) :
     voxel_size = image_input_values['voxel_size']
     threshold = image_input_values.get('threshold')
     threshold_penalty = image_input_values.setdefault('threshold penalty', 1)
-    print('threshold penalty : ', threshold_penalty)
     spot_size = image_input_values.get('spot_size')
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
@@ -303,7 +306,6 @@ def _launch_detection(image, image_input_values: dict, time_stack_gen=None) :
             image_sample = image
     
         threshold = compute_auto_threshold(image_sample, voxel_size=voxel_size, spot_radius=spot_size) * threshold_penalty
-        print("auto threshold result : ", threshold)
     
     spots = detection.detect_spots(
         images= image,
@@ -516,11 +518,7 @@ def launch_detection(
     spots, post_detection_dict = launch_post_detection(image, spots, user_parameters)
     post_detection_dict['threshold'] = threshold
 
-    if user_parameters['use_napari'] :
-        if user_parameters['multichannel'] :
-            other_image = user_parameters['image']
-        else :
-            other_image = []
+    if user_parameters['Napari correction'] :
 
         spots, clusters = correct_spots(
             image, 
@@ -539,12 +537,12 @@ def launch_detection(
     return user_parameters, spots, clusters
             
 
-def launch_features_computation(acquisition_id, image, nucleus_signal, dim, spots, clusters, nucleus_label, cell_label, user_parameters) :
+def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters) :
 
     dim = image.ndim
     frame_results = dict()
             
-    if user_parameters['do_clustering'] : 
+    if user_parameters['Cluster computation'] : 
         frame_results['cluster_number'] = len(clusters)
         if dim == 3 :
             frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3]
@@ -576,11 +574,8 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, dim, spot
     frame_results['threshold'] = user_parameters['threshold']
 
     frame_results = pd.DataFrame(columns= frame_results.keys(), data= (frame_results.values(),))
-
-    result: pd.DataFrame = pd.concat([result, frame_results])
-    result_cell_frame: pd.DataFrame = pd.concat([result_cell_frame, cell_result_dframe])
         
-    return result, result_cell_frame
+    return frame_results, cell_result_dframe
 
 def _compute_clustered_spots_dataframe(clustered_spots) :
     if len(clustered_spots) == 0 : return pd.DataFrame(columns= ["id", "cluster_id", "z", "y", "x"])

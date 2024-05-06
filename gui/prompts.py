@@ -144,7 +144,7 @@ def output_image_prompt(filename) :
 
     else : return values
 
-def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, default_dict: dict) :
+def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, default_dict: dict) :
     """
 
     keys :
@@ -172,10 +172,6 @@ def detection_parameters_promt(is_3D_stack, is_time_stack, is_multichannel, do_d
     detection_parameters = ['threshold', 'threshold penalty']
     default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
     opt= [True, True]
-    if is_time_stack : 
-        detection_parameters += ['time step']
-        opt += [False]
-        default_detection += [default_dict.setdefault('time step', 1)]
     if is_multichannel : 
         detection_parameters += ['channel to compute']
         opt += [False]
@@ -273,9 +269,9 @@ def _sumup_df(results: pd.DataFrame) :
 
     return res
 
-def hub_prompt(fov_results_list:list, do_segmentation=False) :
+def hub_prompt(fov_results, do_segmentation=False) :
 
-    sumup_df = _sumup_df(fov_results_list)
+    sumup_df = _sumup_df(fov_results)
     
     if do_segmentation :
         segmentation_object = sg.Text('Segmentation was performed', font='8', text_color= 'green')
@@ -325,7 +321,7 @@ def ask_detection_confirmation(used_threshold) :
     
 def ask_cancel_detection() :
     layout =[
-        [sg.Text("Cancel new detection and return to main window ?", font= 'bold 10')]
+        [sg.Text("Cancel new detection and return to main window ?", font= 'bold 10')],
         [sg.Button("Yes"), sg.Button("No")]
     ]
 

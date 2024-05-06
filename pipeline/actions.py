@@ -1,4 +1,4 @@
-from ..gui.prompts import output_image_prompt, hub_prompt, coloc_prompt, ask_detection_confirmation, ask_cancel_detection, prompt
+from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection
 from ..interface.output import save_results
 from ._preprocess import map_channels, prepare_image_detection, reorder_shape, reorder_image_stack
 from .detection import ask_input_parameters, initiate_detection, launch_detection, launch_features_computation, get_nucleus_signal
@@ -18,8 +18,8 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
 
     #Ask for image parameters
     new_parameters = ask_input_parameters(ask_for_segmentation= not segmentation_done) #The image is open and stored inside user_parameters
-    if type(user_parameters) == type(None) : #if user clicks 'Cancel'
-        return new_results_df, new_cell_results_df, acquisition_id, user_parameters
+    if type(new_parameters) == type(None) : #if user clicks 'Cancel'
+        return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done,cytoplasm_label, nucleus_label
     else :
         user_parameters.update(new_parameters)
 
@@ -28,7 +28,7 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
 
 
     #Segmentation
-    if user_parameters['do_segmentation'] and not segmentation_done:
+    if user_parameters['Segmentation'] and not segmentation_done:
         im_seg = reorder_image_stack(map, user_parameters)
         cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
 
@@ -36,21 +36,26 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
         cytoplasm_label, nucleus_label = None,None
 
     if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
-        user_parameters['do_segmentation'] = False
+        user_parameters['Segmentation'] = False
         segmentation_done = False
 
     else : segmentation_done = True
 
     #Detection
     while True : # This loop allow user to try detection with different thresholds or parameters before launching features computation
-        detection_parameters = initiate_detection(user_parameters, map,)
+        detection_parameters = initiate_detection(
+            user_parameters,
+            segmentation_done,
+            map= map,
+            shape = user_parameters['image'].shape
+            )
 
         if type(detection_parameters) != type(None) :
             user_parameters.update(detection_parameters) 
         else : #If user clicks cancel
-            cancel = ask_cancel_detection
+            cancel = ask_cancel_detection()
             if cancel : 
-                return new_results_df, new_cell_results_df, acquisition_id, user_parameters
+                return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
             else : continue
 
         acquisition_id += 1
@@ -63,24 +68,23 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
             cell_label=cytoplasm_label,
             nucleus_label=nucleus_label
         )
-        if user_parameters['use_napari'] :
+        if user_parameters['Napari correction'] :
             if ask_detection_confirmation(user_parameters.get('threshold')) : break
         else :
             break
         
-        #Features computation
-        new_results_df, new_cell_results_df = launch_features_computation(
-        acquisition_id=acquisition_id,
-        image=image,
-        nucleus_signal = nucleus_signal,
-        spots=spots,
-        clusters=clusters,
-        nucleus_label = nucleus_label,
-        cell_label= cytoplasm_label,
-        user_parameters=user_parameters,
-        )
-
-        return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done
+    #Features computation
+    new_results_df, new_cell_results_df = launch_features_computation(
+    acquisition_id=acquisition_id,
+    image=image,
+    nucleus_signal = nucleus_signal,
+    spots=spots,
+    clusters=clusters,
+    nucleus_label = nucleus_label,
+    cell_label= cytoplasm_label,
+    user_parameters=user_parameters,
+    )
+    return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
 
 def save_results(result_df, cell_result_df, coloc_df) :
     if len(result_df) != 0 :

@@ -63,7 +63,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 cancel_segmentation = ask_cancel_segmentation()
 
                 if cancel_segmentation :
-                    return None, None
+                    return None, None, user_parameters
                 else : 
                     continue
 

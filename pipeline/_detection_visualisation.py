@@ -49,7 +49,6 @@ class Points_callback :
                 self.next_id += 1
 
             #preparing next callback
-            print(features)
             self.points = new_points
             self._set_callback()
         self.callback = callback
@@ -58,9 +57,6 @@ def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cl
     if len(new_clusters) == 0 : return new_clusters
     if len(spots) == 0 : return new_clusters
     assert len(new_clusters[0]) == 4 or len(new_clusters[0]) == 5, "Wrong number of coordinates for clusters should not happen."
-    
-    
-    print("len de clusters : ", len(new_clusters))
     
     # Update spots clusters
     if len(voxel_size) == 3 :
@@ -81,7 +77,6 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     -------
         new_spots,new_clusters
     """
-    print("type clusters ",type(clusters))
     check_parameter(image= np.ndarray, voxel_size= (tuple,list))
     dim = len(voxel_size)
 
@@ -103,7 +98,8 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         Viewer = napari.Viewer(ndisplay=2, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
         Viewer.add_image(image, scale=scale, name= "rna signal", blending= 'additive', colormap='red')
         other_colors = ['green', 'blue', 'gray', 'cyan', 'bop orange', 'bop purple'] * ((len(other_images)-1 // 7) + 1)
-        for im, color in zip(other_images, other_colors) : Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color)
+        for im, color in zip(other_images, other_colors) : 
+            Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color)
         layer_offset = len(other_images)
 
         Viewer.add_points(spots, size = 5, scale=scale, face_color= 'green', opacity= 1, symbol= 'ring', name= 'single spots') # spots
@@ -121,11 +117,7 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         
 
         new_spots = np.array(Viewer.layers[1 + layer_offset].data, dtype= int)
-        print(
-            "\nmetadata : ", Viewer.layers[1 + layer_offset].metadata,
-            "\ndata : ", Viewer.layers[1 + layer_offset].data,
-            "\nfeatures : ", Viewer.layers[1 + layer_offset].features
-        )
+
         if type(clusters) != type(None) :
             if len(clusters) > 0 : 
                 new_clusters = np.concatenate([

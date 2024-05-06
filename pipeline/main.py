@@ -20,7 +20,7 @@ while True : #Break this loop to close small_fish
 
         if event == 'Add detection' :
 
-            new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_done =  add_detection(
+            new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_don, cytoplasm_label, nucleus_label =  add_detection(
                 user_parameters=user_parameters,
                 segmentation_done=segmentation_done,
                 acquisition_id=acquisition_id,
@@ -58,6 +58,22 @@ while True : #Break this loop to close small_fish
             cytoplasm_label = None
             nucleus_label = None
 
+        elif event == "Reset segmentation" :
+        #TODO
+            pass
+
+        elif event == "Delete acquisitions" :
+        #TODO
+            pass
+
+        elif event == "Batch detection" :
+        #TODO
+            pass
+        
+        else :
+            break
+
     except Exception as error :
         sg.popup(str(error))
         raise error
+quit()

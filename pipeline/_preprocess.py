@@ -26,22 +26,23 @@ def prepare_image_detection(map, user_parameters) :
     if image is already monochannel, nothing happens.
     else : image is the image on which detection is performed, other_image are the other layer to show in Napari Viewer.
     """
-    image = user_parameters['image']
-    image = reorder_image_stack(map, image) #
+    image = reorder_image_stack(map, user_parameters)
     assert len(image.shape) != 5 , "Time stack not supported, should never be True"
     
     if user_parameters['multichannel'] :
         channel_to_compute = user_parameters['channel to compute']
-        image: np.ndarray = image[channel_to_compute]
         other_image = image.copy()
-        del other_image[channel_to_compute]
+        other_image = np.delete(other_image, channel_to_compute, axis=0)
+        other_image = [layer for layer in other_image]
+        image: np.ndarray = image[channel_to_compute]
 
     else :
         other_image = []
 
     return image, other_image
 
-def reorder_image_stack(map, image_stack) :
+def reorder_image_stack(map, user_parameters) :
+    image_stack = user_parameters['image']
     x = (int(map['x']),)
     y = (int(map['y']),)
     z = (int(map['z']),) if type(map.get('z')) != type(None) else ()
@@ -58,8 +59,13 @@ def reorder_image_stack(map, image_stack) :
 
     return image_stack
 
-def map_channels(image: np.ndarray, is_3D_stack, is_time_stack, multichannel) :
+def map_channels(user_parameters) :
     
+    image = user_parameters['image']
+    is_3D_stack = user_parameters['3D stack']
+    is_time_stack = user_parameters['time stack']
+    multichannel = user_parameters['multichannel']
+
     try : 
         map = _auto_map_channels(image, is_3D_stack, is_time_stack, multichannel)
     except MappingError as e :
@@ -138,7 +144,6 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
 
         #Check integrity
         channels_values = np.array(list(map.values()), dtype= int)
-        print(channels_values)
         total_channels = len(map)
         unique_channel = len(np.unique(channels_values))
         if total_channels != unique_channel :
@@ -209,7 +214,7 @@ def convert_parameters_types(values:dict) :
 
     return values
 
-def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, multichannel,segmentation_done, map, shape):
+def check_integrity(values: dict, do_dense_region_deconvolution, multichannel,segmentation_done, map, shape):
     """
     Checks that parameters given in input by user are fit to be used for bigfish detection.
     """
@@ -228,13 +233,6 @@ def check_integrity(values: dict, do_dense_region_deconvolution, is_time_stack, 
         if type(values['gamma']) == type(None) and not isinstance(values['deconvolution_kernel'], (list, tuple)):
             _warning_popup('No gamma found; image will not be denoised before deconvolution.')
             values['gamma'] = 0
-    
-    #time
-    if is_time_stack :
-        if type(values['time step']) == type(None) :
-            raise ParameterInputError("Incorrect time_step.")
-        elif values['time step'] == 0 :
-            raise ParameterInputError("Incorrect time_step, must be > 0.")
 
     #channel
     if multichannel :
@@ -270,7 +268,5 @@ def reorder_shape(shape, map) :
     new_shape = tuple(
         np.array(shape)[source]
     )
-
-    print("new_shape : ", new_shape)
 
     return new_shape
