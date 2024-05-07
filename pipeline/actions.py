@@ -61,7 +61,7 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
         acquisition_id += 1
         image, other_image = prepare_image_detection(map, user_parameters) 
         nucleus_signal = get_nucleus_signal(image, user_parameters)
-        user_parameters, spots, clusters = launch_detection(
+        user_parameters, frame_result, spots, clusters = launch_detection(
             image,
             other_image,
             user_parameters,
@@ -83,6 +83,7 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
     nucleus_label = nucleus_label,
     cell_label= cytoplasm_label,
     user_parameters=user_parameters,
+    frame_results=frame_result,
     )
     return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
 

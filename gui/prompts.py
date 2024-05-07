@@ -182,19 +182,21 @@ def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_dec
     if dim == 2 : tuple_shape = ('y','x')
     else : tuple_shape = ('z','y','x')
     opt = {'voxel_size' : False, 'spot_size' : False, 'log_kernel_size' : True, 'minimum_distance' : True}
+    unit = {'voxel_size' : 'nm', 'minimum_distance' : 'nm', 'spot_size' : 'radius(nm)', 'log_kernel_size' : 'px'}
 
-    layout += tuple_layout(opt=opt, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
+    layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
 
     #Deconvolution
     if do_dense_region_deconvolution :
-        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1), default_dict.setdefault('gamma',5)]
-        layout += parameters_layout(['alpha', 'beta', 'gamma'], default_values= default_dense_regions_deconvolution, header= 'Dense regions deconvolution')
-        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
+        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
+        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'Dense regions deconvolution')
+        layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',5)])
+        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, unit= {"deconvolution_kernel" : 'px'}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
     
     #Clustering
     if do_clustering :
-        default_clustering = [default_dict.setdefault('cluster size',400), default_dict.setdefault('min number of spots', 5)]
-        layout += parameters_layout(['cluster size', 'min number of spots'], default_values=default_clustering)
+        layout += parameters_layout(['cluster size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster size',400)])
+        layout += parameters_layout(['min number of spots'], default_values=[default_dict.setdefault('min number of spots', 5)])
 
     if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
         default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
@@ -281,7 +283,8 @@ def hub_prompt(fov_results, do_segmentation=False) :
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
-        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Save results'), sg.Button('Reset results')]
+        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
+        [sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
     ]
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))

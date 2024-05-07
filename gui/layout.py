@@ -17,7 +17,7 @@ def pad_right(string, length, pad_char) :
     else : return string + pad_char* (length - len(string))
     
 
-def parameters_layout(parameters:'list[str]' = [], header= None, default_values=None, size=5, opt=None) :
+def parameters_layout(parameters:'list[str]' = [], unit=None, header= None, default_values=None, size=5, opt=None) :
 
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header = (str, type(None)))
@@ -32,17 +32,28 @@ def parameters_layout(parameters:'list[str]' = [], header= None, default_values=
     if isinstance(default_values, (list, tuple)) :
         if len(default_values) != len(parameters) : raise ValueError("if default values specified it must be of equal length as parameters.")
         layout= [
-            [sg.Text("{0}".format(pad_right(parameter, max_length, ' ')), text_color= 'green' if option else None), sg.InputText(size= size, key= parameter, default_text= value)] for parameter,value, option in zip(parameters,default_values, opt)
+            [sg.Text("{0}".format(pad_right(parameter, max_length, ' ')), text_color= 'green' if option else None), 
+             sg.InputText(size= size, key= parameter, default_text= value)
+             
+             ] for parameter,value, option in zip(parameters,default_values, opt)
         ]
     else :
         layout= [
-            [sg.Text("{0}".format(pad_right(parameter, max_length, ' ')), text_color= 'green' if option else None), sg.InputText(size= size, key= parameter)] for parameter, option in zip(parameters, opt)
+            [sg.Text("{0}".format(pad_right(parameter, max_length, ' ')), text_color= 'green' if option else None), 
+             sg.InputText(size= size, key= parameter)
+             
+             ] for parameter, option in zip(parameters, opt)
         ]
+    
+    if type(unit) == str :
+        for line_id, line in enumerate(layout) :
+            layout[line_id] += [sg.Text('{0}'.format(unit))]
+    
     if isinstance(header, str) :
         layout = add_header(header, layout)
     return layout
 
-def tuple_layout(opt=None, default_dict={}, **tuples) :
+def tuple_layout(opt=None, default_dict={}, unit:dict={}, **tuples) :
     """
     tuples example : voxel_size = ['z','y','x']; will ask a tuple with 3 element default to 'z', 'y' 'x'.
     """
@@ -63,7 +74,10 @@ def tuple_layout(opt=None, default_dict={}, **tuples) :
     max_size = len(max(tuples.keys(), key=len))
     
     layout = [
-        [sg.Text(pad_right(tup, max_size, ' '), text_color= 'green' if opt[option] else None)] + [sg.InputText(default_text=default_dict.setdefault('{0}_{1}'.format(tup,elmnt), elmnt),key= '{0}_{1}'.format(tup, elmnt), size= 5) for elmnt in tuples[tup]] for tup,option in zip(tuples,opt)
+        [sg.Text(pad_right(tup, max_size, ' '), text_color= 'green' if opt[option] else None)] 
+        + [sg.InputText(default_text=default_dict.setdefault('{0}_{1}'.format(tup,elmnt), elmnt),key= '{0}_{1}'.format(tup, elmnt), size= 5) for elmnt in tuples[tup]]
+        + [sg.Text(unit.setdefault(tup,''))] 
+        for tup,option, in zip(tuples,opt)
     ]
 
     return layout
@@ -137,7 +151,7 @@ def radio_layout(values, header=None) :
         layout = add_header(header, layout=layout)
     return layout
 
-def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
+def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, segment_only_nuclei_preset=False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
     
     USE_GPU = use_gpu()
 
@@ -151,14 +165,16 @@ def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 
     layout += [add_header("Cell Segmentation", [sg.Text("Choose cellpose model for cytoplasm: \n")]),
               [combo_layout(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
                         ]
-    layout += [parameters_layout(['cytoplasm channel', 'cytoplasm diameter'], default_values= [cytoplasm_channel_preset, cyto_diameter_preset])]
+    layout += [parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])]
+    layout += [parameters_layout(['cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset])]
     #Nucleus parameters
     layout += [
             add_header("Nucleus segmentation",[sg.Text("Choose cellpose model for nucleus: \n")]),
               combo_layout(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
                 ]
-    layout += [parameters_layout(['nucleus channel', 'nucleus diameter'], default_values= [nucleus_channel_preset, nucleus_diameter_preset])]
-    layout += [bool_layout(["Segment only nuclei"])]
+    layout += [parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])]
+    layout += [parameters_layout([ 'nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset])]
+    layout += [bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset)]
     
     #Control plots
     layout += [bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)]

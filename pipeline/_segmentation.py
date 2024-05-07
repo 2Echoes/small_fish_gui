@@ -38,7 +38,8 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
         nucleus_size = user_parameters.setdefault('nucleus diameter', 130)
         nucleus_channel = user_parameters.setdefault('nucleus channel', 0)
         path = os.getcwd()
-        show_segmentation = False
+        show_segmentation = user_parameters.setdefault('show segmentation', False)
+        segment_only_nuclei = user_parameters.setdefault('Segment only nuclei', False)
         filename = user_parameters['filename'] + '_cell_segmentation.png'
         available_channels = list(range(image.shape[0]))
 
@@ -55,6 +56,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 nucleus_diameter_preset= nucleus_size,
                 saving_path_preset= path,
                 show_segmentation_preset=show_segmentation,
+                segment_only_nuclei_preset=segment_only_nuclei,
                 filename_preset=filename,
             )
 
@@ -85,31 +87,32 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
             #Checking integrity of parameters
             if type(cyto_model_name) != str  and not do_only_nuc:
                 sg.popup('Invalid cytoplasm model name.')
-                cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
+                values['cyto_model_name'] = user_parameters.setdefault('cyto_model_name', 'cyto2')
                 relaunch= True
             if cytoplasm_channel not in available_channels and not do_only_nuc:
                 sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
                 relaunch= True
-                cytoplasm_channel = user_parameters.setdefault('cytoplasm_channel',0)
+                values['cytoplasm channel'] = user_parameters.setdefault('cytoplasm channel',0)
 
             if type(cyto_size) not in [int, float] and not do_only_nuc:
                 sg.popup("Incorrect cytoplasm size.")
                 relaunch= True
-                cyto_size = user_parameters.setdefault('cyto_size', 30)
+                values['cytoplasm diameter'] = user_parameters.setdefault('diameter', 30)
 
             if type(nucleus_model_name) != str :
                 sg.popup('Invalid nucleus model name.')
-                nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
+                values['nucleus_model_name'] = user_parameters.setdefault('nucleus_model_name', 'nuclei')
                 relaunch= True
             if nucleus_channel not in available_channels :
                 sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
                 relaunch= True
-                nucleus_channel = user_parameters.setdefault('nucleus_channel', 0)
+                values['nucleus channel'] = user_parameters.setdefault('nucleus_channel', 0)
             if type(nucleus_size) not in [int, float] :
                 sg.popup("Incorrect nucleus size.")
                 relaunch= True
-                nucleus_size = user_parameters.setdefault('nucleus_size', 30)
+                values['nucleus diameter'] = user_parameters.setdefault('nucleus diameter', 30)
 
+            user_parameters.update(values)
             if not relaunch : break
 
         #Launching segmentation

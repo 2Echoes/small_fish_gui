@@ -20,7 +20,7 @@ while True : #Break this loop to close small_fish
 
         if event == 'Add detection' :
 
-            new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_don, cytoplasm_label, nucleus_label =  add_detection(
+            new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label =  add_detection(
                 user_parameters=user_parameters,
                 segmentation_done=segmentation_done,
                 acquisition_id=acquisition_id,
@@ -28,7 +28,7 @@ while True : #Break this loop to close small_fish
                 nucleus_label = nucleus_label,
                 )
             result_df = pd.concat([result_df, new_result_df], axis=0)
-            result_df = pd.concat([cell_result_df, new_cell_result_df], axis=0)
+            cell_result_df = pd.concat([cell_result_df, new_cell_result_df], axis=0)
 
         elif event == 'Save results' :
             save_results(
@@ -59,8 +59,9 @@ while True : #Break this loop to close small_fish
             nucleus_label = None
 
         elif event == "Reset segmentation" :
-        #TODO
-            pass
+            segmentation_done = False
+            cytoplasm_label = None
+            nucleus_label = None
 
         elif event == "Delete acquisitions" :
         #TODO

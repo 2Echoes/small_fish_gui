@@ -499,8 +499,17 @@ def launch_detection(
     --> cell extractions
     --> cell features computations
     
+    RETURNS
+    -------
+        user_parameters : dict
+        spots : np.ndarray
+        clusters : np.ndarray
+
+    USER_PARAMETERS UPDATE
+    ----------------------
+        'threshold'
     """
-    
+    fov_result = {}
     do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
     do_clustering = user_parameters['Cluster computation']
 
@@ -516,7 +525,7 @@ def launch_detection(
     else : clusters = None
 
     spots, post_detection_dict = launch_post_detection(image, spots, user_parameters)
-    post_detection_dict['threshold'] = threshold
+    user_parameters['threshold'] = threshold
 
     if user_parameters['Napari correction'] :
 
@@ -532,15 +541,14 @@ def launch_detection(
             other_images=other_image
             )
         
-    user_parameters.update(post_detection_dict)
+    fov_result.update(post_detection_dict)
     
-    return user_parameters, spots, clusters
+    return user_parameters, fov_result, spots, clusters
             
 
-def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters) :
+def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters, frame_results) :
 
     dim = image.ndim
-    frame_results = dict()
             
     if user_parameters['Cluster computation'] : 
         frame_results['cluster_number'] = len(clusters)
