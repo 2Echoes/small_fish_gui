@@ -4,3 +4,26 @@
 Cell segmentation is peformed using *cellpose* (published work) : https://github.com/MouseLand/cellpose
 
 Spot detection is performed via big-fish (published work) : https://github.com/fish-quant/big-fish
+
+Note that time stacks are not yet supported.
+
+# Installation
+
+It is higly recommanded to create a specific [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual](https://docs.python.org/3.6/library/venv.html) environnement to install small fish.
+
+```bash
+conda create -n small_fish python=3.8
+activate bigfish_env
+```
+Then download the package
+
+# Run Small fish
+
+First activate your python environnement : 
+```bash
+activate bigfish_env
+```
+Then launch Small fish : 
+```bash
+python -m small_fish
+```
