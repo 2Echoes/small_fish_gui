@@ -284,7 +284,8 @@ def hub_prompt(fov_results, do_segmentation=False) :
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
         [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
-        [sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
+        # [sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
+        [sg.Button('Save results', button_color= 'green'), sg.Button('Reset results',button_color= 'gray')]
     ]
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))

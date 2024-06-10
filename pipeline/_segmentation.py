@@ -160,8 +160,17 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
             if event == "Yes" :
                 break
         else :
-            break
+            if cytoplasm_label.max() == 0 : #No cell segmented
+                layout = [
+                [sg.Text("No cell segmented. Proceed anyway ?")],
+                [sg.Button("Yes"), sg.Button("No")]
+            ]
+            event, values = prompt(layout=layout, add_ok_cancel=False)
+            if event == "Yes" :
+                return None, None, user_parameters
 
+            break
+        
     user_parameters.update(values)
     return cytoplasm_label, nucleus_label, user_parameters
 
