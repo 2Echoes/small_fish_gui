@@ -3,7 +3,7 @@
 
 Cell segmentation is peformed using *cellpose* (published work) : https://github.com/MouseLand/cellpose
 
-Spot detection is performed via big-fish (published work) : https://github.com/fish-quant/big-fish
+Spot detection is performed via *big-fish* (published work) : https://github.com/fish-quant/big-fish
 
 Time stacks are not yet supported.
 
@@ -13,15 +13,23 @@ It is higly recommanded to create a specific [conda](https://docs.conda.io/proje
 
 ```bash
 conda create -n small_fish python=3.8
-activate bigfish_env
+activate small_fish
 ```
-Then download the package
+Then download the small_fish package : 
+```bash
+pip install small_fish
+```
+<b> (Recommended) </b> Results visualisation is achieved through *Napari* which you can install with :
+
+```bash
+pip install napari[all]
+```
 
 ## Run Small fish
 
 First activate your python environnement : 
 ```bash
-activate bigfish_env
+activate small_fish
 ```
 Then launch Small fish : 
 ```bash
