@@ -401,16 +401,17 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
     )
 
     #BigFish features
-    features_names = ['acquisition_id', 'cell_id', 'cell_bbox'] + classification.get_features_name(
-        names_features_centrosome=False,
-        names_features_area=True,
-        names_features_dispersion=True,
-        names_features_distance=True,
-        names_features_foci=do_clustering,
-        names_features_intranuclear=True,
-        names_features_protrusion=False,
-        names_features_topography=True
-    )
+    with np.errstate(all='ignore', divide= 'ignore', invalid= 'ignore') :
+        features_names = ['acquisition_id', 'cell_id', 'cell_bbox'] + classification.get_features_name(
+            names_features_centrosome=False,
+            names_features_area=True,
+            names_features_dispersion=True,
+            names_features_distance=True,
+            names_features_foci=do_clustering,
+            names_features_intranuclear=True,
+            names_features_protrusion=False,
+            names_features_topography=True
+        )
 
     #Nucleus features : area is computed in bigfish
     features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
@@ -621,6 +622,8 @@ def get_nucleus_signal(image, other_images, user_parameters) :
     if user_parameters['multichannel'] :
         rna_signal_channel = user_parameters['channel to compute']
         nucleus_signal_channel = user_parameters['nucleus channel signal']
+        if type(nucleus_signal_channel) == type(None) :
+            return np.zeros(shape=image.shape)
 
         if rna_signal_channel == nucleus_signal_channel :
             nucleus_signal == image
