@@ -40,7 +40,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
         path = os.getcwd()
         show_segmentation = user_parameters.setdefault('show segmentation', False)
         segment_only_nuclei = user_parameters.setdefault('Segment only nuclei', False)
-        filename = user_parameters['filename'] + '_cell_segmentation.png'
+        filename = user_parameters['filename']
         available_channels = list(range(image.shape[0]))
 
 
@@ -131,8 +131,14 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
         try :
             if type(path) != type(None) and filename != '':
                 output_path = path + '/' + filename
+                nuc_path = output_path + "_nucleus_segmentation"
+                cyto_path = output_path + "_cytoplasm_segmentation"
             else :
                 output_path = None
+                nuc_path = None
+                cyto_path = None
+
+
             cytoplasm_label, nucleus_label = cell_segmentation(
                 image,
                 cyto_model_name= cyto_model_name,
@@ -145,11 +151,17 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
 
         finally  : window.close()
         if show_segmentation or type(output_path) != type(None) :
-            if do_only_nuc : im_proj = image[nucleus_channel]
-            else : im_proj = image[cytoplasm_channel]
+            nuc_proj = image[nucleus_channel]
+            im_proj = image[cytoplasm_channel]
             if im_proj.ndim == 3 :
                 im_proj = stack.maximum_projection(im_proj)
-            plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=output_path)
+            if nuc_proj.ndim == 3 :
+                nuc_proj = stack.maximum_projection(nuc_proj)
+            plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=None, title= "Nucleus segmentation (blue)", remove_frame=False,)
+            if type(nuc_path) != type(None) : plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
+            if not do_only_nuc : 
+                plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=False)
+                if type(cyto_path) != type(None) : plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=True)
         if show_segmentation :
             layout = [
                 [sg.Text("Proceed with current segmentation ?")],
