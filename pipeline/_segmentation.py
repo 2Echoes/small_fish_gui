@@ -165,9 +165,9 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 [sg.Text("No cell segmented. Proceed anyway ?")],
                 [sg.Button("Yes"), sg.Button("No")]
             ]
-            event, values = prompt(layout=layout, add_ok_cancel=False)
-            if event == "Yes" :
-                return None, None, user_parameters
+                event, values = prompt(layout=layout, add_ok_cancel=False)
+                if event == "Yes" :
+                    return None, None, user_parameters
 
             break
         
