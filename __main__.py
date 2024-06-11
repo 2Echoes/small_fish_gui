@@ -3,7 +3,7 @@ import os
 import PySimpleGUI as sg
 
 def main():
-    import small_fish.pipeline.main
+    import small_fish_gui.pipeline.main
 
 
 if __name__ == "__main__":
