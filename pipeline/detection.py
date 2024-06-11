@@ -617,10 +617,21 @@ def _compute_cluster_dataframe(clusters) :
 
     return df
 
-def get_nucleus_signal(image, user_parameters) :
+def get_nucleus_signal(image, other_images, user_parameters) :
     if user_parameters['multichannel'] :
-        nucleus_signal_channel = user_parameters.get('nucleus channel signal')
-        nucleus_signal = image[nucleus_signal_channel]
+        rna_signal_channel = user_parameters['channel to compute']
+        nucleus_signal_channel = user_parameters['nucleus channel signal']
+
+        if rna_signal_channel == nucleus_signal_channel :
+            nucleus_signal == image
+        
+        elif nucleus_signal_channel > rna_signal_channel :
+            nucleus_signal_channel -=1
+            nucleus_signal = other_images[nucleus_signal_channel]
+        
+        elif nucleus_signal_channel < rna_signal_channel :
+            nucleus_signal = other_images[nucleus_signal_channel]
+
         return nucleus_signal
     else :
         return image
