@@ -17,7 +17,7 @@ activate small_fish
 ```
 Then download the small_fish package : 
 ```bash
-pip install small_fish
+pip install small_fish_gui
 ```
 <b> (Recommended) </b> Results visualisation is achieved through *Napari* which you can install with :
 
@@ -33,7 +33,7 @@ activate small_fish
 ```
 Then launch Small fish : 
 ```bash
-python -m small_fish
+python -m small_fish_gui
 ```
 ## Developpement
 
