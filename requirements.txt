@@ -1,4 +1,4 @@
-big_fish==0.6.2
+big-fish==0.6.2
 cellpose==3.0.7
 czifile==2019.7.2
 imageio==2.34.0
