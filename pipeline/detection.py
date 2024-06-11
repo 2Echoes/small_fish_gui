@@ -401,17 +401,16 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
     )
 
     #BigFish features
-    with np.errstate(all='ignore', divide= 'ignore', invalid= 'ignore') :
-        features_names = ['acquisition_id', 'cell_id', 'cell_bbox'] + classification.get_features_name(
-            names_features_centrosome=False,
-            names_features_area=True,
-            names_features_dispersion=True,
-            names_features_distance=True,
-            names_features_foci=do_clustering,
-            names_features_intranuclear=True,
-            names_features_protrusion=False,
-            names_features_topography=True
-        )
+    features_names = ['acquisition_id', 'cell_id', 'cell_bbox'] + classification.get_features_name(
+        names_features_centrosome=False,
+        names_features_area=True,
+        names_features_dispersion=True,
+        names_features_distance=True,
+        names_features_foci=do_clustering,
+        names_features_intranuclear=True,
+        names_features_protrusion=False,
+        names_features_topography=True
+    )
 
     #Nucleus features : area is computed in bigfish
     features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
@@ -431,24 +430,25 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
         foci_coords = cell.get('clusters_coords')
         signal = cell['image']
 
-        features = classification.compute_features(
-            cell_mask=cell_mask,
-            nuc_mask=nuc_mask,
-            ndim=dim,
-            rna_coord= rna_coords,
-            foci_coord=foci_coords,
-            voxel_size_yx= float(voxel_size[-1]),
-            smfish=signal,
-            centrosome_coord=None,
-            compute_centrosome=False,
-            compute_area=True,
-            compute_dispersion=True,
-            compute_distance=True,
-            compute_foci= do_clustering and len(clusters) > 0,
-            compute_intranuclear=True,
-            compute_protrusion=False,
-            compute_topography=True
-        )
+        with np.errstate(divide= 'ignore', invalid= 'ignore') :
+            features = classification.compute_features(
+                cell_mask=cell_mask,
+                nuc_mask=nuc_mask,
+                ndim=dim,
+                rna_coord= rna_coords,
+                foci_coord=foci_coords,
+                voxel_size_yx= float(voxel_size[-1]),
+                smfish=signal,
+                centrosome_coord=None,
+                compute_centrosome=False,
+                compute_area=True,
+                compute_dispersion=True,
+                compute_distance=True,
+                compute_foci= do_clustering and len(clusters) > 0,
+                compute_intranuclear=True,
+                compute_protrusion=False,
+                compute_topography=True
+            )
 
         features = list(features)
         features += [np.mean(nuc_signal), np.median(nuc_signal), np.max(nuc_signal), np.min(nuc_signal)]
