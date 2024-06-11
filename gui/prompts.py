@@ -109,6 +109,7 @@ def input_image_prompt(
 
 def output_image_prompt(filename) :
     while True :
+        relaunch = False
         layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
         layout += parameters_layout(["filename"], default_values= [filename + "_quantification"], size=25)
         layout += bool_layout(['Excel', 'Feather'])

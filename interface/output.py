@@ -10,7 +10,7 @@ def _cast_spot_to_tuple(spot) :
 def _cast_spots_to_tuple(spots) :
     return tuple(list(map(_cast_spot_to_tuple, spots)))
 
-def save_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False) :
+def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False) :
     check_parameter(dataframe= pd.DataFrame, path= str, filename = str, do_excel = bool, do_feather = bool)
 
     if len(dataframe) == 0 : return True

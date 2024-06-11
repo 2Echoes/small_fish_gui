@@ -7,4 +7,4 @@ from .image import get_filename
 from .image import check_format
 from .image import FormatError
 
-from .output import save_results
+from .output import write_results

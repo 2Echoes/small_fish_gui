@@ -1,5 +1,5 @@
 from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection
-from ..interface.output import save_results
+from ..interface.output import write_results
 from ._preprocess import map_channels, prepare_image_detection, reorder_shape, reorder_image_stack
 from .detection import ask_input_parameters, initiate_detection, launch_detection, launch_features_computation, get_nucleus_signal
 from ._segmentation import launch_segmentation
@@ -96,9 +96,9 @@ def save_results(result_df, cell_result_df, coloc_df) :
             filename = dic['filename']
             do_excel = dic['Excel']
             do_feather = dic['Feather']
-            sucess1 = save_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather)
-            sucess2 = save_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather)
-            sucess3 = save_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather)
+            sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather)
+            sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather)
+            sucess3 = write_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather)
             if sucess1 and sucess2 and sucess3 : sg.popup("Sucessfully saved at {0}.".format(path))
 
     else :
