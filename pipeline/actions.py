@@ -61,13 +61,24 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
         acquisition_id += 1
         image, other_image = prepare_image_detection(map, user_parameters) 
         nucleus_signal = get_nucleus_signal(image, other_image, user_parameters)
-        user_parameters, frame_result, spots, clusters = launch_detection(
-            image,
-            other_image,
-            user_parameters,
-            cell_label=cytoplasm_label,
-            nucleus_label=nucleus_label
-        )
+        
+        try : # Catch error raised if user enter a spot size too small compare to voxel size
+            user_parameters, frame_result, spots, clusters = launch_detection(
+                image,
+                other_image,
+                user_parameters,
+                cell_label=cytoplasm_label,
+                nucleus_label=nucleus_label
+            )
+
+        except ValueError as error :
+            if "The array should have an upper bound of 1" in str(error) :
+                sg.popup("Spot size too small for current voxel size.")
+                continue
+            else :
+                raise(error)
+
+
         if user_parameters['Napari correction'] :
             if ask_detection_confirmation(user_parameters.get('threshold')) : break
         else :

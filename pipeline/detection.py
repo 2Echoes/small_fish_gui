@@ -297,7 +297,7 @@ def _launch_detection(image, image_input_values: dict, time_stack_gen=None) :
     spot_size = image_input_values.get('spot_size')
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
-
+    
     if type(threshold) == type(None) : 
         #detection
         if type(time_stack_gen) != type(None) :
