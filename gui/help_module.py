@@ -227,7 +227,7 @@ def _mapping_help() :
     This window present the shape of your image : example (1080,1080,4)
     1080x1080 are the xy dimension (pixel resolution); and 4 is the number of channel. Another example a 3D multichannel 
     stack could be (18,4,1080,1080)...
-    The machine understand the order of the information such as (1080,1080,4) positions are (0,1,2). /!\ It starts from zero! /!\
+    The machine understand the order of the information such as (1080,1080,4) positions are (0,1,2). It starts from zero!
     The mapping purpose is to link the position to the type of informations, in this case we want :
 
             x : 1

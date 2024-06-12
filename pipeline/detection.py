@@ -374,6 +374,38 @@ def launch_post_detection(image, spots, image_input_values: dict,) :
 
     return spots, fov_res
 
+def _compute_cell_snr(image: np.ndarray, bbox, spots, voxel_size, spot_size) :
+    
+    min_y, min_x, max_y, max_x = bbox
+    image= image[min_y: max_y, min_x: max_x]
+
+    if len(spots) == 0 :
+        res = {
+           'snr_mean' : np.NaN,
+           'snr_median' : np.NaN,
+           'snr_std' : np.NaN,
+        }
+
+        return res
+
+    if len(spots[0]) == 3 :
+        Z,Y,X = zip(*spots)
+        spots = np.array(
+            list(zip(Y,X)),
+            dtype= int
+        )
+        voxel_size = voxel_size[1:]
+        spot_size = spot_size[1:]
+
+    snr_dict = compute_snr_spots(
+            image= image,
+            spots= spots,
+            spot_radius= spot_size,
+            voxel_size=voxel_size
+            )
+        
+    return snr_dict
+
 @add_default_loading
 def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signal, cell_label, nucleus_label, user_parameters) :
 
@@ -414,6 +446,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
 
     #Nucleus features : area is computed in bigfish
     features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
+    features_names += ['snr_mean', 'snr_median', 'snr_std']
 
     result_frame = pd.DataFrame()
 
@@ -450,8 +483,22 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
                 compute_topography=True
             )
 
+        #Signal to noise
+        snr_dict = _compute_cell_snr(
+            image,
+            cell_bbox,
+            spots=rna_coords,
+            voxel_size=voxel_size,
+            spot_size=user_parameters['spot_size']
+        )
+
+        snr_mean = snr_dict['snr_mean']
+        snr_median = snr_dict['snr_median']
+        snr_std = snr_dict['snr_std']
+
         features = list(features)
         features += [np.mean(nuc_signal), np.median(nuc_signal), np.max(nuc_signal), np.min(nuc_signal)]
+        features += [snr_mean, snr_median, snr_std]
 
         features = [acquisition_id, cell_id, cell_bbox] + features
         
