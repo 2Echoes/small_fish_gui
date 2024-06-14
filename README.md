@@ -21,7 +21,7 @@ It is higly recommanded to create a specific [conda](https://docs.conda.io/proje
 
 ```bash
 conda create -n small_fish python=3.8
-activate small_fish
+conda activate small_fish
 ```
 Then download the small_fish package : 
 ```bash
