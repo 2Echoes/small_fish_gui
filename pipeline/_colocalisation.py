@@ -204,13 +204,9 @@ def launch_colocalisation(result_tables, result_dataframe, colocalisation_distan
         voxel_size = voxel_size1
 
     if shape1 != shape2 :
-        print(shape1)
-        print(shape2) 
         raise MissMatchError("shape 1 different than shape 2")
     else :
         shape = shape1
-        print(shape1)
-        print(shape2)
 
     acquisition_couple = (acquisition1.at['acquisition_id'], acquisition2.at['acquisition_id'])
 
@@ -235,6 +231,9 @@ def launch_colocalisation(result_tables, result_dataframe, colocalisation_distan
         except MissMatchError as e :
             sg.popup(str(e))
             fraction_spots2_coloc_cluster1 = np.NaN
+        except TypeError : # Clusters not computed
+            fraction_spots2_coloc_cluster1 = np.NaN
+
 
     else : fraction_spots2_coloc_cluster1 = np.NaN
 
@@ -242,9 +241,12 @@ def launch_colocalisation(result_tables, result_dataframe, colocalisation_distan
         try :
             clusters2 = acquisition2['clusters'][:,:len(voxel_size)]
             fraction_spots1_coloc_cluster2 = spots_colocalisation(image_shape=shape, spot_list1=spots1, spot_list2=clusters2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
-        except MissMatchError as e :
+        except MissMatchError as e :# Clusters not computed
             sg.popup(str(e))
             fraction_spots1_coloc_cluster2 = np.NaN
+        except TypeError :
+            fraction_spots1_coloc_cluster2 = np.NaN
+
 
     else : fraction_spots1_coloc_cluster2 = np.NaN
 
@@ -260,7 +262,5 @@ def launch_colocalisation(result_tables, result_dataframe, colocalisation_distan
         'fraction_spots2_coloc_cluster1' : [fraction_spots2_coloc_cluster1],
         'fraction_spots1_coloc_cluster2' : [fraction_spots1_coloc_cluster2],
     })
-
-    print(coloc_df.loc[:,['fraction_spots1_coloc_spots2','fraction_spots2_coloc_spots1', 'fraction_spots2_coloc_cluster1', 'fraction_spots1_coloc_cluster2']])
 
     return coloc_df

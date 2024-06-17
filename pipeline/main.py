@@ -2,7 +2,7 @@
 import pandas as pd
 import PySimpleGUI as sg
 from ..gui import hub_prompt
-from .actions import add_detection, save_results, compute_colocalisation
+from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions
 from ._preprocess import clean_unused_parameters_cache
 
 #'Global' parameters
@@ -16,11 +16,15 @@ cytoplasm_label = None
 nucleus_label = None
 
 while True : #Break this loop to close small_fish
+    result_df = result_df.reset_index(drop=True)
+    cell_result_df = cell_result_df.reset_index(drop=True)
+    coloc_df = coloc_df.reset_index(drop=True)
     try :
         event, values = hub_prompt(result_df, segmentation_done)
 
         if event == 'Add detection' :
             user_parameters = clean_unused_parameters_cache(user_parameters)
+            
 
             new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label =  add_detection(
                 user_parameters=user_parameters,
@@ -66,8 +70,8 @@ while True : #Break this loop to close small_fish
             nucleus_label = None
 
         elif event == "Delete acquisitions" :
-        #TODO
-            pass
+            selected_acquisitions = values.setdefault('result_table', []) #Contains the lines selected by the user on the sum-up array.
+            result_df, cell_result_df, coloc_df = delete_acquisitions(selected_acquisitions, result_df, cell_result_df, coloc_df)
 
         elif event == "Batch detection" :
         #TODO

@@ -126,3 +126,35 @@ def compute_colocalisation(result_tables, result_dataframe) :
         res_coloc = launch_colocalisation(result_tables, result_dataframe=result_dataframe, colocalisation_distance=colocalisation_distance)
 
     return res_coloc
+
+def delete_acquisitions(selected_acquisitions : pd.DataFrame, 
+                        result_df : pd.DataFrame, 
+                        cell_result_df : pd.DataFrame, 
+                        coloc_df : pd.DataFrame
+                        ) :
+    
+    if len(result_df) == 0 :
+        sg.popup("No acquisition to delete.")
+        return result_df, cell_result_df, coloc_df
+
+    if len(selected_acquisitions) == 0 :
+        sg.popup("Please select the acquisitions you would like to delete.")
+    else :
+        acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
+        print("Acquisitions to delete : ", acquisition_ids)
+        result_drop_idx = result_df[result_df['acquisition_id'].isin(acquisition_ids)].index
+        print("{0} acquisitions to delete.".format(len(result_drop_idx)))
+        
+        if len(cell_result_df) > 0 :
+            cell_result_df_drop_idx = cell_result_df[cell_result_df['acquisition_id'].isin(acquisition_ids)].index
+            print("{0} cells to delete.".format(len(cell_result_df_drop_idx)))
+            cell_result_df = cell_result_df.drop(cell_result_df_drop_idx, axis=0)
+        
+        if len(coloc_df) > 0 :
+            coloc_df_drop_idx = coloc_df[(coloc_df["acquisition_id_1"].isin(acquisition_ids)) | (coloc_df['acquisition_id_2'].isin(acquisition_ids))].index
+            print("{0} coloc measurement to delete.".format(len(coloc_df_drop_idx)))
+            coloc_df = coloc_df.drop(coloc_df_drop_idx, axis=0)
+
+        result_df = result_df.drop(result_drop_idx, axis=0)
+
+    return result_df, cell_result_df, coloc_df
