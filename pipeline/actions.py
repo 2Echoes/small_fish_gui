@@ -31,7 +31,8 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
     if user_parameters['Segmentation'] and not segmentation_done:
         im_seg = reorder_image_stack(map, user_parameters)
         cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
-
+    elif segmentation_done :
+        pass
     else :
         cytoplasm_label, nucleus_label = None,None
 

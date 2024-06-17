@@ -357,15 +357,17 @@ def launch_post_detection(image, spots, image_input_values: dict,) :
     #features
     fov_res['spot_number'] = len(spots)
     snr_res = compute_snr_spots(image, spots, voxel_size, spot_size)
-        
-    if dim == 3 :
-        Z,Y,X = list(zip(*spots))
-        spots_values = image[Z,Y,X]
+    if len(spots) == 0 :
+        fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.NaN, np.NaN, np.NaN
     else :
-        Y,X = list(zip(*spots))
-        spots_values = image[Y,X]
-
-    fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.median(spots_values), np.mean(spots_values), np.std(spots_values)
+        if dim == 3 :
+            Z,Y,X = list(zip(*spots))
+            spots_values = image[Z,Y,X]
+        else :
+            Y,X = list(zip(*spots))
+            spots_values = image[Y,X]
+        fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.median(spots_values), np.mean(spots_values), np.std(spots_values)
+    
     fov_res['median_pixel'] = np.median(image)
     fov_res['mean_pixel'] = np.mean(image)
 
@@ -601,9 +603,9 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
     if user_parameters['Cluster computation'] : 
         frame_results['cluster_number'] = len(clusters)
         if dim == 3 :
-            frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3]
+            frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3] if len(clusters) >0 else  0
         else :
-            frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[2]
+            frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[2] if len(clusters) >0 else  0
     
     if type(cell_label) != type(None) and type(nucleus_label) != type(None): 
         cell_result_dframe = launch_cell_extraction(
@@ -673,7 +675,7 @@ def get_nucleus_signal(image, other_images, user_parameters) :
             return np.zeros(shape=image.shape)
 
         if rna_signal_channel == nucleus_signal_channel :
-            nucleus_signal == image
+            nucleus_signal = image
         
         elif nucleus_signal_channel > rna_signal_channel :
             nucleus_signal_channel -=1

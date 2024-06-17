@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 import pandas as pd
 import os
+import numpy as np
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_layout, add_header
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
@@ -266,6 +267,7 @@ def _warning_popup(warning:str) :
 def _sumup_df(results: pd.DataFrame) :
 
     if len(results) > 0 :
+        if 'channel to compute' not in results : results['channel to compute'] = np.NaN
         res = results.loc[:,['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute']]
     else :
         res = pd.DataFrame(columns= ['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute'])

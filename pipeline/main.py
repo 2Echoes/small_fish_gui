@@ -3,6 +3,7 @@ import pandas as pd
 import PySimpleGUI as sg
 from ..gui import hub_prompt
 from .actions import add_detection, save_results, compute_colocalisation
+from ._preprocess import clean_unused_parameters_cache
 
 #'Global' parameters
 user_parameters = dict() # Very important object containg all choice from user that will influence the behavior of the main loop.
@@ -19,6 +20,7 @@ while True : #Break this loop to close small_fish
         event, values = hub_prompt(result_df, segmentation_done)
 
         if event == 'Add detection' :
+            user_parameters = clean_unused_parameters_cache(user_parameters)
 
             new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label =  add_detection(
                 user_parameters=user_parameters,

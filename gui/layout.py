@@ -151,7 +151,7 @@ def radio_layout(values, header=None) :
         layout = add_header(header, layout=layout)
     return layout
 
-def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, segment_only_nuclei_preset=False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png') :
+def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, segment_only_nuclei_preset=False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png',) :
     
     USE_GPU = use_gpu()
 
@@ -165,14 +165,14 @@ def _segmentation_layout(cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 
     layout += [add_header("Cell Segmentation", [sg.Text("Choose cellpose model for cytoplasm: \n")]),
               [combo_layout(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
                         ]
-    layout += [parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])]
+    if multichannel : layout += [parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])]
     layout += [parameters_layout(['cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset])]
     #Nucleus parameters
     layout += [
             add_header("Nucleus segmentation",[sg.Text("Choose cellpose model for nucleus: \n")]),
               combo_layout(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
                 ]
-    layout += [parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])]
+    if multichannel : layout += [parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])]
     layout += [parameters_layout([ 'nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset])]
     layout += [bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset)]
     

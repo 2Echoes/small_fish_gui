@@ -31,7 +31,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
 
     while True : # Loop if show_segmentation 
         #Default parameters
-        cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto2')
+        cyto_model_name = user_parameters.setdefault('cyto_model_name', 'cyto3')
         cyto_size = user_parameters.setdefault('cytoplasm diameter', 180)
         cytoplasm_channel = user_parameters.setdefault('cytoplasm channel', 0)
         nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
@@ -42,6 +42,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
         segment_only_nuclei = user_parameters.setdefault('Segment only nuclei', False)
         filename = user_parameters['filename']
         available_channels = list(range(image.shape[0]))
+        multichannel = user_parameters.get('multichannel')
 
 
     #Ask user for parameters
@@ -58,6 +59,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 show_segmentation_preset=show_segmentation,
                 segment_only_nuclei_preset=segment_only_nuclei,
                 filename_preset=filename,
+                multichannel=multichannel,
             )
 
             event, values = prompt_with_help(layout, help='segmentation')
@@ -236,7 +238,10 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
     
     return label
 
-def _cast_segmentation_parameters(values) :
+def _cast_segmentation_parameters(values:dict) :
+
+    values.setdefault('cytoplasm channel',0)
+    values.setdefault('nucleus channel',0)
 
     if values['cyto_model_name'] == '' :
         values['cyto_model_name'] = None

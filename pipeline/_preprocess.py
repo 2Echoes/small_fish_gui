@@ -270,3 +270,15 @@ def reorder_shape(shape, map) :
     )
 
     return new_shape
+
+def clean_unused_parameters_cache(user_parameters: dict) :
+    """
+    Clean unused parameters that were set to None in previous run.
+    """
+    parameters = ['alpha', 'beta', 'gamma', 'cluster size', 'min number of spots']
+    for parameter in parameters :
+        if parameter in user_parameters.keys() :
+            if type(user_parameters[parameter]) == type(None) :
+                del user_parameters[parameter]
+    
+    return user_parameters
