@@ -43,6 +43,11 @@ Then launch Small fish :
 ```bash
 python -m small_fish_gui
 ```
+
+## Cellpose configuration
+
+If you want to train your own cellpose model or set-up your GPU you can follow the official cellpose documentation, just remember to **first activate your small_fish environnement**.
+
 ## Developpement
 
 Optional features to include in future versions : 
