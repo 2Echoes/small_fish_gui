@@ -18,7 +18,7 @@ Time stacks are not yet supported.
 <img src="https://github.com/2Echoes/small_fish_gui/blob/main/Segmentation%20example.jpg" width="500" title="Cell segmentation with Cellpose" alt="Cell segmentation - cellpose">| <img src="https://github.com/2Echoes/small_fish_gui/blob/main/napari_detection_example.png" width="500" title="Spot detection; clustering visualisation on Napari" alt="detection; Napari example">
 
 ## Installation
-If you don't have a python installation yet I would recommend the miniconda distribution(https://docs.anaconda.com/free/miniconda/miniconda-other-installer-links/); but any distribution should work.
+If you don't have a python installation yet I would recommend the [miniconda distribution](https://docs.anaconda.com/free/miniconda/miniconda-other-installer-links/); but any distribution should work.
 
 It is higly recommanded to create a specific [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual](https://docs.python.org/3.6/library/venv.html) environnement to install small fish.
 
