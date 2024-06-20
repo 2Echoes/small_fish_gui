@@ -55,10 +55,11 @@ For the following steps first activate your small fish environnement :
 conda activate small_fish
 ```
 ### Setting up your GPU for cellpose (Windows / Linux)
-This instructions describe how I installed CUDA and GPU cellpose on the machines I tested unfortunatly with drivers installations things don't always run smoothly, if you run into any difficulties please have a look at the *GPU version (CUDA) on Windows or Linux* section of the [cellpose documentation](https://github.com/MouseLand/cellpose) for assistance.
+This instructions describe how I installed CUDA and GPU cellpose on the machines I tested, unfortunatly, drivers installations don't always run smoothly, if you run into any difficulties please have a look at the *GPU version (CUDA) on Windows or Linux* section of the [cellpose documentation](https://github.com/MouseLand/cellpose) for assistance.
 
-First step is to check that your GPU is CUDA compatible which it should be if from the brand NVIDA.
-Then you need to install CUDA from the [NVDIA archives](https://developer.nvidia.com/cuda-toolkit-archive), any 11.x version should work but I recommend the 11.8 version
+First step is to check that your GPU is CUDA compatible which it should be if from the brand NVIIDA.
+Then you need to install CUDA from the [NVIDIA archives](https://developer.nvidia.com/cuda-toolkit-archive), any 11.x version should work but I recommend the 11.8 version.
+
 Finally we need to make some modifcation to your small fish environnement : 
 
 Remove the CPU version of torch
