@@ -49,7 +49,45 @@ python -m small_fish_gui
 
 ## Cellpose configuration
 
-If you want to train your own cellpose model or set-up your GPU you can follow the official cellpose documentation, just remember to **first activate your small_fish environnement**.
+For the following steps first activate your small fish environnement : 
+
+```bash
+conda activate small_fish
+```
+### Setting up your GPU for cellpose (Windows / Linux)
+This instructions describe how CUDA and GPU cellpose is working best on the machines I tested if you run into any difficulties please have a look at the *GPU version (CUDA) on Windows or Linux* section of the [cellpose documentation](https://github.com/MouseLand/cellpose)
+
+First step is to check that your GPU is CUDA compatible which it should be if from the brand NVIDA.
+Then you need to install CUDA from the [NVDIA archives](https://developer.nvidia.com/cuda-toolkit-archive), any 11.x version should work but I recommend the 11.8 version
+Finally we need to make some modifcation to your small fish environnement : 
+
+Remove the CPU version of torch
+
+```bash
+pip uninstall torch
+```
+Then install pytorch and cudatoolkit :
+
+```bash
+conda install pytorch==1.12.0 cudatoolkit=11.3 -c pytorch
+```
+If the installation succeeded next time your run segmentation with small fish you should see the "GPU is ON" notice upon entering the segmentation parameters.
+If you run into any problems I would recommend following the official cellpose instructions as mentionned above.
+
+
+### Training cellpose
+If you want to train your own cellpose model or import custom model from exterior source I recommend doing so from the cellpose GUI 
+
+To install the GUI run : 
+
+```bash
+pip install cellpose[gui]
+```
+Then to run cellpose
+```bash
+cellpose
+```
+Note that for training it is recommended to first set up your GPU as training computation can be quite long otherwise. To get started with how to train your models you can watch the [video](https://www.youtube.com/watch?v=5qANHWoubZU) from cellpose authors.
 
 ## Developpement
 
