@@ -284,7 +284,7 @@ def initiate_detection(user_parameters, segmentation_done, map, shape) :
     return user_parameters
 
 @add_default_loading
-def _launch_detection(image, image_input_values: dict, time_stack_gen=None) :
+def _launch_detection(image, image_input_values: dict, threshold_user_selection=False) :
 
     """
     Performs spots detection
@@ -298,24 +298,20 @@ def _launch_detection(image, image_input_values: dict, time_stack_gen=None) :
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
     
-    if type(threshold) == type(None) : 
-        #detection
-        if type(time_stack_gen) != type(None) :
-            image_sample = time_stack_gen()
-        else :
-            image_sample = image
+    if type(threshold) == type(None) :     
+        threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size) * threshold_penalty
     
-        threshold = compute_auto_threshold(image_sample, voxel_size=voxel_size, spot_radius=spot_size) * threshold_penalty
-    
-    spots = detection.detect_spots(
-        images= image,
-        threshold=threshold,
-        return_threshold= False,
+    local_maxima = prepare_spots_for_thresholding(
+        image=image,
         voxel_size=voxel_size,
-        spot_radius= spot_size,
-        log_kernel_size=log_kernel_size,
-        minimum_distance=minimum_distance
-        )
+        spot_radius=spot_size
+    )
+
+    spots = detection.spots_thresholding(
+        image=image,
+        mask_local_max=local_maxima,
+        threshold=threshold
+    )
         
     return spots, threshold
 
@@ -687,3 +683,29 @@ def get_nucleus_signal(image, other_images, user_parameters) :
         return nucleus_signal
     else :
         return image
+    
+def prepare_spots_for_thresholding(
+        image: np.ndarray,
+        voxel_size : tuple,
+        spot_radius : tuple,
+
+) :
+    """
+    Apply spot detection steps until local maxima step (just before final threshold).
+    Return filtered image.
+    """
+    
+    ndim = image.ndim
+    log_kernel_size = get_object_radius_pixel(
+            voxel_size_nm=voxel_size,
+            object_radius_nm=spot_radius,
+            ndim=ndim)
+    minimum_distance = get_object_radius_pixel(
+        voxel_size_nm=voxel_size,
+        object_radius_nm=spot_radius,
+        ndim=ndim)
+    
+    image_filtered = stack.log_filter(image, log_kernel_size)
+    mask_local_max = detection.local_maximum_detection(image_filtered, minimum_distance)
+    
+    return mask_local_max
