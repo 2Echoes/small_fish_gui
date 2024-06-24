@@ -6,6 +6,7 @@ from cellpose.core import use_gpu
 from skimage.measure import label
 from ..gui.layout import _segmentation_layout
 from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
+from ._napari_wrapper import show_segmentation as napari_show_segmentation
 
 import cellpose.models as models
 import numpy as np
@@ -152,19 +153,18 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 )
 
         finally  : window.close()
-        if show_segmentation or type(output_path) != type(None) :
-            nuc_proj = image[nucleus_channel]
-            im_proj = image[cytoplasm_channel]
-            if im_proj.ndim == 3 :
-                im_proj = stack.maximum_projection(im_proj)
-            if nuc_proj.ndim == 3 :
-                nuc_proj = stack.maximum_projection(nuc_proj)
-            plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=None, title= "Nucleus segmentation (blue)", remove_frame=False,)
-            if type(nuc_path) != type(None) : plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
-            if not do_only_nuc : 
-                plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=show_segmentation, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=False)
-                if type(cyto_path) != type(None) : plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=True)
+
         if show_segmentation :
+            nucleus_label, cytoplasm_label = napari_show_segmentation(
+                nuc_image=image[nucleus_channel],
+                nuc_label= nucleus_label,
+                cyto_image=image[cytoplasm_channel],
+                cyto_label=cytoplasm_label,
+            )
+
+            if nucleus_label.ndim == 3 : nucleus_label = np.max(nucleus_label, axis=0)
+            if cytoplasm_label.ndim == 3 : cytoplasm_label = np.max(cytoplasm_label, axis=0)
+
             layout = [
                 [sg.Text("Proceed with current segmentation ?")],
                 [sg.Button("Yes"), sg.Button("No")]
@@ -173,6 +173,20 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
             event, values = prompt(layout=layout, add_ok_cancel=False)
             if event == "No" :
                 continue
+
+        if type(output_path) != type(None) :
+            nuc_proj = image[nucleus_channel]
+            im_proj = image[cytoplasm_channel]
+            if im_proj.ndim == 3 :
+                im_proj = stack.maximum_projection(im_proj)
+            if nuc_proj.ndim == 3 :
+                nuc_proj = stack.maximum_projection(nuc_proj)
+            plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
+            if not do_only_nuc : 
+                plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=True)
+        
+
+
 
         if cytoplasm_label.max() == 0 : #No cell segmented
             layout = [
