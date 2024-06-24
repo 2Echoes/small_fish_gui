@@ -184,3 +184,13 @@ def show_segmentation(
     if type(cyto_label) != type(None) : new_cyto_label = Viewer.layers[3].data
 
     return new_nuc_label, new_cyto_label
+
+def threshold_selection(
+        local_maxima_im : np.ndarray,
+        default_threshold : float,
+        voxel_size : tuple,
+        ) :
+    
+    th_range = [0, local_maxima_im.max()]
+    #TODO
+    # return spots, threshold

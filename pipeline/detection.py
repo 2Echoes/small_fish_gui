@@ -5,7 +5,7 @@ Contains code to handle detection as well as bigfish wrappers related to spot de
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
-from ._napari_wrapper import correct_spots, _update_clusters
+from ._napari_wrapper import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
 
@@ -306,12 +306,18 @@ def _launch_detection(image, image_input_values: dict, threshold_user_selection=
         voxel_size=voxel_size,
         spot_radius=spot_size
     )
-
-    spots = detection.spots_thresholding(
-        image=image,
-        mask_local_max=local_maxima,
-        threshold=threshold
-    )
+    if threshold_user_selection :
+        spots, threshold = threshold_selection(
+            local_maxima_im=local_maxima,
+            default_threshold=threshold,
+            voxel_size=voxel_size
+        )
+    else :
+        spots = detection.spots_thresholding(
+            image=image,
+            mask_local_max=local_maxima,
+            threshold=threshold
+        )
         
     return spots, threshold
 
