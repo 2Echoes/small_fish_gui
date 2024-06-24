@@ -5,7 +5,7 @@ Contains code to handle detection as well as bigfish wrappers related to spot de
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
-from ._detection_visualisation import correct_spots, _update_clusters
+from ._napari_wrapper import correct_spots, _update_clusters
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
 
