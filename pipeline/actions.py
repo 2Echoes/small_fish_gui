@@ -141,18 +141,17 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
         sg.popup("Please select the acquisitions you would like to delete.")
     else :
         acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
-        print("Acquisitions to delete : ", acquisition_ids)
         result_drop_idx = result_df[result_df['acquisition_id'].isin(acquisition_ids)].index
-        print("{0} acquisitions to delete.".format(len(result_drop_idx)))
+        print("{0} acquisitions deleted.".format(len(result_drop_idx)))
         
         if len(cell_result_df) > 0 :
             cell_result_df_drop_idx = cell_result_df[cell_result_df['acquisition_id'].isin(acquisition_ids)].index
-            print("{0} cells to delete.".format(len(cell_result_df_drop_idx)))
+            print("{0} cells deleted.".format(len(cell_result_df_drop_idx)))
             cell_result_df = cell_result_df.drop(cell_result_df_drop_idx, axis=0)
         
         if len(coloc_df) > 0 :
             coloc_df_drop_idx = coloc_df[(coloc_df["acquisition_id_1"].isin(acquisition_ids)) | (coloc_df['acquisition_id_2'].isin(acquisition_ids))].index
-            print("{0} coloc measurement to delete.".format(len(coloc_df_drop_idx)))
+            print("{0} coloc measurement deleted.".format(len(coloc_df_drop_idx)))
             coloc_df = coloc_df.drop(coloc_df_drop_idx, axis=0)
 
         result_df = result_df.drop(result_drop_idx, axis=0)
