@@ -8,6 +8,9 @@ from ._signaltonoise import compute_snr_spots
 from ._napari_wrapper import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
+from magicgui import magicgui
+from napari.layers import Image, Points
+from napari.types import LayerDataTuple
 
 import numpy as np
 import pandas as pd
@@ -284,7 +287,7 @@ def initiate_detection(user_parameters, segmentation_done, map, shape) :
     return user_parameters
 
 @add_default_loading
-def _launch_detection(image, image_input_values: dict, threshold_user_selection=False) :
+def _launch_detection(image, image_input_values: dict, threshold_user_selection=True) :
 
     """
     Performs spots detection
@@ -299,25 +302,45 @@ def _launch_detection(image, image_input_values: dict, threshold_user_selection=
     minimum_distance = image_input_values.get('minimum_distance')
     
     if type(threshold) == type(None) :     
-        threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size) * threshold_penalty
+        threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance) * threshold_penalty
     
-    local_maxima = prepare_spots_for_thresholding(
+    filtered_image = _apply_log_filter(
         image=image,
         voxel_size=voxel_size,
-        spot_radius=spot_size
+        spot_radius=spot_size,
+        log_kernel_size = log_kernel_size,
     )
+
+    local_maxima = _local_maxima_mask(
+        image_filtered=filtered_image,
+        voxel_size=voxel_size,
+        spot_radius=spot_size,
+        minimum_distance=minimum_distance
+    )
+
     if threshold_user_selection :
+
+        threshold_slider = _create_threshold_slider(
+            logfiltered_image=filtered_image,
+            local_maxima=local_maxima,
+            default=threshold,
+            min=filtered_image[local_maxima].min(),
+            max=filtered_image[local_maxima].max(),
+            voxel_size=voxel_size
+        )
+
         spots, threshold = threshold_selection(
-            local_maxima_im=local_maxima,
-            default_threshold=threshold,
+            image=image,
+            filtered_image=filtered_image,
+            threshold_slider=threshold_slider,
             voxel_size=voxel_size
         )
     else :
         spots = detection.spots_thresholding(
-            image=image,
+            image=filtered_image,
             mask_local_max=local_maxima,
             threshold=threshold
-        )
+        )[0]
         
     return spots, threshold
 
@@ -689,11 +712,47 @@ def get_nucleus_signal(image, other_images, user_parameters) :
         return nucleus_signal
     else :
         return image
+
+def _create_threshold_slider(
+        logfiltered_image : np.ndarray,
+        local_maxima : np.ndarray,
+        default : int,
+        min : int,
+        max : int,
+        voxel_size
+) :
     
-def prepare_spots_for_thresholding(
+    if isinstance(default, float) : default = round(default)
+
+    @magicgui(
+        threshold={'widget_type' : 'Slider', 'value' : default, 'min' : min, 'max' : max},
+        auto_call=True
+    )
+    def threshold_slider(threshold: int) -> LayerDataTuple:
+        spots = detection.spots_thresholding(
+            image=logfiltered_image,
+            mask_local_max=local_maxima,
+            threshold=threshold
+        )[0]
+        layer_args = {
+            'size': 7, 
+            'scale' : voxel_size, 
+            'face_color' : 'transparent', 
+            'edge_color' : 'blue', 
+            'symbol' : 'ring', 
+            'opacity' : 0.7, 
+            'blending' : 'additive', 
+            'name': 'single spots',
+            'features' : {'threshold' : threshold}
+            }
+        return (spots, layer_args , 'points')
+    return threshold_slider
+
+def _apply_log_filter(
         image: np.ndarray,
         voxel_size : tuple,
         spot_radius : tuple,
+        log_kernel_size,
 
 ) :
     """
@@ -702,16 +761,33 @@ def prepare_spots_for_thresholding(
     """
     
     ndim = image.ndim
-    log_kernel_size = get_object_radius_pixel(
+
+    if type(log_kernel_size) == type(None) :
+        log_kernel_size = get_object_radius_pixel(
+                voxel_size_nm=voxel_size,
+                object_radius_nm=spot_radius,
+                ndim=ndim)
+    
+    
+    image_filtered = stack.log_filter(image, log_kernel_size)
+    
+    return image_filtered
+    
+def _local_maxima_mask(
+    image_filtered: np.ndarray,
+    voxel_size : tuple,
+    spot_radius : tuple,
+    minimum_distance
+
+    ) : 
+
+    ndim = image_filtered.ndim
+
+    if type(minimum_distance) == type(None) :
+        minimum_distance = get_object_radius_pixel(
             voxel_size_nm=voxel_size,
             object_radius_nm=spot_radius,
             ndim=ndim)
-    minimum_distance = get_object_radius_pixel(
-        voxel_size_nm=voxel_size,
-        object_radius_nm=spot_radius,
-        ndim=ndim)
-    
-    image_filtered = stack.log_filter(image, log_kernel_size)
     mask_local_max = detection.local_maximum_detection(image_filtered, minimum_distance)
     
-    return mask_local_max
+    return mask_local_max.astype(bool)

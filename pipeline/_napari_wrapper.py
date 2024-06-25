@@ -2,7 +2,6 @@
 Contains Napari wrappers to visualise and correct spots/clusters.
 """
 
-
 import numpy as np
 import scipy.ndimage as ndi
 import napari
@@ -185,12 +184,46 @@ def show_segmentation(
 
     return new_nuc_label, new_cyto_label
 
+def _create_threshold_callback(widget) :
+    def get_threshold_callback(event : Event) :
+        print(widget.value)
+        return widget.value
+    return get_threshold_callback
+
+
 def threshold_selection(
-        local_maxima_im : np.ndarray,
-        default_threshold : float,
+        image : np.ndarray,
+        filtered_image : np.ndarray,
+        threshold_slider,
         voxel_size : tuple,
         ) :
     
-    th_range = [0, local_maxima_im.max()]
-    #TODO
-    # return spots, threshold
+    
+    Viewer = napari.Viewer(title= "Small fish - Threshold selector", ndisplay=2, show=True)
+    Viewer.add_image(
+        data= image,
+        contrast_limits= [image.min(), image.max()],
+        name= "raw signal",
+        colormap= 'green',
+        scale= voxel_size,
+        blending= 'additive'
+    )
+    Viewer.add_image(
+        data= filtered_image,
+        contrast_limits= [filtered_image.min(), filtered_image.max()],
+        colormap= 'gray',
+        scale=voxel_size,
+        blending='additive'
+    )
+
+    Viewer.window.add_dock_widget(threshold_slider, name='threshold_selector')
+    threshold_slider() #First occurence with auto or entered threshold.
+    napari.run()
+
+    spots = Viewer.layers[-1].data.astype(int)
+    if len(spots) == 0 :
+        threshold = filtered_image.max()
+    else :
+        threshold = Viewer.layers[-1].properties.get('threshold')[0]
+
+    return spots, threshold
