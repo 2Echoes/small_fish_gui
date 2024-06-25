@@ -8,6 +8,7 @@ from ._signaltonoise import compute_snr_spots
 from ._napari_wrapper import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
+from .spots import compute_Spots
 from magicgui import magicgui
 from napari.layers import Image, Points
 from napari.types import LayerDataTuple
@@ -23,6 +24,7 @@ import bigfish.multistack as multistack
 import bigfish.classification as classification
 from bigfish.detection.spot_detection import get_object_radius_pixel
 from types import GeneratorType
+from skimage.measure import regionprops
 
 
 def ask_input_parameters(ask_for_segmentation=True) :
@@ -475,6 +477,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
     #Nucleus features : area is computed in bigfish
     features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
     features_names += ['snr_mean', 'snr_median', 'snr_std']
+    features_names += ['cell_center_coord','foci_number','foci_in_nuc_number']
 
     result_frame = pd.DataFrame()
 
@@ -511,6 +514,30 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
                 compute_topography=True
             )
 
+        #center of cell coordinates
+        local_cell_center = regionprops(
+            label_image=cell_mask.astype(int)
+        )[0]['centroid']
+        cell_center = (local_cell_center[0] + min_y, local_cell_center[1] + min_x)
+
+        #foci in nucleus
+        if type(foci_coords) != type(None) :
+            if len(foci_coords) == 0 : 
+                foci_number = 0
+                foci_in_nuc_number = 0
+            else :
+                foci_number = len(foci_coords)
+                foci_index = list(zip(*foci_coords))
+                if len(foci_index) == 5 :
+                    foci_index = foci_index[1:3]
+                elif len(foci_index) == 4 :
+                    foci_index = foci_index[:2]
+                else : raise AssertionError("Impossible number of dim for foci : ", len(foci_index))
+                foci_in_nuc_number = nuc_mask[tuple(foci_index)].astype(bool).sum()
+        else :
+            foci_number = np.NaN
+            foci_in_nuc_number = np.NaN
+
         #Signal to noise
         snr_dict = _compute_cell_snr(
             image,
@@ -527,6 +554,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
         features = list(features)
         features += [np.mean(nuc_signal), np.median(nuc_signal), np.max(nuc_signal), np.min(nuc_signal)]
         features += [snr_mean, snr_median, snr_std]
+        features += [cell_center, foci_number, foci_in_nuc_number]
 
         features = [acquisition_id, cell_id, cell_bbox] + features
         

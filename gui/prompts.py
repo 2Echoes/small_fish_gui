@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
-from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_layout, add_header
+from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_layout, add_header, path_layout
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
 
@@ -113,7 +113,7 @@ def output_image_prompt(filename) :
         relaunch = False
         layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
         layout += parameters_layout(["filename"], default_values= [filename + "_quantification"], size=25)
-        layout += bool_layout(['Excel', 'Feather'])
+        layout += bool_layout(['csv','Excel', 'Feather'])
         layout.append([sg.Button('Cancel')])
 
         event,values= prompt(layout)
@@ -205,6 +205,21 @@ def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_dec
         layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
     layout += bool_layout(['Interactive threshold selector'], preset=[False])
+    layout += path_layout(
+        keys=['spots_extraction_folder'],
+        look_for_dir=True,
+        header= "Individual spot extraction",
+        preset= default_dict.setdefault('spots_extraction_folder', '')
+    )
+    layout += parameters_layout(
+        parameters=['spots_filename'],
+        default_values=[default_dict.setdefault('spots_filename','spots_extraction')],
+        size= 13
+    )
+    layout += bool_layout(
+        parameters= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
+        preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
+    )
 
     event, values = prompt_with_help(layout, help='detection')
     if event == 'Cancel' : return None

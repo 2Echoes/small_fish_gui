@@ -4,13 +4,14 @@ from ._preprocess import map_channels, prepare_image_detection, reorder_shape, r
 from .detection import ask_input_parameters, initiate_detection, launch_detection, launch_features_computation, get_nucleus_signal
 from ._segmentation import launch_segmentation
 from ._colocalisation import initiate_colocalisation, launch_colocalisation
+from .spots import launch_spots_extraction
 
 import pandas as pd
 import PySimpleGUI as sg
 
 def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_label, nucleus_label) :
     """
-    #TODO : list all keys added to user_parameters when returned
+    #TODO : list all keys added to user_parameters when returned.
     """
 
     new_results_df = pd.DataFrame()
@@ -84,7 +85,20 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
             if ask_detection_confirmation(user_parameters.get('threshold')) : break
         else :
             break
-        
+
+    if user_parameters['spots_extraction_folder'] != '' and type(user_parameters['spots_extraction_folder']) != type(None) :
+        if user_parameters['spots_filename'] != '' and type(user_parameters['spots_filename']) != type(None) :
+            if any((user_parameters['do_spots_excel'], user_parameters['do_spots_csv'], user_parameters['do_spots_feather'])) :
+                print((user_parameters['do_spots_excel'], user_parameters['do_spots_csv'], user_parameters['do_spots_feather']))
+                launch_spots_extraction(
+                    acquisition_id=acquisition_id,
+                    user_parameters=user_parameters,
+                    image=image,
+                    spots=spots,
+                    nucleus_label= nucleus_label,
+                    cell_label= cytoplasm_label,
+                )
+
     #Features computation
     new_results_df, new_cell_results_df = launch_features_computation(
     acquisition_id=acquisition_id,
@@ -108,9 +122,10 @@ def save_results(result_df, cell_result_df, coloc_df) :
             filename = dic['filename']
             do_excel = dic['Excel']
             do_feather = dic['Feather']
-            sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather)
-            sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather)
-            sucess3 = write_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather)
+            do_csv = dic['csv']
+            sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
+            sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
+            sucess3 = write_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             if sucess1 and sucess2 and sucess3 : sg.popup("Sucessfully saved at {0}.".format(path))
 
     else :
