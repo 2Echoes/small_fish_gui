@@ -95,10 +95,10 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     scale = compute_anisotropy_coef(voxel_size)
     try :
         Viewer = napari.Viewer(ndisplay=2, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
-        Viewer.add_image(image, scale=scale, name= "rna signal", blending= 'additive', colormap='red')
+        Viewer.add_image(image, scale=scale, name= "rna signal", blending= 'additive', colormap='red', contrast_limits=[image.min(), image.max()])
         other_colors = ['green', 'blue', 'gray', 'cyan', 'bop orange', 'bop purple'] * ((len(other_images)-1 // 7) + 1)
         for im, color in zip(other_images, other_colors) : 
-            Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color)
+            Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color, contrast_limits=[im.min(), im.max()])
         layer_offset = len(other_images)
 
         Viewer.add_points(spots, size = 5, scale=scale, face_color= 'green', opacity= 1, symbol= 'ring', name= 'single spots') # spots
@@ -184,11 +184,6 @@ def show_segmentation(
 
     return new_nuc_label, new_cyto_label
 
-def _create_threshold_callback(widget) :
-    def get_threshold_callback(event : Event) :
-        print(widget.value)
-        return widget.value
-    return get_threshold_callback
 
 
 def threshold_selection(
@@ -197,6 +192,10 @@ def threshold_selection(
         threshold_slider,
         voxel_size : tuple,
         ) :
+    
+    """
+    To view code for spot selection please have a look at magicgui instance created with `detection._create_threshold_slider` which is then passed to this napari wrapper as 'threshold_slider' argument.
+    """
     
     
     Viewer = napari.Viewer(title= "Small fish - Threshold selector", ndisplay=2, show=True)
