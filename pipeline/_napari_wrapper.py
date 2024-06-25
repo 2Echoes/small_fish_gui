@@ -168,11 +168,11 @@ def show_segmentation(
     Viewer = napari.Viewer(ndisplay=2, title= 'Show segmentation', axis_labels=['z','y','x'] if dim == 3 else ['y', 'x'], show= False)
     
     # Adding channels
-    Viewer.add_image(nuc_image, name= "nucleus signal", blending= 'additive', colormap='blue')
+    Viewer.add_image(nuc_image, name= "nucleus signal", blending= 'additive', colormap='blue', contrast_limits=[nuc_image.min(), nuc_image.max()])
     Viewer.add_labels(nuc_label, opacity= 0.5, blending= 'additive')
     
     #Adding labels
-    if type(cyto_image) != type(None) : Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red')
+    if type(cyto_image) != type(None) : Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red', contrast_limits=[cyto_image.min(), cyto_image.max()])
     if type(cyto_label) != type(None) : Viewer.add_labels(cyto_label, opacity= 0.4, blending= 'additive')
     
     #Launch Napari
