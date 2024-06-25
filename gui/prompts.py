@@ -204,6 +204,8 @@ def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_dec
         default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
         layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
+    layout += bool_layout(['Interactive threshold selector'], preset=[False])
+
     event, values = prompt_with_help(layout, help='detection')
     if event == 'Cancel' : return None
     if is_3D_stack : values['dim'] = 3

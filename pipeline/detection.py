@@ -287,7 +287,7 @@ def initiate_detection(user_parameters, segmentation_done, map, shape) :
     return user_parameters
 
 @add_default_loading
-def _launch_detection(image, image_input_values: dict, threshold_user_selection=True) :
+def _launch_detection(image, image_input_values: dict) :
 
     """
     Performs spots detection
@@ -300,6 +300,7 @@ def _launch_detection(image, image_input_values: dict, threshold_user_selection=
     spot_size = image_input_values.get('spot_size')
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
+    threshold_user_selection = image_input_values.get('Interactive threshold selector')
     
     if type(threshold) == type(None) :     
         threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance) * threshold_penalty
