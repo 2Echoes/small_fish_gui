@@ -1,5 +1,5 @@
 import numpy as np
-import pandas as pd
+import os
 import PySimpleGUI as sg
 from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt, prompt_with_help
 
@@ -252,6 +252,11 @@ def check_integrity(values: dict, do_dense_region_deconvolution, multichannel,se
         if ch >= ch_len :
             raise ParameterInputError("Channel to compute is out of range for image.\nPlease select from {0}".format(list(range(ch_len))))
         values['channel to compute'] = ch
+
+    #Spot extraction
+    if not os.path.isdir(values['spots_extraction_folder']) and values['spots_extraction_folder'] != '':
+        raise ParameterInputError("Incorrect spot extraction folder.")
+
 
     return values
 
