@@ -763,8 +763,10 @@ def _create_threshold_slider(
             mask_local_max=local_maxima,
             threshold=threshold
         )[0]
+
+        print(voxel_size)
         layer_args = {
-            'size': 7, 
+            'size': 5, 
             'scale' : voxel_size, 
             'face_color' : 'transparent', 
             'edge_color' : 'blue', 

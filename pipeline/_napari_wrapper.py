@@ -173,14 +173,15 @@ def show_segmentation(
     
     #Adding labels
     if type(cyto_image) != type(None) : Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red', contrast_limits=[cyto_image.min(), cyto_image.max()])
-    if type(cyto_label) != type(None) : Viewer.add_labels(cyto_label, opacity= 0.4, blending= 'additive')
+    if type(cyto_label) != type(None) and not np.array_equal(cyto_label, nuc_label): Viewer.add_labels(cyto_label, opacity= 0.4, blending= 'additive')
     
     #Launch Napari
     Viewer.show(block=False)
     napari.run()
 
     new_nuc_label = Viewer.layers[1].data
-    if type(cyto_label) != type(None) : new_cyto_label = Viewer.layers[3].data
+    if type(cyto_label) != type(None) and not np.array_equal(cyto_label, nuc_label) : new_cyto_label = Viewer.layers[3].data
+    else : new_cyto_label = new_nuc_label
 
     return new_nuc_label, new_cyto_label
 
@@ -197,6 +198,7 @@ def threshold_selection(
     To view code for spot selection please have a look at magicgui instance created with `detection._create_threshold_slider` which is then passed to this napari wrapper as 'threshold_slider' argument.
     """
     
+    print(voxel_size)
     
     Viewer = napari.Viewer(title= "Small fish - Threshold selector", ndisplay=2, show=True)
     Viewer.add_image(
