@@ -198,8 +198,6 @@ def threshold_selection(
     To view code for spot selection please have a look at magicgui instance created with `detection._create_threshold_slider` which is then passed to this napari wrapper as 'threshold_slider' argument.
     """
     
-    print(voxel_size)
-    
     Viewer = napari.Viewer(title= "Small fish - Threshold selector", ndisplay=2, show=True)
     Viewer.add_image(
         data= image,

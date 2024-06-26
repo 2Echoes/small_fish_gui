@@ -746,15 +746,16 @@ def _create_threshold_slider(
         logfiltered_image : np.ndarray,
         local_maxima : np.ndarray,
         default : int,
-        min : int,
-        max : int,
+        min_value : int,
+        max_value : int,
         voxel_size
 ) :
     
     if isinstance(default, float) : default = round(default)
+    min_value = max(min_value,25) #Security to avoid user put too low threshold and crashes Napari if out of memory.
 
     @magicgui(
-        threshold={'widget_type' : 'Slider', 'value' : default, 'min' : min, 'max' : max},
+        threshold={'widget_type' : 'Slider', 'value' : default, 'min' : min_value, 'max' : max_value},
         auto_call=True
     )
     def threshold_slider(threshold: int) -> LayerDataTuple:
@@ -764,7 +765,6 @@ def _create_threshold_slider(
             threshold=threshold
         )[0]
 
-        print(voxel_size)
         layer_args = {
             'size': 5, 
             'scale' : voxel_size, 
