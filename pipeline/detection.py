@@ -327,8 +327,8 @@ def _launch_detection(image, image_input_values: dict) :
             logfiltered_image=filtered_image,
             local_maxima=local_maxima,
             default=threshold,
-            min=filtered_image[local_maxima].min(),
-            max=filtered_image[local_maxima].max(),
+            min_value=filtered_image[local_maxima].min(),
+            max_value=filtered_image[local_maxima].max(),
             voxel_size=voxel_size
         )
 
@@ -752,11 +752,12 @@ def _create_threshold_slider(
 ) :
     
     if isinstance(default, float) : default = round(default)
-    min_value = max(min_value,25) #Security to avoid user put too low threshold and crashes Napari if out of memory.
+    min_value = max(min_value,15) #Security to avoid user put too low threshold and crashes Napari if out of memory.
 
     @magicgui(
-        threshold={'widget_type' : 'Slider', 'value' : default, 'min' : min_value, 'max' : max_value},
-        auto_call=True
+        threshold={'widget_type' : 'Slider', 'value' : default, 'min' : min_value, 'max' : max_value, 'tracking' : True,},
+        auto_call=False,
+        call_button= "Apply"
     )
     def threshold_slider(threshold: int) -> LayerDataTuple:
         spots = detection.spots_thresholding(
