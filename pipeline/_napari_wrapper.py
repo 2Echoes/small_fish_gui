@@ -199,19 +199,20 @@ def threshold_selection(
     """
     
     Viewer = napari.Viewer(title= "Small fish - Threshold selector", ndisplay=2, show=True)
+    scale = compute_anisotropy_coef(voxel_size)
     Viewer.add_image(
         data= image,
         contrast_limits= [image.min(), image.max()],
         name= "raw signal",
         colormap= 'green',
-        scale= voxel_size,
+        scale= scale,
         blending= 'additive'
     )
     Viewer.add_image(
         data= filtered_image,
         contrast_limits= [filtered_image.min(), filtered_image.max()],
         colormap= 'gray',
-        scale=voxel_size,
+        scale=scale,
         blending='additive'
     )
 
