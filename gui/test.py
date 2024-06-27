@@ -1,4 +1,5 @@
 import PySimpleGUI as sg
-import small_fish.gui.prompts as p
+import small_fish_gui.gui.batch as prompt
 
-p.hub_prompt([{},{},{"cell_number" : 100, "spot_number" : 1000},{},{},{'cell_number' : 10},{}])
+prompt.batch_promp()
+print('end')
