@@ -7,9 +7,10 @@ from cellpose.core import use_gpu
 sg.theme('DarkAmber')
 
 
-def add_header(header_text, layout) :
-    header = [[sg.Text('\n{0}'.format(header_text), size= (len(header_text),3), font= 'bold 15')]]
-    return header + layout
+def add_header(header_text) :
+    """Returns elmnt not layout"""
+    header = [sg.Text('\n{0}'.format(header_text), size= (len(header_text),3), font= 'bold 15')]
+    return header
 
 
 def pad_right(string, length, pad_char) :
@@ -50,7 +51,7 @@ def parameters_layout(parameters:'list[str]' = [], unit=None, header= None, defa
             layout[line_id] += [sg.Text('{0}'.format(unit))]
     
     if isinstance(header, str) :
-        layout = add_header(header, layout)
+        layout = [add_header(header)] + layout
     return layout
 
 def tuple_layout(opt=None, default_dict={}, unit:dict={}, **tuples) :
@@ -97,7 +98,7 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
         [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, initial_folder= preset)] for name in keys
         ]
     if isinstance(header, str) :
-        layout = add_header(header, layout=layout)
+        layout = [add_header(header)] + layout
     return layout
 
 def bool_layout(parameters= [], header=None, preset=None) :
@@ -118,10 +119,10 @@ def bool_layout(parameters= [], header=None, preset=None) :
         [sg.Checkbox(pad_right(name, max_length, ' '), key= name, default=box_preset)] for name, box_preset in zip(parameters,preset)
     ]
     if isinstance(header, str) :
-        layout = add_header(header, layout=layout)
+        layout = [add_header(header)] + layout
     return layout
 
-def combo_layout(values, key, header=None, read_only=True, default_value=None) :
+def combo_elmt(values, key, header=None, read_only=True, default_value=None) :
     """
     drop-down list
     """
@@ -135,7 +136,7 @@ def combo_layout(values, key, header=None, read_only=True, default_value=None) :
         sg.Combo(values, default_value=default_value, readonly=read_only, key=key)
     ]
     if isinstance(header, str) :
-        layout = add_header(header, layout=layout)
+        layout = add_header(header) + layout
     return layout
 
 def radio_layout(values, header=None) :
@@ -148,7 +149,7 @@ def radio_layout(values, header=None) :
         [sg.Radio(value, group_id= 0) for value in values]
     ]
     if isinstance(header, str) :
-        layout = add_header(header, layout=layout)
+        layout = [add_header(header)] + layout
     return layout
 
 def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, segment_only_nuclei_preset=False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png',) :
@@ -162,23 +163,115 @@ def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_
     layout = [[sg.Text("GPU is currently "), sg.Text('ON', text_color= 'green') if USE_GPU else sg.Text('OFF', text_color= 'red')]]
     
     #cytoplasm parameters
-    layout += [add_header("Cell Segmentation", [sg.Text("Choose cellpose model for cytoplasm: \n")]),
-              [combo_layout(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
+    layout += [
+        add_header("Cell Segmentation"),
+        [sg.Text("Choose cellpose model for cytoplasm: \n")],
+        combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)
                         ]
-    if multichannel : layout += [parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])]
-    layout += [parameters_layout(['cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset])]
+                        
+    if multichannel : layout += parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])
+    layout += parameters_layout(['cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset])
     #Nucleus parameters
     layout += [
-            add_header("Nucleus segmentation",[sg.Text("Choose cellpose model for nucleus: \n")]),
-              combo_layout(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
+            add_header("Nucleus segmentation"),
+            [sg.Text("Choose cellpose model for nucleus: \n")],
+              combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
                 ]
-    if multichannel : layout += [parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])]
-    layout += [parameters_layout([ 'nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset])]
-    layout += [bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset)]
+    
+    if multichannel : layout += parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])
+    layout += parameters_layout([ 'nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset])
+    layout += bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset)
     
     #Control plots
-    layout += [bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)]
-    layout += [path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)]
-    layout += [parameters_layout(['filename'], default_values=[filename_preset], size= 25)]
+    layout += bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)
+    layout += path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)
+    layout += parameters_layout(['filename'], default_values=[filename_preset], size= 25)
+
+    return layout
+
+def _input_parameters_layout(
+        ask_for_segmentation,
+        is_3D_stack_preset,
+        time_stack_preset,
+        multichannel_preset,
+        do_dense_regions_deconvolution_preset,
+        do_clustering_preset,
+        do_segmentation_preset,
+        do_Napari_correction
+
+) :
+    layout_image_path = path_layout(['image path'], header= "Image")
+    layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
+    
+    if ask_for_segmentation : 
+        layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Segmentation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], header= "Pipeline settings")
+    else : 
+        layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
+
+    return layout_image_path
+
+def _detection_layout(
+        is_3D_stack,
+        is_multichannel,
+        do_dense_region_deconvolution,
+        do_clustering,
+        do_segmentation,
+        segmentation_done=False,
+        default_dict={},
+) :
+    if is_3D_stack : dim = 3
+    else : dim = 2
+
+    #Detection
+    detection_parameters = ['threshold', 'threshold penalty']
+    default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
+    opt= [True, True]
+    if is_multichannel : 
+        detection_parameters += ['channel to compute']
+        opt += [False]
+        default_detection += [default_dict.setdefault('channel to compute', '')]
+    
+    layout = [[sg.Text("Green parameters", text_color= 'green'), sg.Text(" are optional parameters.")]]
+    layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt, default_values=default_detection)
+    
+    if dim == 2 : tuple_shape = ('y','x')
+    else : tuple_shape = ('z','y','x')
+    opt = {'voxel_size' : False, 'spot_size' : False, 'log_kernel_size' : True, 'minimum_distance' : True}
+    unit = {'voxel_size' : 'nm', 'minimum_distance' : 'nm', 'spot_size' : 'radius(nm)', 'log_kernel_size' : 'px'}
+
+    layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
+
+    #Deconvolution
+    if do_dense_region_deconvolution :
+        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
+        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'Dense regions deconvolution')
+        layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',5)])
+        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, unit= {"deconvolution_kernel" : 'px'}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
+    
+    #Clustering
+    if do_clustering :
+        layout += parameters_layout(['cluster size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster size',400)])
+        layout += parameters_layout(['min number of spots'], default_values=[default_dict.setdefault('min number of spots', 5)])
+
+    if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
+        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
+        layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
+
+    layout += bool_layout(['Interactive threshold selector'], preset=[False])
+    layout += path_layout(
+        keys=['spots_extraction_folder'],
+        look_for_dir=True,
+        header= "Individual spot extraction",
+        preset= default_dict.setdefault('spots_extraction_folder', '')
+    )
+    layout += parameters_layout(
+        parameters=['spots_filename'],
+        default_values=[default_dict.setdefault('spots_filename','spots_extraction')],
+        size= 13
+    )
+    layout += bool_layout(
+        parameters= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
+        preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
+    )
 
     return layout

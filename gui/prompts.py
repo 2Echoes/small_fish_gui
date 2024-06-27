@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
-from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_layout, add_header, path_layout
+from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
 
@@ -360,3 +360,4 @@ def ask_cancel_detection() :
         return False
     else :
         return True
+

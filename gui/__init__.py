@@ -21,7 +21,7 @@ from .prompts import ask_detection_confirmation
 from .layout import parameters_layout 
 from .layout import bool_layout
 from .layout import path_layout
-from .layout import combo_layout
+from .layout import combo_elmt
 from .layout import tuple_layout
 from .layout import radio_layout
 from .layout import add_header
