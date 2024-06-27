@@ -12,8 +12,10 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') 
     """
     if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
 
+    col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=(250,500))
+    layout = [[col_elmt]]
     
-    window = sg.Window('small fish', layout=layout, margins=(10,10))
+    window = sg.Window('small fish', layout=layout, margins=(10,10), size=(250,500))
     event, values = window.read(timeout=timeout, timeout_key=timeout_key)
     if event == None : 
         window.close()
@@ -31,7 +33,10 @@ def prompt_with_help(layout, help =None) :
     layout += [[sg.Button('Help')]]
     layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     
-    window = sg.Window('small fish', layout=layout)
+    col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=(250,500))
+    layout = [[col_elmt]]
+
+    window = sg.Window('small fish', layout=layout, size=(250,500))
     while True :
         event, values = window.read()
         if event == None :
