@@ -8,7 +8,7 @@ sg.theme('DarkAmber')
 
 
 def add_header(header_text) :
-    """Returns elmnt not layout"""
+    """Returns [elmnt] not layout"""
     header = [sg.Text('\n{0}'.format(header_text), size= (len(header_text),3), font= 'bold 15')]
     return header
 
@@ -201,12 +201,18 @@ def _input_parameters_layout(
 
 ) :
     layout_image_path = path_layout(['image path'], header= "Image")
-    layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
+    layout_image_path += bool_layout(['3D stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
     
     if ask_for_segmentation : 
-        layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Segmentation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], header= "Pipeline settings")
+        layout_image_path += bool_layout(
+            ['Dense regions deconvolution', 'Cluster computation', 'Segmentation', 'Napari correction'], 
+            preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], 
+            header= "Pipeline settings")
     else : 
-        layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
+        layout_image_path += bool_layout(
+            ['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], 
+            preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], 
+            header= "Pipeline settings")
 
     return layout_image_path
 
@@ -273,5 +279,29 @@ def _detection_layout(
         parameters= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
         preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
     )
+
+    return layout
+
+def _ask_channel_map_layout(
+        shape,
+        is_3D_stack,
+        multichannel,
+        is_time_stack,
+        preset_map={},
+) :
+    
+    x = preset_map.setdefault('x',0)
+    y = preset_map.setdefault('y',0)
+    z = preset_map.setdefault('z',0)
+    c = preset_map.setdefault('c',0)
+    t = preset_map.setdefault('t',0)
+
+    layout = [
+            add_header("Dimensions mapping"), [sg.Text("Image shape : {0}".format(shape))]
+        ]
+    layout += parameters_layout(['x','y'], default_values=[x,y])
+    if is_3D_stack : layout += parameters_layout(['z'], default_values=[z])
+    if multichannel : layout += parameters_layout(['c'], default_values=[c])
+    if is_time_stack : layout += parameters_layout(['t'], default_values=[t])
 
     return layout

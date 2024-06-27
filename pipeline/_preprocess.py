@@ -122,14 +122,13 @@ def _auto_map_channels(image: np.ndarray, is_3D_stack, is_time_stack, multichann
     return map
 
 def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map: dict= {}) :
-    map = preset_map
     while True :
         relaunch = False
-        x = map.setdefault('x',0)
-        y = map.setdefault('y',0)
-        z = map.setdefault('z',0)
-        c = map.setdefault('c',0)
-        t = map.setdefault('t',0)
+        x = preset_map.setdefault('x',0)
+        y = preset_map.setdefault('y',0)
+        z = preset_map.setdefault('z',0)
+        c = preset_map.setdefault('c',0)
+        t = preset_map.setdefault('t',0)
 
         layout = [
             add_header("Dimensions mapping", [sg.Text("Image shape : {0}".format(shape))])
@@ -139,12 +138,12 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
         if multichannel : layout += [parameters_layout(['c'], default_values=[c])]
         if is_time_stack : layout += [parameters_layout(['t'], default_values=[t])]
 
-        event, map = prompt_with_help(layout,help= 'mapping', add_scrollbar=False)
+        event, preset_map = prompt_with_help(layout,help= 'mapping', add_scrollbar=False)
         if event == 'Cancel' : quit()
 
         #Check integrity
-        channels_values = np.array(list(map.values()), dtype= int)
-        total_channels = len(map)
+        channels_values = np.array(list(preset_map.values()), dtype= int)
+        total_channels = len(preset_map)
         unique_channel = len(np.unique(channels_values))
         if total_channels != unique_channel :
             sg.popup("{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
@@ -154,7 +153,7 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
             relaunch= True
         if not relaunch : break
 
-    return map
+    return preset_map
 
 def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
     layout = [
