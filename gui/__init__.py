@@ -10,7 +10,6 @@ from .prompts import input_image_prompt
 from .prompts import hub_prompt
 from .prompts import detection_parameters_promt
 from .prompts import coloc_prompt
-from .prompts import post_analysis_prompt
 from .prompts import output_image_prompt
 from .prompts import ask_cancel_detection
 from .prompts import ask_cancel_segmentation

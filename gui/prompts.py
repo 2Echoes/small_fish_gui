@@ -6,16 +6,20 @@ from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, c
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
 
-def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') :
+def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', add_scrollbar=True) :
     """
     Default event : 'Ok', 'Cancel'
     """
     if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
 
-    col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=(250,500))
-    layout = [[col_elmt]]
+    if add_scrollbar :
+        size = (400,500)
+        col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=size)
+        layout = [[col_elmt]]
+    else :
+        size = (None,None)
     
-    window = sg.Window('small fish', layout=layout, margins=(10,10), size=(250,500))
+    window = sg.Window('small fish', layout=layout, margins=(10,10), size=size, resizable=True)
     event, values = window.read(timeout=timeout, timeout_key=timeout_key)
     if event == None : 
         window.close()
@@ -28,15 +32,19 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY') 
         window.close()
         return event, values
 
-def prompt_with_help(layout, help =None) :
+def prompt_with_help(layout, help =None, add_scrollbar=True) :
     layout += [[]]
     layout += [[sg.Button('Help')]]
     layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     
-    col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=(250,500))
-    layout = [[col_elmt]]
+    if add_scrollbar :
+        size = (400,500)
+        col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=size)
+        layout = [[col_elmt]]
+    else :
+        size = (None,None)
 
-    window = sg.Window('small fish', layout=layout, size=(250,500))
+    window = sg.Window('small fish', layout=layout, size=size, resizable=True)
     while True :
         event, values = window.read()
         if event == None :
@@ -84,7 +92,7 @@ def input_image_prompt(
     else : 
         layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
     
-    event, values = prompt_with_help(layout_image_path, help= 'general')
+    event, values = prompt_with_help(layout_image_path, help= 'general', add_scrollbar=False)
 
     if event == 'Cancel' :
         return None
@@ -232,22 +240,6 @@ def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_dec
     else : values['dim'] = 2
     return values
 
-def post_analysis_prompt() :
-    answer = events(['Save results','add_detection', 'colocalisation', 'open results in napari'])
-
-    return answer
-
-def events(event_list) :
-    """
-    Return event chose from user
-    """
-    
-    layout = [
-        [sg.Button(event) for event in event_list]
-    ]
-
-    event, values = prompt(layout, add_ok_cancel= False)
-    return event
 
 def ask_replace_file(filename:str) :
     layout = [

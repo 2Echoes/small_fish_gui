@@ -139,7 +139,7 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
         if multichannel : layout += [parameters_layout(['c'], default_values=[c])]
         if is_time_stack : layout += [parameters_layout(['t'], default_values=[t])]
 
-        event, map = prompt_with_help(layout,help= 'mapping')
+        event, map = prompt_with_help(layout,help= 'mapping', add_scrollbar=False)
         if event == 'Cancel' : quit()
 
         #Check integrity
@@ -166,7 +166,7 @@ def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
         [sg.Button('Change mapping')]
     ]
 
-    event, values = prompt_with_help(layout, help='mapping')
+    event, values = prompt_with_help(layout, help='mapping', add_scrollbar=False)
 
     if event == 'Ok' :
         return map
