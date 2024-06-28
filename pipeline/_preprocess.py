@@ -242,6 +242,9 @@ def check_integrity(
             _warning_popup('No gamma found; image will not be denoised before deconvolution.')
             values['gamma'] = 0
 
+        if values['alpha'] > 1 or values['alpha'] < 0 :
+            raise ParameterInputError("alpha must be set between 0 and 1.")
+
     if do_clustering :
         if not isinstance(values['min number of spots'], (int)) :
             raise ParameterInputError("Incorrect min spot number parameter.")

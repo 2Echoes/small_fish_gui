@@ -1,6 +1,5 @@
 import PySimpleGUI as sg
 from ..pipeline._preprocess import _auto_map_channels
-from ..pipeline._preprocess import _check_channel_map_integrity
 from ..pipeline._preprocess import MappingError
 
 def get_elmt_from_key(Tab_elmt:sg.Tab, key) -> sg.Element:

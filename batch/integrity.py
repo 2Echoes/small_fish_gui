@@ -7,6 +7,8 @@ import bigfish.stack as stack
 import numpy as np
 import PySimpleGUI as sg
 
+from ..pipeline._preprocess import check_integrity, convert_parameters_types, ParameterInputError
+
 def check_file(filename:str) :
 
     if filename.endswith('.czi') :
@@ -50,3 +52,63 @@ def sanity_check(
 
         print("Sanity check completed.")
         return None if len(shape) != len(ref_shape) else shape
+
+def check_channel_map_integrity(
+        maping:dict, 
+        shape: tuple,
+        expected_dim : int
+        ) :
+    
+    #Check integrity
+    channels_values = np.array(list(maping.values()), dtype= int)
+    total_channels = len(maping)
+    unique_channel = len(np.unique(channels_values))
+    res= True
+
+    if expected_dim != total_channels :
+        sg.popup("Image has {0} dimensions but {1} were mapped.".format(expected_dim, total_channels))
+        res = False
+    if total_channels != unique_channel :
+        sg.popup("{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
+        res = False
+    if not all(channels_values < len(shape)):
+        sg.popup("Channels values out of range for image dimensions.\nPlease select dimensions from {0}".format(list(range(len(shape)))))
+        res = False
+
+    return res
+
+def check_segmentation_parameters() :
+    pass
+
+def check_detection_parameters(
+        values,
+        do_dense_region_deconvolution,
+        do_clustering,
+        is_multichannel,
+        is_3D,
+        map,
+        shape
+) :
+    
+    values['dim'] = 3 if is_3D else 2
+    values = convert_parameters_types(values)
+    try :
+        check_integrity(
+            values=values,
+            do_dense_region_deconvolution=do_dense_region_deconvolution,
+            do_clustering=do_clustering,
+            multichannel=is_multichannel,
+            segmentation_done=None,
+            map=map,
+            shape=shape
+        )
+    except ParameterInputError as e: 
+        detection_is_ok = False
+        sg.popup_error(e)
+    else :
+        detection_is_ok = True
+    
+    return detection_is_ok, values
+
+def check_output_parameters() :
+    pass

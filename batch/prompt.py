@@ -8,9 +8,8 @@ import PySimpleGUI as sg
 from .utils import get_elmt_from_key, create_map, call_auto_map
 from .update import update_detection_tab, update_map_tab, update_master_parameters, update_segmentation_tab
 from .input import load, extract_files
-from .integrity import sanity_check
+from .integrity import sanity_check, check_channel_map_integrity, check_detection_parameters
 from ..gui.layout import _segmentation_layout, _detection_layout, _input_parameters_layout, _ask_channel_map_layout
-from ..pipeline._preprocess import _check_channel_map_integrity
 
 
 def batch_promp() :
@@ -69,6 +68,8 @@ def batch_promp() :
 
     #Segmentation tab
     segmentation_layout = _segmentation_layout(multichannel=True, cytoplasm_model_preset='cyto3')
+    apply_segmentation_button = sg.Button('apply', key='apply-segmentation')
+    segmentation_layout += [[apply_segmentation_button]]
     segmentation_tab = sg.Tab("Segmentation", segmentation_layout, visible=False)
 
     #Detection tab
@@ -79,7 +80,9 @@ def batch_promp() :
         do_dense_region_deconvolution=True,
         do_segmentation=True,
     )
-    detection_tab = sg.Tab("Detection", detection_layout)
+    apply_detection_button = sg.Button('apply', key='apply-detection')
+    detection_layout += [[apply_detection_button]]
+    detection_tab = sg.Tab("Detection", detection_layout, visible=False)
 
     _tab_group = sg.TabGroup([[input_tab, map_tab, segmentation_tab, detection_tab]], enable_events=True)
     tab_col = sg.Column( #Allow the tab to be scrollable
@@ -189,6 +192,7 @@ def batch_promp() :
             last_shape_read.update("Last shape read : {0}".format(last_shape))
             dimension_number_text.update("Dimension number : {0}".format(dim_number))
             Master_parameters_dict['_is_mapping_correct'] = False
+            Master_parameters_dict['_is_detection_correct'] = False
             update_map_tab(
                 tab_elmt=tab_dict.get("Map"),
                 is_3D=is_3D,
@@ -211,6 +215,7 @@ def batch_promp() :
             else :
                 dim_number = None
                 Master_parameters_dict['_is_mapping_correct'] = False
+                Master_parameters_dict['_is_detection_correct'] = False
                 dimension_number_text.update("Dimension number : unknown")
                 auto_map.update(disabled=True)
 
@@ -222,14 +227,6 @@ def batch_promp() :
                 segmentation_correct_text= segmentation_ok_text,
                 do_segmentation=do_segmentation,
                 is_multichannel=is_multichanel,
-            )
-
-            update_detection_tab(
-                tab_elmt=tab_dict.get("Detection"),
-                is_multichannel=is_multichanel,
-                is_3D=is_3D,
-                do_dense_region_deconvolution=do_dense_regions_deconvolution,
-                do_clustering=do_clustering,
             )
 
             update_map_tab(
@@ -247,7 +244,7 @@ def batch_promp() :
                 is_multichannel=is_multichanel
             )
 
-            Master_parameters_dict['_is_mapping_correct'] = _check_channel_map_integrity(
+            Master_parameters_dict['_is_mapping_correct'] = check_channel_map_integrity(
                 maping=Master_parameters_dict['_map'],
                 shape=last_shape,
                 expected_dim=dim_number
@@ -263,7 +260,7 @@ def batch_promp() :
                 is_multichannel=is_multichanel,
             )
 
-            Master_parameters_dict['_is_mapping_correct'] = _check_channel_map_integrity(
+            Master_parameters_dict['_is_mapping_correct'] = check_channel_map_integrity(
                 maping=Master_parameters_dict['_map'],
                 shape=last_shape,
                 expected_dim=dim_number
@@ -274,8 +271,16 @@ def batch_promp() :
         elif event == 'apply-segmentation' : #TODO
             pass
         
-        elif event == 'apply-detection' : #TODO
-            pass
+        elif event == 'apply-detection' :
+            Master_parameters_dict['_is_detection_correct'], values = check_detection_parameters(
+                values=values,
+                do_dense_region_deconvolution=do_dense_regions_deconvolution,
+                do_clustering=do_clustering,
+                is_multichannel=is_multichanel,
+                is_3D=is_3D,
+                map= Master_parameters_dict.get('_map'),
+                shape=last_shape
+            )
         
         elif event == 'apply-output' : #TODO
             pass
@@ -291,5 +296,14 @@ def batch_promp() :
             Master_parameter_dict=Master_parameters_dict,
             update_dict=Master_parameters_update_dict
         )
+
+        update_detection_tab(
+                tab_elmt=tab_dict.get("Detection"),
+                is_multichannel=is_multichanel,
+                is_3D=is_3D,
+                do_dense_region_deconvolution=do_dense_regions_deconvolution,
+                do_clustering=do_clustering,
+                is_mapping_ok=Master_parameters_dict['_is_mapping_correct'],
+            )
 
     window.close()

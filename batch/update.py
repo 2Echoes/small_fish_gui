@@ -29,7 +29,8 @@ def update_detection_tab(
         is_multichannel, 
         is_3D, 
         do_dense_region_deconvolution,
-        do_clustering
+        do_clustering,
+        is_mapping_ok
         ) :
     
     #Acess elements
@@ -74,6 +75,9 @@ def update_detection_tab(
     for key, enabled in update_dict.items() :
         for elmt in list_dict.get(key) :
             elmt.update(disabled=not enabled)
+
+    if is_mapping_ok :
+        tab_elmt.update(visible=True)
 
 def update_segmentation_tab(tab_elmt : sg.Tab, segmentation_correct_text : sg.Text, do_segmentation, is_multichannel) : 
     
