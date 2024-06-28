@@ -67,7 +67,7 @@ def map_channels(user_parameters) :
     multichannel = user_parameters['multichannel']
 
     try : 
-        map = _auto_map_channels(image, is_3D_stack, is_time_stack, multichannel)
+        map = _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image=image)
     except MappingError as e :
         sg.popup("Automatic dimension mapping went wrong. Please indicate manually dimensions positions in the array.")
         map = _ask_channel_map(image.shape, is_3D_stack, is_time_stack, multichannel, preset_map= e.get_map())
@@ -77,8 +77,9 @@ def map_channels(user_parameters) :
 
     return map
 
-def _auto_map_channels(image: np.ndarray, is_3D_stack, is_time_stack, multichannel) :
-    shape = image.shape
+def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarray=None, shape=None) :
+    if type(shape) == type(None) :
+        shape = image.shape
     reducing_list = list(shape)
 
     #Set the biggest dimension to y
@@ -120,6 +121,31 @@ def _auto_map_channels(image: np.ndarray, is_3D_stack, is_time_stack, multichann
     if total_channels != unique_channel : raise MappingError(map,"{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
 
     return map
+
+
+def _check_channel_map_integrity(
+        maping:dict, 
+        shape: tuple,
+        expected_dim : int
+        ) :
+    
+    #Check integrity
+    channels_values = np.array(list(maping.values()), dtype= int)
+    total_channels = len(maping)
+    unique_channel = len(np.unique(channels_values))
+    res= True
+
+    if expected_dim != total_channels :
+        sg.popup("Image has {0} dimensions but {1} were mapped.".format(expected_dim, total_channels))
+        res = False
+    if total_channels != unique_channel :
+        sg.popup("{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
+        res = False
+    if not all(channels_values < len(shape)):
+        sg.popup("Channels values out of range for image dimensions.\nPlease select dimensions from {0}".format(list(range(len(shape)))))
+        res = False
+
+    return res
 
 def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map: dict= {}) :
     while True :

@@ -246,7 +246,12 @@ def _detection_layout(
     unit = {'voxel_size' : 'nm', 'minimum_distance' : 'nm', 'spot_size' : 'radius(nm)', 'log_kernel_size' : 'px'}
 
     layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
-
+    
+    if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
+        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
+        layout += [[sg.Text("nucleus channel signal "), sg.InputText(default_text=default_segmentation, key= "nucleus channel signal", size= 5, tooltip= "Channel from which signal will be measured for nucleus features, \nallowing you to measure signal from a different channel than the one used for segmentation.")]]
+        # layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text("Channel from which signal will be measured for nucleus features, allowing you to measure signal from a different channel than the one used for segmentation.")]]
+    
     #Deconvolution
     if do_dense_region_deconvolution :
         default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
@@ -259,9 +264,7 @@ def _detection_layout(
         layout += parameters_layout(['cluster size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster size',400)])
         layout += parameters_layout(['min number of spots'], default_values=[default_dict.setdefault('min number of spots', 5)])
 
-    if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
-        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
-        layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
+    
 
     layout += bool_layout(['Interactive threshold selector'], preset=[False])
     layout += path_layout(
