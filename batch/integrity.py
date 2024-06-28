@@ -2,6 +2,7 @@
 Submodule handling all parameters check, asserting functions and pipeline will be able to run.
 """
 
+import os
 import czifile as czi
 import bigfish.stack as stack
 import numpy as np
@@ -128,5 +129,20 @@ def check_detection_parameters(
     
     return detection_is_ok, values
 
-def check_output_parameters() :
-    pass
+def check_output_parameters(values) :
+    is_output_ok = True
+
+    output_folder = values.get('output_folder')
+    if not os.path.isdir(output_folder) :
+        sg.popup("Incorrect output folder selected")
+        is_output_ok=False
+
+    original_name = values['batch_name']
+    loop=1
+    values['batch_name'] = values['batch_name'].replace(' ','_')
+    while os.path.isfile(output_folder + '/' + values['batch_name']) :
+        values['batch_name'] = original_name + '_{0}'.format(loop)
+        loop+=1
+    if len(values['batch_name']) == 0 : is_output_ok = False
+
+    return is_output_ok, values

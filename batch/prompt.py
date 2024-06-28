@@ -6,9 +6,9 @@ import os
 import PySimpleGUI as sg
 
 from .utils import get_elmt_from_key, create_map, call_auto_map
-from .update import update_detection_tab, update_map_tab, update_master_parameters, update_segmentation_tab
+from .update import update_detection_tab, update_map_tab, update_master_parameters, update_segmentation_tab, update_output_tab
 from .input import load, extract_files
-from .integrity import sanity_check, check_channel_map_integrity, check_detection_parameters, check_segmentation_parameters
+from .integrity import sanity_check, check_channel_map_integrity, check_detection_parameters, check_segmentation_parameters, check_output_parameters
 from ..gui.layout import _segmentation_layout, _detection_layout, _input_parameters_layout, _ask_channel_map_layout
 
 
@@ -86,7 +86,25 @@ def batch_promp() :
     detection_keys_to_hide = ['do_spots_csv', 'do_spots_excel', 'do_spots_feather','spots_filename','spots_extraction_folder']
     detection_tab = sg.Tab("Detection", detection_layout, visible=False)
 
-    _tab_group = sg.TabGroup([[input_tab, map_tab, segmentation_tab, detection_tab]], enable_events=True)
+
+    #Output tab
+    apply_output_button = sg.Button('apply', key='apply-output')
+    save_segmentation_box = sg.Checkbox("save segmentation", disabled=True, key='save segmentation')
+    save_detection_box = sg.Checkbox("create spot detection visuals", key= 'save detection', tooltip="Create multichannel tiff with raw spot signal and detected spots.\nWarning if processing a lot of files make sure you have enough free space on your hard drive.")
+    extract_spots_box = sg.Checkbox("extract spots", key='extract spots')
+    batch_name_input = sg.InputText(size=25, key='batch_name')
+    output_layout=[
+        [sg.Text("Select a folder : "), sg.FolderBrowse(initial_folder=os.getcwd(), key='output_folder')],
+        [sg.Text("Name for batch : "), batch_name_input],
+        [save_segmentation_box],
+        [save_detection_box],
+        [extract_spots_box],
+        [apply_output_button],
+    ]
+    output_tab = sg.Tab("Output", output_layout, visible=True)
+
+    ##TAB GROUP
+    _tab_group = sg.TabGroup([[input_tab, map_tab, segmentation_tab, detection_tab, output_tab]], enable_events=True)
     tab_col = sg.Column( #Allow the tab to be scrollable
         [[_tab_group]],
         scrollable=True,
@@ -94,6 +112,16 @@ def batch_promp() :
         s= (390,390),
         pad=((0,0),(5,5))
         )
+    
+    
+    tab_dict= {
+        "Input" : input_tab,
+        "Segmentation" : segmentation_tab,
+        "Detection" : detection_tab,
+        "Map" : map_tab,
+        "Output" : output_tab
+    }
+
     
 #####   Launcher
 
@@ -122,13 +150,6 @@ def batch_promp() :
         pad=((3,5),(5,5))
         )
 
-    tab_dict= {
-        "Input" : input_tab,
-        "Segmentation" : segmentation_tab,
-        "Detection" : detection_tab,
-        "Map" : map_tab,
-    }
-
 #########################################
 #####   Window Creation
 #########################################
@@ -140,7 +161,7 @@ def batch_promp() :
         [sanity_header, sanity_check_button, sanity_progress],
         [dimension_number_text],
         [tab_col, launch_col],
-        # [sg.Output(size=(100,10), pad=(30,10))],
+        [sg.Output(size=(100,10), pad=(30,10))],
     ]
 
     window = sg.Window("small fish", layout=layout, size= (800,800), auto_size_buttons=True, auto_size_text=True)
@@ -163,6 +184,7 @@ def batch_promp() :
     loop = 0
     timeout = 1
     last_shape = None
+    talk=True
     
 
 #########################################
@@ -172,6 +194,7 @@ def batch_promp() :
     #Hiding options for non batch mode
     window= window.finalize()
     napari_correction_elmt.update(disabled=True)
+    get_elmt_from_key(tab_dict['Input'], key= 'image path').update(disabled=True)
     for key in seg_keys_to_hide : get_elmt_from_key(tab_dict['Segmentation'], key=key).update(disabled=True)
     for key in detection_keys_to_hide : get_elmt_from_key(tab_dict['Detection'], key=key).update(disabled=True)
     
@@ -283,8 +306,9 @@ def batch_promp() :
                 shape=last_shape
             )
         
-        elif event == 'apply-output' : #TODO
-            pass
+        elif event == 'apply-output' :
+            Master_parameters_dict['_is_output_correct'], values = check_output_parameters(values)
+            batch_name_input.update(value=values.get('batch_name'))
 
         elif event == "Cancel" :
             print(values)
@@ -292,7 +316,12 @@ def batch_promp() :
         elif event == None :
             quit()
 
+        elif event == 'start' :
+            print("Starting...")
+
         #End of loop
+
+        #If user loads other files
         if type(last_shape) != type(None) :
             if len(last_shape) != 2 + is_3D + is_multichanel :
                 Master_parameters_dict['_is_mapping_correct'] = False
@@ -323,6 +352,27 @@ def batch_promp() :
             do_dense_region_deconvolution=do_dense_regions_deconvolution,
             do_clustering=do_clustering,
             is_mapping_ok=Master_parameters_dict['_is_mapping_correct'],
+            do_segmentation=do_segmentation,
         )
+
+        update_output_tab(
+            tab_elmt=tab_dict['Output'],
+            do_segmentation=do_segmentation
+        )
+
+        _segmentation_ready = (Master_parameters_dict['_is_segmentation_correct'] and do_segmentation) or not do_segmentation
+        if Master_parameters_dict['_is_detection_correct'] and Master_parameters_dict['_is_output_correct'] and Master_parameters_dict['_is_mapping_correct'] and _segmentation_ready :
+            start_button.update(button_color='blue', disabled=False)
+            total_acquisition_text.update("/ {0}".format(len(filename_list)))
+            batch_progression_bar.update(current_count=0, bar_color=('green','blue'))
+            if talk : 
+                print("Small fish is ready, launch with the start button.")
+                talk= False
+        else :
+            talk = True
+            start_button.update(button_color='green', disabled=True)
+            total_acquisition_text.update("/ 0")
+            batch_progression_bar.update(current_count=0, bar_color=('blue','black'))
+
 
     window.close()

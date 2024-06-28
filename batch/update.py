@@ -30,7 +30,8 @@ def update_detection_tab(
         is_3D, 
         do_dense_region_deconvolution,
         do_clustering,
-        is_mapping_ok
+        is_mapping_ok,
+        do_segmentation,
         ) :
     
     #Acess elements
@@ -48,9 +49,15 @@ def update_detection_tab(
     deconvolution_kernel_x = get_elmt_from_key(tab_elmt, key= 'deconvolution_kernel_x')
     deconvolution_kernel_y = get_elmt_from_key(tab_elmt, key= 'deconvolution_kernel_y')
     deconvolution_kernel_z = get_elmt_from_key(tab_elmt, key= 'deconvolution_kernel_z')
+    
+    #Clustering
     cluster_size = get_elmt_from_key(tab_elmt, key= 'cluster size')
     min_number_of_spot = get_elmt_from_key(tab_elmt, key= 'min number of spots')
+    
+    #segmentation and multichannel
     nucleus_channel_signal = get_elmt_from_key(tab_elmt, key= 'nucleus channel signal')
+    
+    #disable
     interactive_threshold_selector = get_elmt_from_key(tab_elmt, key= 'Interactive threshold selector')
 
     update_dict={
@@ -60,15 +67,17 @@ def update_detection_tab(
         'do_clustering' : do_clustering,
         'always_hidden' : False,
         'is_3D&do_denseregion' : is_3D and do_dense_region_deconvolution,
+        'do_segmentation' : do_segmentation and is_multichannel
     }
 
     list_dict={
         'is_3D' : [voxel_size_z, spot_size_z, log_kernel_size_z, minimum_distance_z, ],
-        'is_multichannel' : [channel_to_compute, nucleus_channel_signal],
+        'is_multichannel' : [channel_to_compute],
         'do_dense_region_deconvolution' : [alpha,beta,gamma, deconvolution_kernel_x, deconvolution_kernel_y],
         'do_clustering' : [cluster_size, min_number_of_spot],
         'always_hidden' : [interactive_threshold_selector, ],
         'is_3D&do_denseregion' : [deconvolution_kernel_z],
+        'do_segmentation' : [nucleus_channel_signal]
         
     }
 
@@ -111,3 +120,10 @@ def update_map_tab(
     z_element.update(disabled=not is_3D)
     automap_element.update(disabled=type(last_shape) == type(None))
     apply_element.update(disabled=type(last_shape) == type(None))
+
+def update_output_tab(
+        tab_elmt : sg.Tab,
+        do_segmentation
+) :
+    segmentation_box = get_elmt_from_key(tab_elmt, "save segmentation")
+    segmentation_box.update(disabled = not do_segmentation)
