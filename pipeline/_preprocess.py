@@ -122,31 +122,6 @@ def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarr
 
     return map
 
-
-def _check_channel_map_integrity(
-        maping:dict, 
-        shape: tuple,
-        expected_dim : int
-        ) :
-    
-    #Check integrity
-    channels_values = np.array(list(maping.values()), dtype= int)
-    total_channels = len(maping)
-    unique_channel = len(np.unique(channels_values))
-    res= True
-
-    if expected_dim != total_channels :
-        sg.popup("Image has {0} dimensions but {1} were mapped.".format(expected_dim, total_channels))
-        res = False
-    if total_channels != unique_channel :
-        sg.popup("{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
-        res = False
-    if not all(channels_values < len(shape)):
-        sg.popup("Channels values out of range for image dimensions.\nPlease select dimensions from {0}".format(list(range(len(shape)))))
-        res = False
-
-    return res
-
 def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map: dict= {}) :
     while True :
         relaunch = False
@@ -239,7 +214,15 @@ def convert_parameters_types(values:dict) :
 
     return values
 
-def check_integrity(values: dict, do_dense_region_deconvolution, multichannel,segmentation_done, map, shape):
+def check_integrity(
+        values: dict, 
+        do_dense_region_deconvolution,
+        do_clustering, 
+        multichannel,
+        segmentation_done, 
+        map, 
+        shape
+        ):
     """
     Checks that parameters given in input by user are fit to be used for bigfish detection.
     """
@@ -259,10 +242,19 @@ def check_integrity(values: dict, do_dense_region_deconvolution, multichannel,se
             _warning_popup('No gamma found; image will not be denoised before deconvolution.')
             values['gamma'] = 0
 
+    if do_clustering :
+        if not isinstance(values['min number of spots'], (int)) :
+            raise ParameterInputError("Incorrect min spot number parameter.")
+        if not isinstance(values['cluster size'], (int)) :
+            raise ParameterInputError("Incorrect cluster size parameter.")
+
     #channel
     if multichannel :
         ch_len = shape[int(map['c'])]
-        if segmentation_done :
+
+        if type(segmentation_done) == type(None) :
+            pass
+        elif segmentation_done :
             try : nuc_signal_ch = int(values['nucleus channel signal'])
             except Exception :
                 raise ParameterInputError("Incorrect channel for nucleus signal measure.")
