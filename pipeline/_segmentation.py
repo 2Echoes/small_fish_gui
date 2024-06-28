@@ -170,7 +170,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 [sg.Button("Yes"), sg.Button("No")]
             ]
             
-            event, values = prompt(layout=layout, add_ok_cancel=False)
+            event, values = prompt(layout=layout, add_ok_cancel=False, add_scrollbar=False)
             if event == "No" :
                 continue
 

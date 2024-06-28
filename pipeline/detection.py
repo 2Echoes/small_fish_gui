@@ -8,6 +8,7 @@ from ._signaltonoise import compute_snr_spots
 from ._napari_wrapper import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
+from ..utils import compute_anisotropy_coef
 from .spots import compute_Spots
 from magicgui import magicgui
 from napari.layers import Image, Points
@@ -766,9 +767,11 @@ def _create_threshold_slider(
             threshold=threshold
         )[0]
 
+        scale = compute_anisotropy_coef(voxel_size)
+
         layer_args = {
             'size': 5, 
-            'scale' : voxel_size, 
+            'scale' : scale, 
             'face_color' : 'transparent', 
             'edge_color' : 'blue', 
             'symbol' : 'ring', 
