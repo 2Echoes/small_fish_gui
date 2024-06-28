@@ -15,6 +15,10 @@ def call_auto_map(
         is_multichannel,
     ) :
     
+    if len(shape) < 2 + is_3D + is_multichannel :
+        sg.popup("Image is of dimension {0} and you're trying to map {1} dimensions".format(len(shape), 2+is_3D+is_multichannel))
+        return {}
+
     #Get auto map
     try :
         map = _auto_map_channels(

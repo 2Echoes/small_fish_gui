@@ -76,20 +76,20 @@ def update_detection_tab(
         for elmt in list_dict.get(key) :
             elmt.update(disabled=not enabled)
 
-    if is_mapping_ok :
-        tab_elmt.update(visible=True)
+    tab_elmt.update(visible=is_mapping_ok)
 
-def update_segmentation_tab(tab_elmt : sg.Tab, segmentation_correct_text : sg.Text, do_segmentation, is_multichannel) : 
+def update_segmentation_tab(tab_elmt : sg.Tab, segmentation_correct_text : sg.Text, do_segmentation, is_multichannel, is_mapping_ok) : 
     
     #Access elements
     cytoplasm_channel_elmt = get_elmt_from_key(tab_elmt, key= 'cytoplasm channel')
     nucleus_channel_elmt = get_elmt_from_key(tab_elmt, key= 'nucleus channel')
     
     #Update values
-    tab_elmt.update(visible=do_segmentation)
     cytoplasm_channel_elmt.update(disabled = not is_multichannel)
     nucleus_channel_elmt.update(disabled = not is_multichannel)
     segmentation_correct_text.update(visible= do_segmentation)
+
+    tab_elmt.update(visible=is_mapping_ok and do_segmentation)
 
 def update_map_tab(
         tab_elmt : sg.Tab,

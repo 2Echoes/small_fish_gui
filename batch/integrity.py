@@ -7,7 +7,8 @@ import bigfish.stack as stack
 import numpy as np
 import PySimpleGUI as sg
 
-from ..pipeline._preprocess import check_integrity, convert_parameters_types, ParameterInputError
+from ..pipeline._preprocess import check_integrity, convert_parameters_types, ParameterInputError, _check_segmentation_parameters
+from ..pipeline._segmentation import _cast_segmentation_parameters
 
 def check_file(filename:str) :
 
@@ -77,8 +78,25 @@ def check_channel_map_integrity(
 
     return res
 
-def check_segmentation_parameters() :
-    pass
+def check_segmentation_parameters(
+        values,
+        shape,
+        is_multichannel,
+) :
+    values = _cast_segmentation_parameters(values=values)
+    try :
+        _check_segmentation_parameters(
+            user_parameters=values,
+            shape=shape,
+            is_multichannel=is_multichannel
+        )
+    except ParameterInputError as e: 
+        segmentation_is_ok = False
+        sg.popup_error(e)
+    else :
+        segmentation_is_ok = True
+    
+    return segmentation_is_ok, values
 
 def check_detection_parameters(
         values,

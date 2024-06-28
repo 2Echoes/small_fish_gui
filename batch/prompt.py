@@ -8,7 +8,7 @@ import PySimpleGUI as sg
 from .utils import get_elmt_from_key, create_map, call_auto_map
 from .update import update_detection_tab, update_map_tab, update_master_parameters, update_segmentation_tab
 from .input import load, extract_files
-from .integrity import sanity_check, check_channel_map_integrity, check_detection_parameters
+from .integrity import sanity_check, check_channel_map_integrity, check_detection_parameters, check_segmentation_parameters
 from ..gui.layout import _segmentation_layout, _detection_layout, _input_parameters_layout, _ask_channel_map_layout
 
 
@@ -70,6 +70,7 @@ def batch_promp() :
     segmentation_layout = _segmentation_layout(multichannel=True, cytoplasm_model_preset='cyto3')
     apply_segmentation_button = sg.Button('apply', key='apply-segmentation')
     segmentation_layout += [[apply_segmentation_button]]
+    seg_keys_to_hide = ['show segmentation', 'saving path', 'filename']
     segmentation_tab = sg.Tab("Segmentation", segmentation_layout, visible=False)
 
     #Detection tab
@@ -82,6 +83,7 @@ def batch_promp() :
     )
     apply_detection_button = sg.Button('apply', key='apply-detection')
     detection_layout += [[apply_detection_button]]
+    detection_keys_to_hide = ['do_spots_csv', 'do_spots_excel', 'do_spots_feather','spots_filename','spots_extraction_folder']
     detection_tab = sg.Tab("Detection", detection_layout, visible=False)
 
     _tab_group = sg.TabGroup([[input_tab, map_tab, segmentation_tab, detection_tab]], enable_events=True)
@@ -166,12 +168,17 @@ def batch_promp() :
 #########################################
 #####   Event Loop : break to close window
 #########################################
-
+    
+    #Hiding options for non batch mode
+    window= window.finalize()
+    napari_correction_elmt.update(disabled=True)
+    for key in seg_keys_to_hide : get_elmt_from_key(tab_dict['Segmentation'], key=key).update(disabled=True)
+    for key in detection_keys_to_hide : get_elmt_from_key(tab_dict['Detection'], key=key).update(disabled=True)
+    
     while True :
         loop +=1
         window = window.refresh()
         event, values = window.read(timeout=timeout)
-        napari_correction_elmt.update(disabled=True)
         
         #Welcome message
         if loop == 1 : 
@@ -191,8 +198,6 @@ def batch_promp() :
             files_table.update(values=files_values)
             last_shape_read.update("Last shape read : {0}".format(last_shape))
             dimension_number_text.update("Dimension number : {0}".format(dim_number))
-            Master_parameters_dict['_is_mapping_correct'] = False
-            Master_parameters_dict['_is_detection_correct'] = False
             update_map_tab(
                 tab_elmt=tab_dict.get("Map"),
                 is_3D=is_3D,
@@ -214,20 +219,12 @@ def batch_promp() :
                 auto_map.update(disabled=False)
             else :
                 dim_number = None
-                Master_parameters_dict['_is_mapping_correct'] = False
-                Master_parameters_dict['_is_detection_correct'] = False
                 dimension_number_text.update("Dimension number : unknown")
                 auto_map.update(disabled=True)
 
             last_shape_read.update("Last shape read : {0}".format(last_shape))
            
         elif event == _tab_group.key or event == 'Ok': #Tab switch in parameters
-            update_segmentation_tab(
-                tab_elmt=tab_dict.get("Segmentation"),
-                segmentation_correct_text= segmentation_ok_text,
-                do_segmentation=do_segmentation,
-                is_multichannel=is_multichanel,
-            )
 
             update_map_tab(
                 tab_elmt=tab_dict.get("Map"),
@@ -268,8 +265,12 @@ def batch_promp() :
             
             if not Master_parameters_dict['_is_mapping_correct'] : Master_parameters_dict['_map'] = {}
 
-        elif event == 'apply-segmentation' : #TODO
-            pass
+        elif event == 'apply-segmentation' :
+            Master_parameters_dict['_is_segmentation_correct'], values = check_segmentation_parameters(
+                values=values,
+                shape=last_shape,
+                is_multichannel=is_multichanel
+            )
         
         elif event == 'apply-detection' :
             Master_parameters_dict['_is_detection_correct'], values = check_detection_parameters(
@@ -292,18 +293,36 @@ def batch_promp() :
             quit()
 
         #End of loop
+        if type(last_shape) != type(None) :
+            if len(last_shape) != 2 + is_3D + is_multichanel :
+                Master_parameters_dict['_is_mapping_correct'] = False
+                Master_parameters_dict['_is_detection_correct'] = False
+                Master_parameters_dict['_is_segmentation_correct'] = False
+        else : 
+            Master_parameters_dict['_is_mapping_correct'] = False
+            Master_parameters_dict['_is_detection_correct'] = False
+            Master_parameters_dict['_is_segmentation_correct'] = False
+
         update_master_parameters(
             Master_parameter_dict=Master_parameters_dict,
             update_dict=Master_parameters_update_dict
         )
 
+        update_segmentation_tab(
+            tab_elmt=tab_dict.get("Segmentation"),
+            segmentation_correct_text= segmentation_ok_text,
+            do_segmentation=do_segmentation,
+            is_multichannel=is_multichanel,
+            is_mapping_ok=Master_parameters_dict['_is_mapping_correct']
+        )
+
         update_detection_tab(
-                tab_elmt=tab_dict.get("Detection"),
-                is_multichannel=is_multichanel,
-                is_3D=is_3D,
-                do_dense_region_deconvolution=do_dense_regions_deconvolution,
-                do_clustering=do_clustering,
-                is_mapping_ok=Master_parameters_dict['_is_mapping_correct'],
-            )
+            tab_elmt=tab_dict.get("Detection"),
+            is_multichannel=is_multichanel,
+            is_3D=is_3D,
+            do_dense_region_deconvolution=do_dense_regions_deconvolution,
+            do_clustering=do_clustering,
+            is_mapping_ok=Master_parameters_dict['_is_mapping_correct'],
+        )
 
     window.close()

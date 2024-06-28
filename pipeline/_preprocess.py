@@ -280,7 +280,6 @@ def check_integrity(
 
     return values
 
-
 def reorder_shape(shape, map) :
     x = [int(map['x']),]
     y = [int(map['y']),]
@@ -295,6 +294,40 @@ def reorder_shape(shape, map) :
     )
 
     return new_shape
+
+def _check_segmentation_parameters(
+        user_parameters,
+        shape,
+        is_multichannel,
+) :
+
+    available_channels = list(range(len(shape)))
+    do_only_nuc = user_parameters['Segment only nuclei']
+    cyto_model_name = user_parameters['cyto_model_name']
+    cyto_size = user_parameters['cytoplasm diameter']
+    cytoplasm_channel = user_parameters['cytoplasm channel']
+    nucleus_model_name = user_parameters['nucleus_model_name']
+    nucleus_size = user_parameters['nucleus diameter']
+    nucleus_channel = user_parameters['nucleus channel']
+   
+
+    if type(cyto_model_name) != str  and not do_only_nuc:
+        raise ParameterInputError('Invalid cytoplasm model name.')
+    if cytoplasm_channel not in available_channels and not do_only_nuc and is_multichannel:
+        raise ParameterInputError('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+
+    if type(cyto_size) not in [int, float] and not do_only_nuc:
+        raise ParameterInputError("Incorrect cytoplasm size.")
+
+    if type(nucleus_model_name) != str :
+        raise ParameterInputError('Invalid nucleus model name.')
+    
+    if nucleus_channel not in available_channels and is_multichannel:
+        raise ParameterInputError('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
+    
+    if type(nucleus_size) not in [int, float] :
+        raise ParameterInputError("Incorrect nucleus size.")
+
 
 def clean_unused_parameters_cache(user_parameters: dict) :
     """
