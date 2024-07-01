@@ -1,4 +1,5 @@
 import inspect
+import datetime as dt
 
 def check_parameter(**kwargs):
     """Check dtype of the function's parameters.
@@ -53,3 +54,7 @@ def compute_anisotropy_coef(voxel_size) :
 
     else :
         return (voxel_size[0] / voxel_size[1], 1)
+    
+
+def get_datetime():
+    return dt.datetime.now().strftime("%Y%m%d %H-%M-%S")
