@@ -300,7 +300,7 @@ def hub_prompt(fov_results, do_segmentation=False) :
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
-        [sg.Button('Add detection'), sg.Button('Compute colocalisation')],#, sg.Button('Batch detection')],
+        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
         [sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
         # [sg.Button('Save results', button_color= 'green'), sg.Button('Reset results',button_color= 'gray')]
     ]
@@ -333,7 +333,7 @@ def ask_detection_confirmation(used_threshold) :
         [sg.Button("Ok"), sg.Button("Restart detection")]
     ]
 
-    event, value = prompt(layout, add_ok_cancel=False)
+    event, value = prompt(layout, add_ok_cancel=False, add_scrollbar=False)
 
     if event == 'Restart detection' :
         return False
@@ -346,7 +346,7 @@ def ask_cancel_detection() :
         [sg.Button("Yes"), sg.Button("No")]
     ]
 
-    event, value = prompt(layout, add_ok_cancel=False)
+    event, value = prompt(layout, add_ok_cancel=False, add_scrollbar=False)
 
     if event == 'No' :
         return False

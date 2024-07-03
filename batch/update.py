@@ -123,7 +123,10 @@ def update_map_tab(
 
 def update_output_tab(
         tab_elmt : sg.Tab,
-        do_segmentation
+        do_segmentation,
+        output_folder,
 ) :
     segmentation_box = get_elmt_from_key(tab_elmt, "save segmentation")
     segmentation_box.update(disabled = not do_segmentation)
+    batch_folder_text = get_elmt_from_key(tab_elmt, "batch_folder_text")
+    batch_folder_text.update(value = output_folder)

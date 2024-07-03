@@ -132,17 +132,27 @@ def check_detection_parameters(
 def check_output_parameters(values) :
     is_output_ok = True
 
+    #Output folder
     output_folder = values.get('output_folder')
     if not os.path.isdir(output_folder) :
         sg.popup("Incorrect output folder selected")
         is_output_ok=False
 
+    #Batch name
     original_name = values['batch_name']
     loop=1
     values['batch_name'] = values['batch_name'].replace(' ','_')
-    while os.path.isfile(output_folder + '/' + values['batch_name']) :
+    while os.path.isdir(output_folder + '/' + values['batch_name']) :
         values['batch_name'] = original_name + '_{0}'.format(loop)
         loop+=1
     if len(values['batch_name']) == 0 : is_output_ok = False
+
+    #extension
+    if values['csv'] or values['xlsx'] or values['feather'] :
+        pass
+    else :
+        sg.popup("Select at least one data format for output.")
+        is_output_ok=False
+
 
     return is_output_ok, values

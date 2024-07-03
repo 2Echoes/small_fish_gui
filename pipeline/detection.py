@@ -26,6 +26,7 @@ import bigfish.classification as classification
 from bigfish.detection.spot_detection import get_object_radius_pixel
 from types import GeneratorType
 from skimage.measure import regionprops
+from scipy.ndimage import binary_dilation
 
 
 def ask_input_parameters(ask_for_segmentation=True) :
@@ -600,7 +601,8 @@ def launch_detection(
         other_image,
         user_parameters,
         cell_label= None,
-        nucleus_label = None
+        nucleus_label = None,
+        hide_loading=False,
         ) :
     """
     Main call for features computation :
@@ -626,18 +628,18 @@ def launch_detection(
     do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
     do_clustering = user_parameters['Cluster computation']
 
-    spots, threshold  = _launch_detection(image, user_parameters)
+    spots, threshold  = _launch_detection(image, user_parameters, hide_loading = hide_loading)
         
     if do_dense_region_deconvolution : 
-        spots = launch_dense_region_deconvolution(image, spots, user_parameters)
+        spots = launch_dense_region_deconvolution(image, spots, user_parameters, hide_loading = hide_loading)
         
     if do_clustering : 
-        clusters = launch_clustering(spots, user_parameters) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
+        clusters = launch_clustering(spots, user_parameters, hide_loading = hide_loading) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
         clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], min_spot_number= user_parameters['min number of spots'], shape=image.shape)
 
     else : clusters = None
 
-    spots, post_detection_dict = launch_post_detection(image, spots, user_parameters)
+    spots, post_detection_dict = launch_post_detection(image, spots, user_parameters, hide_loading = hide_loading)
     user_parameters['threshold'] = threshold
 
     if user_parameters['Napari correction'] :
@@ -834,3 +836,54 @@ def _local_maxima_mask(
     mask_local_max = detection.local_maximum_detection(image_filtered, minimum_distance)
     
     return mask_local_max.astype(bool)
+
+def output_spot_tiffvisual(channel,spots_list, path_output, dot_size = 3, rescale = True):
+    
+    """
+    Outputs a tiff image with one channel being {channel} and the other a mask containing dots where sports are located.
+    
+    Parameters
+    ----------
+        channel : np.ndarray
+            3D monochannel image
+        spots : list[np.ndarray] or np.ndarray
+            Spots arrays are ndarray where each element corresponds is a tuple(z,y,x) corresponding to 3D coordinate of a spot
+            To plot different spots on different channels a list of spots ndarray can be passed. 
+        path_output : str
+        dot_size : int
+            in pixels
+    """
+    
+    stack.check_parameter(channel = (np.ndarray), spots_list= (list, np.ndarray), path_output = (str), dot_size = (int))
+    stack.check_array(channel, ndim= [2,3])
+    if isinstance(spots_list, np.ndarray) : spots_list = [spots_list]
+
+    if channel.ndim == 3 : 
+        channel = stack.maximum_projection(channel)
+
+    im = np.zeros([1 + len(spots_list)] + list(channel.shape))
+    im[0,:,:] = channel
+
+    for level in range(len(spots_list)) :
+        if len(spots_list[level]) == 0 : continue
+        else :
+            spots_mask = np.zeros_like(channel)
+            
+            #Unpacking spots
+            if len(spots_list[level][0]) == 2 :
+                Y,X = zip(*spots_list[level])
+            elif len(spots_list[level][0]) == 3 :
+                Z,Y,X = zip(*spots_list[level])
+                del Z
+            else :
+                Z,Y,X,*_ = zip(*spots_list[level])
+                del Z,_
+            
+            #Reconstructing signal
+            spots_mask[Y,X] = 1
+            if dot_size > 1 : spots_mask = binary_dilation(spots_mask, iterations= dot_size-1)
+            spots_mask = stack.rescale(np.array(spots_mask, dtype = channel.dtype))
+            im[level + 1] = spots_mask
+
+    if rescale : channel = stack.rescale(channel, channel_to_stretch= 0)
+    stack.save_image(im, path_output, extension= 'tif')

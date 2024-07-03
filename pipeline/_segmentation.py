@@ -351,3 +351,39 @@ def remove_disjoint(image):
         image_cleaned = image_cleaned.astype(bool)
 
     return image_cleaned
+
+def plot_segmentation(
+        cyto_image : np.ndarray, 
+        cyto_label : np.ndarray, 
+        nuc_image : np.ndarray, 
+        nuc_label : np.ndarray,
+        path :str, 
+        do_only_nuc=False
+        ) :
+
+    if nuc_image.ndim == 3 :
+        nuc_image = np.max(nuc_image,axis=0)
+    
+    plot.plot_segmentation_boundary(
+        image=nuc_image,
+        nuc_label= nuc_label,
+        boundary_size= 3,
+        contrast=True,
+        path_output=path + "_nuclei_segmentation.png",
+        show=False,
+    )
+
+
+    if not do_only_nuc :
+        if cyto_image.ndim == 3 :
+            cyto_image = np.max(cyto_image,axis=0)
+    
+        plot.plot_segmentation_boundary(
+            image=cyto_image,
+            cell_label= cyto_label,
+            nuc_label= nuc_label,
+            boundary_size= 3,
+            contrast=True,
+            path_output=path + "_cytoplasm_segmentation.png",
+            show=False,
+        )

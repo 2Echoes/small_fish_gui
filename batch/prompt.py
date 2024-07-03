@@ -6,13 +6,19 @@ import os
 import PySimpleGUI as sg
 
 from .utils import get_elmt_from_key, create_map, call_auto_map
+from .pipeline import batch_pipeline
 from .update import update_detection_tab, update_map_tab, update_master_parameters, update_segmentation_tab, update_output_tab
 from .input import load, extract_files
 from .integrity import sanity_check, check_channel_map_integrity, check_detection_parameters, check_segmentation_parameters, check_output_parameters
 from ..gui.layout import _segmentation_layout, _detection_layout, _input_parameters_layout, _ask_channel_map_layout
 
 
-def batch_promp() :
+def batch_promp(
+        results_df,
+        cell_results_df,
+        acquisition_id,
+        preset: dict={},
+) :
 
     files_values = [[]]
 
@@ -39,13 +45,13 @@ def batch_promp() :
     #Input tab
     input_layout = _input_parameters_layout(
         ask_for_segmentation=True,
-        is_3D_stack_preset=False,
+        is_3D_stack_preset= preset.setdefault("3D stack" ,False),
         time_stack_preset=False,
-        multichannel_preset=False,
-        do_dense_regions_deconvolution_preset=False,
-        do_clustering_preset=False,
+        multichannel_preset=preset.setdefault("multichannel" ,False),
+        do_dense_regions_deconvolution_preset=preset.setdefault("Dense regions deconvolution" ,False),
+        do_clustering_preset= preset.setdefault("Cluster computation", False),
         do_Napari_correction=False,
-        do_segmentation_preset=False,
+        do_segmentation_preset= preset.setdefault("Segmentation", False),
     )
     input_layout += [[sg.Button('Ok')]]
     input_tab = sg.Tab("Input", input_layout)
@@ -67,7 +73,17 @@ def batch_promp() :
     map_tab = sg.Tab("Map", map_layout)
 
     #Segmentation tab
-    segmentation_layout = _segmentation_layout(multichannel=True, cytoplasm_model_preset='cyto3')
+    segmentation_layout = _segmentation_layout(
+        multichannel=True, 
+        cytoplasm_model_preset=preset.setdefault("cyto_model_name",'cyto3'),
+        cytoplasm_channel_preset=preset.setdefault("cytoplasm channel",0),
+        cyto_diameter_preset=preset.setdefault("cytoplasm diameter",180),
+        nucleus_model_preset=preset.setdefault("nucleus_model_name",'nuclei'),
+        nucleus_channel_preset=preset.setdefault("nucleus channel",0),
+        nucleus_diameter_preset=preset.setdefault("nucleus diameter",150),
+        segment_only_nuclei_preset=preset.setdefault("Segment only nuclei",False)
+        )
+    
     apply_segmentation_button = sg.Button('apply', key='apply-segmentation')
     segmentation_layout += [[apply_segmentation_button]]
     seg_keys_to_hide = ['show segmentation', 'saving path', 'filename']
@@ -80,25 +96,30 @@ def batch_promp() :
         do_clustering=True,
         do_dense_region_deconvolution=True,
         do_segmentation=True,
+        default_dict= preset,
     )
     apply_detection_button = sg.Button('apply', key='apply-detection')
     detection_layout += [[apply_detection_button]]
     detection_keys_to_hide = ['do_spots_csv', 'do_spots_excel', 'do_spots_feather','spots_filename','spots_extraction_folder']
     detection_tab = sg.Tab("Detection", detection_layout, visible=False)
 
-
     #Output tab
+    show_batch_folder_text = sg.Text('', key= 'batch_folder_text')
     apply_output_button = sg.Button('apply', key='apply-output')
     save_segmentation_box = sg.Checkbox("save segmentation", disabled=True, key='save segmentation')
     save_detection_box = sg.Checkbox("create spot detection visuals", key= 'save detection', tooltip="Create multichannel tiff with raw spot signal and detected spots.\nWarning if processing a lot of files make sure you have enough free space on your hard drive.")
     extract_spots_box = sg.Checkbox("extract spots", key='extract spots')
     batch_name_input = sg.InputText(size=25, key='batch_name')
     output_layout=[
-        [sg.Text("Select a folder : "), sg.FolderBrowse(initial_folder=os.getcwd(), key='output_folder')],
+        [sg.Text("Output folder", font=('bold',15), pad=(0,10))],
+        [show_batch_folder_text],
+        [sg.Text("Select a folder : "), sg.FolderBrowse(initial_folder=os.getcwd(), key='output_folder', target=(1,-1))],
         [sg.Text("Name for batch : "), batch_name_input],
         [save_segmentation_box],
         [save_detection_box],
         [extract_spots_box],
+        [sg.Text("Data extension", font=('bold',15), pad=(0,10))],
+        [sg.Checkbox(".csv", key='csv'),sg.Checkbox(".xlsx", key='xlsx'),sg.Checkbox(".feather", key='feather'),],
         [apply_output_button],
     ]
     output_tab = sg.Tab("Output", output_layout, visible=True)
@@ -113,7 +134,6 @@ def batch_promp() :
         pad=((0,0),(5,5))
         )
     
-    
     tab_dict= {
         "Input" : input_tab,
         "Segmentation" : segmentation_tab,
@@ -121,7 +141,6 @@ def batch_promp() :
         "Map" : map_tab,
         "Output" : output_tab
     }
-
     
 #####   Launcher
 
@@ -153,7 +172,7 @@ def batch_promp() :
 #########################################
 #####   Window Creation
 #########################################
-
+    stream_output = sg.Output(size=(100,10), pad=(30,10), visible=True)
     layout = [
         [sg.Text("Batch Processing", font=('bold',20), pad=((300,0),(0,2)))],
         [sg.Text("Select a folder : "), sg.FolderBrowse(initial_folder=os.getcwd(), key='Batch_folder'), sg.Button('Load')],
@@ -161,10 +180,12 @@ def batch_promp() :
         [sanity_header, sanity_check_button, sanity_progress],
         [dimension_number_text],
         [tab_col, launch_col],
-        [sg.Output(size=(100,10), pad=(30,10))],
+        [stream_output],
     ]
+    stream_output.restore_stderr()
+    stream_output.restore_stdout()
 
-    window = sg.Window("small fish", layout=layout, size= (800,800), auto_size_buttons=True, auto_size_text=True)
+    window = sg.Window("small fish", layout=layout, size= (800,800), auto_size_buttons=True, auto_size_text=True, resizable=True)
     
     #MASTER PARAMETERS
     Master_parameters_dict ={
@@ -186,7 +207,6 @@ def batch_promp() :
     last_shape = None
     talk=True
     
-
 #########################################
 #####   Event Loop : break to close window
 #########################################
@@ -198,181 +218,207 @@ def batch_promp() :
     for key in seg_keys_to_hide : get_elmt_from_key(tab_dict['Segmentation'], key=key).update(disabled=True)
     for key in detection_keys_to_hide : get_elmt_from_key(tab_dict['Detection'], key=key).update(disabled=True)
     
-    while True :
-        loop +=1
-        window = window.refresh()
-        event, values = window.read(timeout=timeout)
-        
-        #Welcome message
-        if loop == 1 : 
-            timeout = None
-            print("Welcome to small fish batch analysis. Please start by loading some files and setting parameters.")
-        
-        batch_folder = values.get('Batch_folder')
-        is_multichanel = values.get('multichannel')
-        is_3D = values.get('3D stack')
-        do_segmentation = values.get('Segmentation')
-        do_dense_regions_deconvolution = values.get('Dense regions deconvolution')
-        do_clustering = values.get('Cluster computation')
+    while True : 
+        try :
+            loop +=1
+            window = window.refresh()
+            event, values = window.read(timeout=timeout)
 
-        if type(batch_folder) != type(None)  and event == 'Load':
+            #Welcome message
+            if loop == 1 : 
+                timeout = None
+                print("Welcome to small fish batch analysis. Please start by loading some files and setting parameters.")
 
-            files_values, last_shape, dim_number = load(batch_folder)
-            files_table.update(values=files_values)
-            last_shape_read.update("Last shape read : {0}".format(last_shape))
-            dimension_number_text.update("Dimension number : {0}".format(dim_number))
-            update_map_tab(
-                tab_elmt=tab_dict.get("Map"),
-                is_3D=is_3D,
-                is_multichannel=is_multichanel,
-                last_shape=last_shape
-            )
+            batch_folder = values.get('Batch_folder')
+            is_multichanel = values.get('multichannel')
+            is_3D = values.get('3D stack')
+            do_segmentation = values.get('Segmentation')
+            do_dense_regions_deconvolution = values.get('Dense regions deconvolution')
+            do_clustering = values.get('Cluster computation')
 
-        elif event == 'Check' :
-            filename_list = extract_files(files_values)
-            last_shape = sanity_check(
-                filename_list=filename_list,
-                batch_folder=batch_folder,
-                window=window,
-                progress_bar=sanity_progress
-            )
-            if isinstance(last_shape,(tuple,list)) :
-                dim_number = len(last_shape)
+            if type(batch_folder) != type(None)  and event == 'Load':
+
+                files_values, last_shape, dim_number = load(batch_folder)
+                files_table.update(values=files_values)
+                last_shape_read.update("Last shape read : {0}".format(last_shape))
                 dimension_number_text.update("Dimension number : {0}".format(dim_number))
-                auto_map.update(disabled=False)
-            else :
-                dim_number = None
-                dimension_number_text.update("Dimension number : unknown")
-                auto_map.update(disabled=True)
-
-            last_shape_read.update("Last shape read : {0}".format(last_shape))
-           
-        elif event == _tab_group.key or event == 'Ok': #Tab switch in parameters
-
-            update_map_tab(
-                tab_elmt=tab_dict.get("Map"),
-                is_3D=is_3D,
-                is_multichannel=is_multichanel,
-                last_shape=last_shape
-            )
-
-        elif event == 'auto-map' :
-            Master_parameters_dict['_map'] = call_auto_map(
-                tab_elmt=tab_dict.get("Map"),
-                shape=last_shape,
-                is_3D=is_3D,
-                is_multichannel=is_multichanel
-            )
-
-            Master_parameters_dict['_is_mapping_correct'] = check_channel_map_integrity(
-                maping=Master_parameters_dict['_map'],
-                shape=last_shape,
-                expected_dim=dim_number
+                update_map_tab(
+                    tab_elmt=tab_dict.get("Map"),
+                    is_3D=is_3D,
+                    is_multichannel=is_multichanel,
+                    last_shape=last_shape
                 )
-            
-            if not Master_parameters_dict['_is_mapping_correct'] : Master_parameters_dict['_map'] = {}
+                filename_list = extract_files(files_values)
 
-        elif event == 'apply-map' :
-            
-            Master_parameters_dict['_map'] = create_map(
-                values=values,
-                is_3D=is_3D,
-                is_multichannel=is_multichanel,
-            )
-
-            Master_parameters_dict['_is_mapping_correct'] = check_channel_map_integrity(
-                maping=Master_parameters_dict['_map'],
-                shape=last_shape,
-                expected_dim=dim_number
+            elif event == 'Check' :
+                last_shape = sanity_check(
+                    filename_list=filename_list,
+                    batch_folder=batch_folder,
+                    window=window,
+                    progress_bar=sanity_progress
                 )
-            
-            if not Master_parameters_dict['_is_mapping_correct'] : Master_parameters_dict['_map'] = {}
+                if isinstance(last_shape,(tuple,list)) :
+                    dim_number = len(last_shape)
+                    dimension_number_text.update("Dimension number : {0}".format(dim_number))
+                    auto_map.update(disabled=False)
+                else :
+                    dim_number = None
+                    dimension_number_text.update("Dimension number : unknown")
+                    auto_map.update(disabled=True)
 
-        elif event == 'apply-segmentation' :
-            Master_parameters_dict['_is_segmentation_correct'], values = check_segmentation_parameters(
-                values=values,
-                shape=last_shape,
-                is_multichannel=is_multichanel
-            )
-        
-        elif event == 'apply-detection' :
-            Master_parameters_dict['_is_detection_correct'], values = check_detection_parameters(
-                values=values,
-                do_dense_region_deconvolution=do_dense_regions_deconvolution,
-                do_clustering=do_clustering,
-                is_multichannel=is_multichanel,
-                is_3D=is_3D,
-                map= Master_parameters_dict.get('_map'),
-                shape=last_shape
-            )
-        
-        elif event == 'apply-output' :
-            Master_parameters_dict['_is_output_correct'], values = check_output_parameters(values)
-            batch_name_input.update(value=values.get('batch_name'))
+                last_shape_read.update("Last shape read : {0}".format(last_shape))
 
-        elif event == "Cancel" :
-            print(values)
-        
-        elif event == None :
-            quit()
+            elif event == _tab_group.key or event == 'Ok': #Tab switch in parameters
 
-        elif event == 'start' :
-            print("Starting...")
+                update_map_tab(
+                    tab_elmt=tab_dict.get("Map"),
+                    is_3D=is_3D,
+                    is_multichannel=is_multichanel,
+                    last_shape=last_shape
+                )
 
-        #End of loop
+            elif event == 'auto-map' :
+                Master_parameters_dict['_map'] = call_auto_map(
+                    tab_elmt=tab_dict.get("Map"),
+                    shape=last_shape,
+                    is_3D=is_3D,
+                    is_multichannel=is_multichanel
+                )
 
-        #If user loads other files
-        if type(last_shape) != type(None) :
-            if len(last_shape) != 2 + is_3D + is_multichanel :
+                Master_parameters_dict['_is_mapping_correct'] = check_channel_map_integrity(
+                    maping=Master_parameters_dict['_map'],
+                    shape=last_shape,
+                    expected_dim=dim_number
+                    )
+
+                if not Master_parameters_dict['_is_mapping_correct'] : Master_parameters_dict['_map'] = {}
+
+            elif event == 'apply-map' :
+
+                Master_parameters_dict['_map'] = create_map(
+                    values=values,
+                    is_3D=is_3D,
+                    is_multichannel=is_multichanel,
+                )
+
+                Master_parameters_dict['_is_mapping_correct'] = check_channel_map_integrity(
+                    maping=Master_parameters_dict['_map'],
+                    shape=last_shape,
+                    expected_dim=dim_number
+                    )
+
+                if not Master_parameters_dict['_is_mapping_correct'] : Master_parameters_dict['_map'] = {}
+
+            elif event == 'apply-segmentation' :
+                Master_parameters_dict['_is_segmentation_correct'], values = check_segmentation_parameters(
+                    values=values,
+                    shape=last_shape,
+                    is_multichannel=is_multichanel
+                )
+
+            elif event == 'apply-detection' :
+                Master_parameters_dict['_is_detection_correct'], values = check_detection_parameters(
+                    values=values,
+                    do_dense_region_deconvolution=do_dense_regions_deconvolution,
+                    do_clustering=do_clustering,
+                    is_multichannel=is_multichanel,
+                    is_3D=is_3D,
+                    map= Master_parameters_dict.get('_map'),
+                    shape=last_shape
+                )
+
+            elif event == 'apply-output' :
+                Master_parameters_dict['_is_output_correct'], values = check_output_parameters(values)
+                batch_name_input.update(value=values.get('batch_name'))
+
+            elif event == "Cancel" :
+                print(values)
+
+            elif event == None :
+                quit()
+
+            elif event == 'Start' :
+                start_button.update(disabled=True)
+                results_df, cell_results_df, acquisition_id = batch_pipeline(
+                    batch_window= window,
+                    batch_progress_bar= batch_progression_bar,
+                    progress_count=current_acquisition_text,
+                    parameters=values,
+                    filenames_list=filename_list,
+                    do_segmentation=do_segmentation,
+                    map= Master_parameters_dict['_map'],
+                    results_df=results_df,
+                    cell_results_df=cell_results_df,
+                    is_3D=is_3D,
+                    last_acquisition_id=acquisition_id+1,
+                )
+                stream_output.restore_stderr()
+                stream_output.restore_stdout()
+
+                window.close()
+                return results_df, cell_results_df, acquisition_id, values, False, None,None #Segmentation done : False, cell label : None, Nucleus label : None
+
+
+            #End of loop
+
+            #If user loads other files
+            if type(last_shape) != type(None) :
+                if len(last_shape) != 2 + is_3D + is_multichanel :
+                    Master_parameters_dict['_is_mapping_correct'] = False
+                    Master_parameters_dict['_is_detection_correct'] = False
+                    Master_parameters_dict['_is_segmentation_correct'] = False
+            else : 
                 Master_parameters_dict['_is_mapping_correct'] = False
                 Master_parameters_dict['_is_detection_correct'] = False
                 Master_parameters_dict['_is_segmentation_correct'] = False
-        else : 
-            Master_parameters_dict['_is_mapping_correct'] = False
-            Master_parameters_dict['_is_detection_correct'] = False
-            Master_parameters_dict['_is_segmentation_correct'] = False
 
-        update_master_parameters(
-            Master_parameter_dict=Master_parameters_dict,
-            update_dict=Master_parameters_update_dict
-        )
+            update_master_parameters(
+                Master_parameter_dict=Master_parameters_dict,
+                update_dict=Master_parameters_update_dict
+            )
 
-        update_segmentation_tab(
-            tab_elmt=tab_dict.get("Segmentation"),
-            segmentation_correct_text= segmentation_ok_text,
-            do_segmentation=do_segmentation,
-            is_multichannel=is_multichanel,
-            is_mapping_ok=Master_parameters_dict['_is_mapping_correct']
-        )
+            update_segmentation_tab(
+                tab_elmt=tab_dict.get("Segmentation"),
+                segmentation_correct_text= segmentation_ok_text,
+                do_segmentation=do_segmentation,
+                is_multichannel=is_multichanel,
+                is_mapping_ok=Master_parameters_dict['_is_mapping_correct']
+            )
 
-        update_detection_tab(
-            tab_elmt=tab_dict.get("Detection"),
-            is_multichannel=is_multichanel,
-            is_3D=is_3D,
-            do_dense_region_deconvolution=do_dense_regions_deconvolution,
-            do_clustering=do_clustering,
-            is_mapping_ok=Master_parameters_dict['_is_mapping_correct'],
-            do_segmentation=do_segmentation,
-        )
+            update_detection_tab(
+                tab_elmt=tab_dict.get("Detection"),
+                is_multichannel=is_multichanel,
+                is_3D=is_3D,
+                do_dense_region_deconvolution=do_dense_regions_deconvolution,
+                do_clustering=do_clustering,
+                is_mapping_ok=Master_parameters_dict['_is_mapping_correct'],
+                do_segmentation=do_segmentation,
+            )
 
-        update_output_tab(
-            tab_elmt=tab_dict['Output'],
-            do_segmentation=do_segmentation
-        )
+            update_output_tab(
+                tab_elmt=tab_dict['Output'],
+                do_segmentation=do_segmentation,
+                output_folder=values['output_folder'],
+            )
 
-        _segmentation_ready = (Master_parameters_dict['_is_segmentation_correct'] and do_segmentation) or not do_segmentation
-        if Master_parameters_dict['_is_detection_correct'] and Master_parameters_dict['_is_output_correct'] and Master_parameters_dict['_is_mapping_correct'] and _segmentation_ready :
-            start_button.update(button_color='blue', disabled=False)
-            total_acquisition_text.update("/ {0}".format(len(filename_list)))
-            batch_progression_bar.update(current_count=0, bar_color=('green','blue'))
-            if talk : 
-                print("Small fish is ready, launch with the start button.")
-                talk= False
-        else :
-            talk = True
-            start_button.update(button_color='green', disabled=True)
-            total_acquisition_text.update("/ 0")
-            batch_progression_bar.update(current_count=0, bar_color=('blue','black'))
+            _segmentation_ready = (Master_parameters_dict['_is_segmentation_correct'] and do_segmentation) or not do_segmentation
+            if Master_parameters_dict['_is_detection_correct'] and Master_parameters_dict['_is_output_correct'] and Master_parameters_dict['_is_mapping_correct'] and _segmentation_ready :
+                start_button.update(button_color='blue', disabled=False)
+                total_acquisition_text.update("/ {0}".format(len(filename_list)))
+                batch_progression_bar.update(current_count=0, bar_color=('green','blue'))
+                if talk : 
+                    print("Small fish is ready, launch with the start button.")
+                    talk= False
+            else :
+                talk = True
+                start_button.update(button_color='green', disabled=True)
+                total_acquisition_text.update("/ 0")
+                batch_progression_bar.update(current_count=0, bar_color=('blue','black'))
+
+        except Exception as e :
+            stream_output.restore_stderr()
+            stream_output.restore_stdout()
+            raise e
 
 
     window.close()

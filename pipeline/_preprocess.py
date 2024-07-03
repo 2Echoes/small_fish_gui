@@ -195,8 +195,8 @@ def convert_parameters_types(values:dict) :
         else : values[tuple_parameter] = tuple_values
 
     #Parameters
-    int_list = ['threshold', 'channel_to_compute', 'min number of spots', 'cluster size','nucleus channel signal']
-    float_list = ['time_step', 'alpha', 'beta', 'gamma', 'threshold penalty']
+    int_list = ['threshold', 'channel_to_compute', 'channel to compute', 'min number of spots', 'cluster size','nucleus channel signal']
+    float_list = ['alpha', 'beta', 'gamma', 'threshold penalty']
 
     for parameter in int_list :
         try :

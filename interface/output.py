@@ -10,8 +10,10 @@ def _cast_spot_to_tuple(spot) :
 def _cast_spots_to_tuple(spots) :
     return tuple(list(map(_cast_spot_to_tuple, spots)))
 
-def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False) :
+def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False, overwrite=False) :
     check_parameter(dataframe= pd.DataFrame, path= str, filename = str, do_excel = bool, do_feather = bool)
+
+    dataframe.columns = dataframe.columns.astype(str) # assert columns header are string for feather
 
     if len(dataframe) == 0 : return True
     if not do_excel and not do_feather and not do_csv : 
@@ -23,9 +25,11 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
 
     new_filename = filename
     i= 1
-    while new_filename + '.xlsx' in os.listdir(path) or new_filename + '.feather' in os.listdir(path) or new_filename + '.csv' in os.listdir(path) :
-        new_filename = filename + '_{0}'.format(i)
-        i+=1
+
+    if not overwrite :
+        while new_filename + '.xlsx' in os.listdir(path) or new_filename + '.feather' in os.listdir(path) or new_filename + '.csv' in os.listdir(path) :
+            new_filename = filename + '_{0}'.format(i)
+            i+=1
 
     if 'image' in dataframe.columns :
         dataframe = dataframe.drop(['image'], axis=1)

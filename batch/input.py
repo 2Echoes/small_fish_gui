@@ -3,7 +3,21 @@ Submodule handling handling files and filenames in batch mode.
 """
 
 import os
+import bigfish.stack as stack
+import czifile as czi
+import numpy as np
 from .integrity import check_file
+
+def open_image(filename:str) :
+
+    if filename.endswith('.czi') :
+        image = czi.imread(filename)
+    else :
+        image = stack.read_image(filename)
+
+    image = np.squeeze(image)
+
+    return image
 
 def get_images(filename:str) :
     """returns filename if is image else return None"""
