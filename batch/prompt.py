@@ -226,7 +226,7 @@ def batch_promp(
 
             #Welcome message
             if loop == 1 : 
-                timeout = None
+                timeout = 500
                 print("Welcome to small fish batch analysis. Please start by loading some files and setting parameters.")
 
             batch_folder = values.get('Batch_folder')
@@ -332,10 +332,12 @@ def batch_promp(
                 batch_name_input.update(value=values.get('batch_name'))
 
             elif event == "Cancel" :
-                print(values)
+                raise InterruptedError("cancel")
 
             elif event == None :
-                quit()
+                raise InterruptedError("closed")
+            elif event == sg.WINDOW_CLOSED : 
+                raise InterruptedError("closed")
 
             elif event == 'Start' :
                 start_button.update(disabled=True)

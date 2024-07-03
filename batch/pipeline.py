@@ -132,7 +132,6 @@ def batch_pipeline(
                 raise(error)
         
         if parameters['save detection'] :
-            print("cluster : ", clusters)
             if parameters['Cluster computation'] : spots_list = [spots, clusters[:,:parameters['dim']]]
             else : spots_list = [spots]
             output_spot_tiffvisual(
