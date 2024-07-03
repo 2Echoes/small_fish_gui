@@ -5,7 +5,7 @@ Cell segmentation (**2D**) is peformed using *cellpose* (published work) : https
 
 Spot detection is performed via *big-fish* (published work) : https://github.com/fish-quant/big-fish
 
-Time stacks are not yet supported.
+Time stacks are not supported.
 
 ## What can you do with small fish ?
 
@@ -93,6 +93,5 @@ Note that for training it is recommended to first set up your GPU as training co
 ## Developpement
 
 Optional features to include in future versions : 
-- batch processing
 - time stack (which would include cell tracking)
 - 3D segmentation
