@@ -5,7 +5,7 @@ Cell segmentation (**2D**) is peformed using *cellpose* (published work) : https
 
 Spot detection is performed via *big-fish* (published work) : https://github.com/fish-quant/big-fish
 
-Time stacks are not supported.
+**Time stacks are not supported.**
 
 ## What can you do with small fish ?
 
@@ -77,7 +77,7 @@ If you run into any problems I would recommend following the official cellpose i
 
 
 ### Training cellpose
-If you want to train your own cellpose model or import custom model from exterior source I recommend doing so from the cellpose GUI 
+If you want to train your own cellpose model or import custom model from exterior source I recommend doing so from the cellpose GUI. Note that Small fish uses mean projection to segment images in 2D, if you want to retrain a cellpose model to fit your data it is recommended to do so on mean or max projection of your data.
 
 To install the GUI run : 
 
