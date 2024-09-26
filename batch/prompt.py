@@ -35,7 +35,7 @@ def batch_promp(
     sanity_header = sg.Text("Dimension sanity", font=('bold',15), pad=(0,10))
     dimension_number_text = sg.Text("Dimension number : unknown")
     
-
+#LAYOUT INIT
 #########################################
 #####   COLUMNS
 #########################################
@@ -182,8 +182,6 @@ def batch_promp(
         [tab_col, launch_col],
         [stream_output],
     ]
-    stream_output.restore_stderr()
-    stream_output.restore_stdout()
 
     window = sg.Window("small fish", layout=layout, size= (800,800), auto_size_buttons=True, auto_size_text=True, resizable=True)
     
@@ -332,7 +330,11 @@ def batch_promp(
                 batch_name_input.update(value=values.get('batch_name'))
 
             elif event == "Cancel" :
-                raise InterruptedError("cancel")
+                stream_output.restore_stderr()
+                stream_output.restore_stdout()
+                window.close()
+                return results_df, cell_results_df, acquisition_id, preset, False, None,None #Segmentation done : False, cell label : None, Nucleus label : None
+
 
             elif event == None :
                 raise InterruptedError("closed")
