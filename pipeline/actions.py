@@ -1,3 +1,7 @@
+"""
+This submodule groups all the possible actions of the user in the main windows. It is the start of each action the user can do.
+"""
+
 from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection
 from ..interface.output import write_results
 from ._preprocess import map_channels, prepare_image_detection, reorder_shape, reorder_image_stack
@@ -25,6 +29,8 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
         user_parameters.update(new_parameters)
 
     map = map_channels(user_parameters)
+    if type(map) == type(None) : #User clicks Cancel 
+        return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
     user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map)
 
 
@@ -89,7 +95,6 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
     if user_parameters['spots_extraction_folder'] != '' and type(user_parameters['spots_extraction_folder']) != type(None) :
         if user_parameters['spots_filename'] != '' and type(user_parameters['spots_filename']) != type(None) :
             if any((user_parameters['do_spots_excel'], user_parameters['do_spots_csv'], user_parameters['do_spots_feather'])) :
-                print((user_parameters['do_spots_excel'], user_parameters['do_spots_csv'], user_parameters['do_spots_feather']))
                 launch_spots_extraction(
                     acquisition_id=acquisition_id,
                     user_parameters=user_parameters,

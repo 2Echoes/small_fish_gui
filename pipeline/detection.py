@@ -1,7 +1,6 @@
 """
 Contains code to handle detection as well as bigfish wrappers related to spot detection.
 """
-
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
@@ -279,7 +278,6 @@ def initiate_detection(user_parameters, segmentation_done, map, shape) :
             segmentation_done= segmentation_done,
             default_dict=user_parameters
             )
-        
         if type(user_parameters) == type(None) : return user_parameters
         try :
             user_parameters = convert_parameters_types(user_parameters)
@@ -315,7 +313,7 @@ def _launch_detection(image, image_input_values: dict) :
     threshold_user_selection = image_input_values.get('Interactive threshold selector')
     
     if type(threshold) == type(None) :     
-        threshold = compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance) * threshold_penalty
+        threshold = threshold_penalty * compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
     
     filtered_image = _apply_log_filter(
         image=image,
@@ -412,7 +410,7 @@ def launch_post_detection(image, spots, image_input_values: dict,) :
     #appending results
     fov_res.update(snr_res)
 
-    return spots, fov_res
+    return fov_res
 
 def _compute_cell_snr(image: np.ndarray, bbox, spots, voxel_size, spot_size) :
     
@@ -639,7 +637,6 @@ def launch_detection(
 
     else : clusters = None
 
-    spots, post_detection_dict = launch_post_detection(image, spots, user_parameters, hide_loading = hide_loading)
     user_parameters['threshold'] = threshold
 
     if user_parameters['Napari correction'] :
@@ -655,7 +652,7 @@ def launch_detection(
             nucleus_label=nucleus_label,
             other_images=other_image
             )
-        
+    post_detection_dict = launch_post_detection(image, spots, user_parameters, hide_loading = hide_loading)
     fov_result.update(post_detection_dict)
     
     return user_parameters, fov_result, spots, clusters
@@ -783,12 +780,13 @@ def _create_threshold_slider(
             'size': 5, 
             'scale' : scale, 
             'face_color' : 'transparent', 
-            'edge_color' : 'blue', 
-            'symbol' : 'ring', 
+            'edge_color' : 'red', 
+            'symbol' : 'disc', 
             'opacity' : 0.7, 
-            'blending' : 'additive', 
+            'blending' : 'translucent', 
             'name': 'single spots',
-            'features' : {'threshold' : threshold}
+            'features' : {'threshold' : threshold},
+            'visible' : True,
             }
         return (spots, layer_args , 'points')
     return threshold_slider

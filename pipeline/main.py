@@ -1,4 +1,7 @@
-#### New version for main.py
+"""
+This script is called when software starts; it is the main loop.
+"""
+
 import pandas as pd
 import PySimpleGUI as sg
 from ..gui import hub_prompt
@@ -7,7 +10,7 @@ from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
 
 #'Global' parameters
-user_parameters = dict() # Very important object containg all choice from user that will influence the behavior of the main loop.
+user_parameters = dict() # Very important instance containg all choice from user that will influence the behavior of the actions loops.
 acquisition_id = -1
 result_df = pd.DataFrame()
 cell_result_df = pd.DataFrame()
