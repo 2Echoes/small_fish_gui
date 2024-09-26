@@ -95,7 +95,7 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
 
     max_length = len(max(keys, key=len))
     layout = [
-        [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, initial_folder= preset)] for name in keys
+        [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, target=(555666777,2), initial_folder= preset), sg.Text('')] for name in keys
         ]
     if isinstance(header, str) :
         layout = [add_header(header)] + layout
@@ -152,7 +152,20 @@ def radio_layout(values, header=None) :
         layout = [add_header(header)] + layout
     return layout
 
-def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_model_preset= 'nuclei', cytoplasm_channel_preset=0, nucleus_channel_preset=0, cyto_diameter_preset=30, nucleus_diameter_preset= 30, show_segmentation_preset= False, segment_only_nuclei_preset=False, saving_path_preset=os.getcwd(), filename_preset='cell_segmentation.png',) :
+def _segmentation_layout(
+        multichannel, 
+        cytoplasm_model_preset= 'cyto3', 
+        nucleus_model_preset= 'nuclei', 
+        cytoplasm_channel_preset=0, 
+        nucleus_channel_preset=0, 
+        other_nucleus_image_preset = None,
+        cyto_diameter_preset=30, 
+        nucleus_diameter_preset= 30, 
+        show_segmentation_preset= False, 
+        segment_only_nuclei_preset=False, 
+        saving_path_preset=os.getcwd(), 
+        filename_preset='cell_segmentation.png',
+        ) :
     
     USE_GPU = use_gpu()
 
@@ -160,7 +173,9 @@ def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_
     if len(models_list) == 0 : models_list = ['no model found']
     
     #Header : GPU availabality
-    layout = [[sg.Text("GPU is currently "), sg.Text('ON', text_color= 'green') if USE_GPU else sg.Text('OFF', text_color= 'red')]]
+    layout = [
+        [sg.Text("GPU is currently "), sg.Text('ON', text_color= 'green') if USE_GPU else sg.Text('OFF', text_color= 'red')]
+        ]
     
     #cytoplasm parameters
     layout += [
@@ -170,6 +185,8 @@ def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_
                         ]
                         
     if multichannel : layout += parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])
+
+
     layout += parameters_layout(['cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset])
     #Nucleus parameters
     layout += [
@@ -179,6 +196,7 @@ def _segmentation_layout(multichannel, cytoplasm_model_preset= 'cyto2', nucleus_
                 ]
     
     if multichannel : layout += parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])
+    layout += path_layout(['other_nucleus_image'], preset=other_nucleus_image_preset)
     layout += parameters_layout([ 'nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset])
     layout += bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset)
     
