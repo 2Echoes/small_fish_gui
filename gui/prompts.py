@@ -32,14 +32,14 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', 
         window.close()
         return event, values
 
-def prompt_with_help(layout, help =None, add_scrollbar=True) :
+def prompt_with_help(layout, help =None, add_scrollbar=True, vertical_scroll_only=True) :
     layout += [[]]
     layout += [[sg.Button('Help')]]
     layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     
     if add_scrollbar :
         size = (400,500)
-        col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=size)
+        col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=vertical_scroll_only, size=size)
         layout = [[col_elmt]]
     else :
         size = (None,None)
@@ -280,11 +280,13 @@ def _warning_popup(warning:str) :
 
 def _sumup_df(results: pd.DataFrame) :
 
+    COLUMNS = ['acquisition_id','threshold', 'spot_number', 'cell_number', 'filename', 'channel to compute']
+
     if len(results) > 0 :
         if 'channel to compute' not in results : results['channel to compute'] = np.NaN
-        res = results.loc[:,['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute']]
+        res = results.loc[:,COLUMNS]
     else :
-        res = pd.DataFrame(columns= ['acquisition_id', 'spot_number', 'cell_number', 'filename', 'channel to compute'])
+        res = pd.DataFrame(columns= COLUMNS)
 
     return res
 
@@ -293,9 +295,9 @@ def hub_prompt(fov_results, do_segmentation=False) :
     sumup_df = _sumup_df(fov_results)
     
     if do_segmentation :
-        segmentation_object = sg.Text('Segmentation was performed', font='8', text_color= 'green')
+        segmentation_object = sg.Text('Segmentation in memory', font='8', text_color= 'green')
     else :
-        segmentation_object = sg.Text('Segmentation was not performed', font='8', text_color= 'red')
+        segmentation_object = sg.Text('No segmentation in memory', font='8', text_color= 'red')
 
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],

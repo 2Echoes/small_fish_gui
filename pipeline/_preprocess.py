@@ -69,7 +69,7 @@ def map_channels(user_parameters) :
     try : 
         map = _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image=image)
     except MappingError as e :
-        sg.popup("Automatic dimension mapping went wrong. Please indicate manually dimensions positions in the array.")
+        sg.popup("Automatic dimension mapping went wrong. Please indicate dimensions positions in the array.")
         map = _ask_channel_map(image.shape, is_3D_stack, is_time_stack, multichannel, preset_map= e.get_map())
 
     else :
@@ -125,14 +125,16 @@ def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarr
 def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map: dict= {}) :
     while True :
         relaunch = False
+        save_preset = preset_map.copy()
         x = preset_map.setdefault('x',0)
         y = preset_map.setdefault('y',0)
         z = preset_map.setdefault('z',0)
         c = preset_map.setdefault('c',0)
         t = preset_map.setdefault('t',0)
 
+
         layout = [
-            add_header("Dimensions mapping", [sg.Text("Image shape : {0}".format(shape))])
+            add_header("Dimensions mapping") + [sg.Text("Image shape : {0}".format(shape))]
         ]
         layout += [parameters_layout(['x','y'], default_values=[x,y])]
         if is_3D_stack : layout += [parameters_layout(['z'], default_values=[z])]
@@ -140,7 +142,7 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
         if is_time_stack : layout += [parameters_layout(['t'], default_values=[t])]
 
         event, preset_map = prompt_with_help(layout,help= 'mapping', add_scrollbar=False)
-        if event == 'Cancel' : quit()
+        if event == 'Cancel' : return save_preset
 
         #Check integrity
         channels_values = np.array(list(preset_map.values()), dtype= int)
@@ -157,24 +159,26 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
     return preset_map
 
 def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
-    layout = [
-        [sg.Text("Image shape : {0}".format(shape))],
-        [sg.Text('Dimensions mapping was set to :')],
-        [sg.Text('x : {0} \ny : {1} \nz : {2} \nc : {3} \nt : {4}'.format(
-            map['x'], map['y'], map.get('z'), map.get("c"), map.get('t')
-        ))],
-        [sg.Button('Change mapping')]
-    ]
+    while True : 
+        layout = [
+            [sg.Text("Image shape : {0}".format(shape))],
+            [sg.Text('Dimensions mapping was set to :')],
+            [sg.Text('x : {0} \ny : {1} \nz : {2} \nc : {3} \nt : {4}'.format(
+                map['x'], map['y'], map.get('z'), map.get("c"), map.get('t')
+            ))],
+            [sg.Button('Change mapping')]
+        ]
 
-    event, values = prompt_with_help(layout, help='mapping', add_scrollbar=False)
+        event, values = prompt_with_help(layout, help='mapping', add_scrollbar=False)
 
-    if event == 'Ok' :
-        return map
-    elif event == 'Change mapping' or event == 'Cancel':
-        map = _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map=map)
-    else : raise AssertionError('Unforseen event')
+        if event == 'Ok' :
+            return map
+        elif event == 'Change mapping':
+            map = _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map=map)
+        elif event == 'Cancel' : 
+            return None
+        else : raise AssertionError('Unforseen event')
 
-    return map
 
 def convert_parameters_types(values:dict) :
     """
