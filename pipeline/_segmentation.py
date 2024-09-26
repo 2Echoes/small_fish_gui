@@ -6,14 +6,19 @@ from cellpose.core import use_gpu
 from skimage.measure import label
 from ..gui.layout import _segmentation_layout
 from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
+from ..interface import open_image
 from ._napari_wrapper import show_segmentation as napari_show_segmentation
+from .utils import from_label_get_centeroidscoords
+from matplotlib.colors import ListedColormap
 
+import matplotlib as mpl
 import cellpose.models as models
 import numpy as np
 import bigfish.multistack as multistack
 import bigfish.stack as stack
 import bigfish.plot as plot
 import PySimpleGUI as sg
+import matplotlib.pyplot as plt
 import os
 
 def launch_segmentation(image: np.ndarray, user_parameters: dict) :
@@ -38,6 +43,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
         nucleus_model_name = user_parameters.setdefault('nucleus_model_name', 'nuclei')
         nucleus_size = user_parameters.setdefault('nucleus diameter', 130)
         nucleus_channel = user_parameters.setdefault('nucleus channel', 0)
+        other_nucleus_image = user_parameters.setdefault('other_nucleus_image',None)
         path = os.getcwd()
         show_segmentation = user_parameters.setdefault('show segmentation', False)
         segment_only_nuclei = user_parameters.setdefault('Segment only nuclei', False)
@@ -56,6 +62,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 nucleus_channel_preset= nucleus_channel,
                 cyto_diameter_preset= cyto_size,
                 nucleus_diameter_preset= nucleus_size,
+                other_nucleus_image_preset=other_nucleus_image,
                 saving_path_preset= path,
                 show_segmentation_preset=show_segmentation,
                 segment_only_nuclei_preset=segment_only_nuclei,
@@ -81,10 +88,11 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
             nucleus_model_name = values['nucleus_model_name']
             nucleus_size = values['nucleus diameter']
             nucleus_channel = values['nucleus channel']
+            other_nucleus_image = values['other_nucleus_image']
             path = values['saving path'] if values['saving path'] != '' else None
             show_segmentation = values['show segmentation']
             filename = values['filename'] if type(path) != type(None) else None
-            channels = [cytoplasm_channel, nucleus_channel]
+            channels = [cytoplasm_channel, nucleus_channel] if multichannel else [...,...]
 
             relaunch= False
             #Checking integrity of parameters
@@ -92,10 +100,13 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 sg.popup('Invalid cytoplasm model name.')
                 values['cyto_model_name'] = user_parameters.setdefault('cyto_model_name', 'cyto2')
                 relaunch= True
-            if cytoplasm_channel not in available_channels and not do_only_nuc:
-                sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
-                relaunch= True
-                values['cytoplasm channel'] = user_parameters.setdefault('cytoplasm channel',0)
+            if multichannel :
+                if cytoplasm_channel not in available_channels and not do_only_nuc:
+                    sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+                    relaunch= True
+                    values['cytoplasm channel'] = user_parameters.setdefault('cytoplasm channel',0)
+            else :
+                cytoplasm_channel = ...
 
             if type(cyto_size) not in [int, float] and not do_only_nuc:
                 sg.popup("Incorrect cytoplasm size.")
@@ -106,14 +117,46 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 sg.popup('Invalid nucleus model name.')
                 values['nucleus_model_name'] = user_parameters.setdefault('nucleus_model_name', 'nuclei')
                 relaunch= True
-            if nucleus_channel not in available_channels :
-                sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
-                relaunch= True
-                values['nucleus channel'] = user_parameters.setdefault('nucleus_channel', 0)
+            
+            if multichannel :
+                if nucleus_channel not in available_channels :
+                    sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
+                    relaunch= True
+                    values['nucleus channel'] = user_parameters.setdefault('nucleus_channel', 0)
+            else : 
+                nucleus_channel = ...
+
             if type(nucleus_size) not in [int, float] :
                 sg.popup("Incorrect nucleus size.")
                 relaunch= True
                 values['nucleus diameter'] = user_parameters.setdefault('nucleus diameter', 30)
+            if other_nucleus_image != '' :
+                if not os.path.isfile(other_nucleus_image) :
+                    sg.popup("Nucleus image is not a file.")
+                    relaunch=True
+                    values['other_nucleus_image'] = None
+                else :
+                    try :
+                        nucleus_image = open_image(other_nucleus_image)
+                    except Exception as e :
+                        sg.popup("Could not open image.\n{0}".format(e))
+                        relaunch=True
+                        values['other_nucleus_image'] = user_parameters.setdefault('other_nucleus_image', None)
+                    else :
+                        if nucleus_image.ndim != image.ndim - multichannel :
+                            sg.popup("Nucleus image dimension missmatched. Expected same dimension as cytoplasm_image for monochannel or same dimension as cytoplasm_image -1 for multichannel\ncytoplasm dimension : {0}, nucleus dimension : {1}".format(image.ndim, nucleus_image.ndim))
+                            nucleus_image = None
+                            relaunch=True
+                            values['other_nucleus_image'] = user_parameters.setdefault('other_nucleus_image', None)
+                        
+                        elif nucleus_image.shape != image[cytoplasm_channel] :
+                            sg.popup("Nucleus image shape missmatched. Expected same shape as cytoplasm_image \ncytoplasm shape : {0}, nucleus shape : {1}".format(image[cytoplasm_channel].shape, nucleus_image.shape))
+                            nucleus_image = None
+                            relaunch=True
+                            values['other_nucleus_image'] = user_parameters.setdefault('other_nucleus_image', None)
+
+            else :
+                nucleus_image = None
 
             user_parameters.update(values)
             if not relaunch : break
@@ -149,14 +192,15 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 nucleus_model_name= nucleus_model_name,
                 nucleus_diameter= nucleus_size,
                 channels=channels,
-                do_only_nuc=do_only_nuc
+                do_only_nuc=do_only_nuc,
+                external_nucleus_image = nucleus_image,
                 )
 
         finally  : window.close()
 
         if show_segmentation :
             nucleus_label, cytoplasm_label = napari_show_segmentation(
-                nuc_image=image[nucleus_channel],
+                nuc_image=image[nucleus_channel] if type(nucleus_image) == type(None) else nucleus_image,
                 nuc_label= nucleus_label,
                 cyto_image=image[cytoplasm_channel],
                 cyto_label=cytoplasm_label,
@@ -175,16 +219,30 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                 continue
 
         if type(output_path) != type(None) :
+            
+            #Get backgrounds
             nuc_proj = image[nucleus_channel]
             im_proj = image[cytoplasm_channel]
             if im_proj.ndim == 3 :
                 im_proj = stack.maximum_projection(im_proj)
             if nuc_proj.ndim == 3 :
                 nuc_proj = stack.maximum_projection(nuc_proj)
+            
+            #Call plots
             plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
             if not do_only_nuc : 
                 plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=True)
-        
+            plot_labels(
+                nucleus_label,
+                path_output=output_path + "_nucleus_label_map.png",
+                show=False
+                )
+            if not do_only_nuc : 
+                plot_labels(
+                    cytoplasm_label,
+                    path_output=output_path + "_cytoplasm_label_map.png",
+                    show=False
+                    )
 
 
 
@@ -204,7 +262,14 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
     user_parameters.update(values)
     return cytoplasm_label, nucleus_label, user_parameters
 
-def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto_diameter, nucleus_diameter, do_only_nuc=False) :
+def cell_segmentation(
+        image, cyto_model_name, 
+        nucleus_model_name, 
+        channels, cyto_diameter, 
+        nucleus_diameter, 
+        do_only_nuc=False,
+        external_nucleus_image = None,
+        ) :
 
     nuc_channel = channels[1]
     if not do_only_nuc : 
@@ -214,10 +279,13 @@ def cell_segmentation(image, cyto_model_name, nucleus_model_name, channels, cyto
         else : 
             cyto = image[cyto_channel]
 
-    if image[nuc_channel].ndim >= 3 :
-        nuc = stack.maximum_projection(image[nuc_channel])
-    else : 
+    if type(external_nucleus_image) != type(None) :
+        nuc = external_nucleus_image
+    else :
         nuc = image[nuc_channel]
+
+    if nuc.ndim >= 3 :
+        nuc = stack.maximum_projection(nuc)
     
     if not do_only_nuc :
         image = np.zeros(shape=(2,) + cyto.shape)
@@ -387,3 +455,48 @@ def plot_segmentation(
             path_output=path + "_cytoplasm_segmentation.png",
             show=False,
         )
+
+def plot_labels(labelled_image: np.ndarray, path_output:str = None, show= True, axis= False, close= True):
+    """
+    Plot a labelled image and indicate the label number at the center of each region.
+    """
+    stack.check_parameter(labelled_image = (np.ndarray, list), show = (bool))
+    if isinstance(labelled_image, np.ndarray) : 
+        stack.check_array(labelled_image, ndim= 2)
+        labelled_image = [labelled_image]
+    
+    #Setting a colormap with background to white so all cells can be visible
+    viridis = mpl.colormaps['viridis'].resampled(256)
+    newcolors = viridis(np.linspace(0, 1, 256))
+    white = np.array([1, 1, 1, 1])
+    newcolors[0, :] = white
+    newcmp = ListedColormap(newcolors)
+
+    plt.figure(figsize= (10,10))
+    rescaled_image = stack.rescale(np.array(labelled_image[0], dtype= np.int32), channel_to_stretch= 0)
+    rescaled_image[rescaled_image == 0] = -100
+    plot = plt.imshow(rescaled_image, cmap=newcmp)
+    plot.axes.get_xaxis().set_visible(axis)
+    plot.axes.get_yaxis().set_visible(axis)
+    plt.tight_layout()
+
+    for index in range(0, len(labelled_image)) :
+        centroid_dict = from_label_get_centeroidscoords(labelled_image[index])
+        labels = centroid_dict["label"]
+        Y = centroid_dict["centroid-0"]
+        X = centroid_dict["centroid-1"]
+        centroids = zip(Y,X)
+
+        for label in labels :
+            y,x = next(centroids)
+            y,x = round(y), round(x)
+            an = plt.annotate(str(label), [round(x), round(y)])
+
+    if not axis : plt.cla
+    if show : plt.show()
+    if path_output != None :
+        stack.check_parameter(path_output = (str))
+        plt.savefig(path_output)
+    if close : plt.close()
+
+    return plot
