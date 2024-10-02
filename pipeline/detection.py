@@ -693,6 +693,15 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
     frame_results['threshold'] = user_parameters['threshold']
 
     frame_results = pd.DataFrame(columns= frame_results.keys(), data= (frame_results.values(),))
+
+    #Adding name column
+    result_col = list(frame_results.columns)
+    cell_result_col = list(cell_result_dframe.columns)
+    name = "acquisition_{0}".format(acquisition_id)
+    frame_results['name'] = name
+    cell_result_dframe['name'] = name
+    frame_results = frame_results.loc[:,['name'] + result_col]
+    cell_result_dframe = cell_result_dframe.loc[:,['name'] + cell_result_col]
         
     return frame_results, cell_result_dframe
 

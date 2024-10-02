@@ -13,7 +13,7 @@ from ._colocalisation import spots_multicolocalisation
 
 def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, min_spot_number, shape) :
     if len(new_clusters) == 0 : return new_clusters
-    if len(spots) == 0 : return new_clusters
+    if len(spots) == 0 : return np.empty(shape=(0,2+len(voxel_size)))
 
     if len(new_clusters[0]) in [2,3] :
         new_clusters = np.concatenate([
@@ -25,13 +25,10 @@ def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cl
     assert len(new_clusters[0]) == 4 or len(new_clusters[0]) == 5, "Wrong number of coordinates for clusters should not happen."
     
     # Update spots clusters
-    if len(voxel_size) == 3 :
-        new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:3], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
-    elif len(voxel_size) == 2 :
-        new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:2], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
+    new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:-2], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
 
     # delete too small clusters
-        new_clusters = np.delete(new_clusters, new_clusters[:,-2] < min_spot_number, 0)
+    new_clusters = np.delete(new_clusters, new_clusters[:,-2] < min_spot_number, 0)
 
     return new_clusters
 
@@ -98,9 +95,8 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     new_spots = np.array(Viewer.layers['single spots'].data, dtype= int)
 
     if type(clusters) != type(None) :
-        if len(clusters) > 0 : 
-            new_clusters = np.array(Viewer.layers['foci'].data, dtype= int)
-            new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, min_spot_number=min_spot_number, shape=image.shape)
+        new_clusters = np.array(Viewer.layers['foci'].data, dtype= int)
+        new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, min_spot_number=min_spot_number, shape=image.shape)
     else : new_clusters = None
 
     return new_spots, new_clusters
