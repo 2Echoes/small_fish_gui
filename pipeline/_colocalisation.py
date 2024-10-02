@@ -263,4 +263,7 @@ def launch_colocalisation(result_tables, result_dataframe, colocalisation_distan
         'fraction_spots1_coloc_cluster2' : [fraction_spots1_coloc_cluster2],
     })
 
+    coloc_df['fraction_spots1_coloc_free2'] = coloc_df['fraction_spots1_coloc_spots2'] - coloc_df['fraction_spots1_coloc_cluster2']
+    coloc_df['fraction_spots2_coloc_free1'] = coloc_df['fraction_spots2_coloc_spots1'] - coloc_df['fraction_spots2_coloc_cluster1']
+
     return coloc_df

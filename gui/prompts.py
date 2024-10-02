@@ -318,10 +318,7 @@ def hub_prompt(fov_results, do_segmentation=False) :
             return event, values
 
 def coloc_prompt() :
-    layout = [
-        [parameters_layout(['colocalisation distance'], header= 'Colocalisation', default_values= 0)]
-    ]
-
+    layout = parameters_layout(['colocalisation distance'], header= 'Colocalisation', default_values= 0)
     event, values = prompt_with_help(layout)
 
     if event == 'Ok' :

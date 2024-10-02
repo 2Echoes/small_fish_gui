@@ -1,6 +1,7 @@
 """
 Contains code to handle detection as well as bigfish wrappers related to spot detection.
 """
+
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
@@ -574,8 +575,6 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
         )
     
     return result_frame
-
-
 
 @add_default_loading
 def launch_clustering(spots, user_parameters): 
