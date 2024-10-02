@@ -148,9 +148,9 @@ def show_segmentation(
     Viewer.show(block=False)
     napari.run()
 
-
     new_nuc_label = Viewer.layers['nucleus_label'].data
-    if type(cyto_label) != type(None) and not np.array_equal(cyto_label, nuc_label) : new_cyto_label = Viewer.layers['cytoplasm_label'].data
+    if 'cytoplasm_label' in Viewer.layers : 
+        new_cyto_label = Viewer.layers['cytoplasm_label'].data
     else : new_cyto_label = new_nuc_label
 
     return new_nuc_label, new_cyto_label
