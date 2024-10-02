@@ -1,6 +1,8 @@
 import sys, subprocess
 import PySimpleGUI as sg
 
+from small_fish_gui import __version__
+
 def main():
     import small_fish_gui.pipeline.main
 
@@ -10,9 +12,7 @@ def is_last_version() :
     latest_version = latest_version[:latest_version.find(')')]
     latest_version = latest_version.replace(' ','').split(',')[-1]
 
-    current_version = str(subprocess.run([sys.executable, '-m', 'pip', 'show', '{}'.format('small_fish_gui')], capture_output=True, text=True))
-    current_version = current_version[current_version.find('Version:')+8:]
-    current_version = current_version[:current_version.find('\\n')].replace(' ','')
+    current_version = __version__
 
     return current_version == latest_version
 
