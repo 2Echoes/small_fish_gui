@@ -2,7 +2,7 @@
 This submodule groups all the possible actions of the user in the main windows. It is the start of each action the user can do.
 """
 
-from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection
+from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection, rename_prompt
 from ..interface.output import write_results
 from ._preprocess import map_channels, prepare_image_detection, reorder_shape, reorder_image_stack
 from .detection import ask_input_parameters, initiate_detection, launch_detection, launch_features_computation, get_nucleus_signal
@@ -175,5 +175,34 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
             coloc_df = coloc_df.drop(coloc_df_drop_idx, axis=0)
 
         result_df = result_df.drop(result_drop_idx, axis=0)
+
+    return result_df, cell_result_df, coloc_df
+
+def rename_acquisitions(
+        selected_acquisitions : pd.DataFrame, 
+        result_df : pd.DataFrame, 
+        cell_result_df : pd.DataFrame, 
+        coloc_df : pd.DataFrame
+        ) :
+    
+    if len(result_df) == 0 :
+        sg.popup("No acquisition to rename.")
+        return result_df, cell_result_df, coloc_df
+    
+    if len(selected_acquisitions) == 0 :
+        sg.popup("Please select the acquisitions you would like to rename.")
+
+    else :
+        name = rename_prompt()
+        print("entered : ",name)
+        if not name : return result_df, cell_result_df, coloc_df #User didn't put a name or canceled
+        name : str = name.replace(' ','_')
+        acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
+
+        result_df.loc[result_df['acquisition_id'].isin(acquisition_ids),['name']] = name
+        if len(cell_result_df) > 0 : cell_result_df.loc[cell_result_df['acquisition_id'].isin(acquisition_ids),['name']] = name
+        if len(coloc_df) > 0 : 
+            coloc_df.loc[coloc_df['acquisition_id_1'].isin(acquisition_ids), ['name1']] = name
+            coloc_df.loc[coloc_df['acquisition_id_2'].isin(acquisition_ids), ['name2']] = name
 
     return result_df, cell_result_df, coloc_df

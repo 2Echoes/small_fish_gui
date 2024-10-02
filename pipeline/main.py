@@ -5,7 +5,7 @@ This script is called when software starts; it is the main loop.
 import pandas as pd
 import PySimpleGUI as sg
 from ..gui import hub_prompt
-from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions
+from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions
 from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
 
@@ -84,6 +84,10 @@ while True : #Break this loop to close small_fish
                 preset=user_parameters,
             )
         
+        elif event == "Rename acquisition" :
+            selected_acquisitions = values.setdefault('result_table', []) #Contains the lines selected by the user on the sum-up array.
+            result_df, cell_result_df, coloc_df = rename_acquisitions(selected_acquisitions, result_df, cell_result_df, coloc_df)
+
         else :
             break
 

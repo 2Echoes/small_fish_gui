@@ -280,7 +280,7 @@ def _warning_popup(warning:str) :
 
 def _sumup_df(results: pd.DataFrame) :
 
-    COLUMNS = ['acquisition_id','threshold', 'spot_number', 'cell_number', 'filename', 'channel to compute']
+    COLUMNS = ['acquisition_id','name','threshold', 'spot_number', 'cell_number', 'filename', 'channel to compute']
 
     if len(results) > 0 :
         if 'channel to compute' not in results : results['channel to compute'] = np.NaN
@@ -303,7 +303,7 @@ def hub_prompt(fov_results, do_segmentation=False) :
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
         [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
-        [sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
+        [sg.Button('Rename acquisition', button_color= 'green'), sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
         # [sg.Button('Save results', button_color= 'green'), sg.Button('Reset results',button_color= 'gray')]
     ]
 
@@ -318,11 +318,18 @@ def hub_prompt(fov_results, do_segmentation=False) :
             return event, values
 
 def coloc_prompt() :
-    layout = parameters_layout(['colocalisation distance'], header= 'Colocalisation', default_values= 0)
+    layout = parameters_layout(['colocalisation distance'], unit= 'nm', header= 'Colocalisation', default_values= 0)
     event, values = prompt_with_help(layout)
 
     if event == 'Ok' :
         return values['colocalisation distance']
+    else : return False
+
+def rename_prompt() :
+    layout = parameters_layout(['name'], header= "Rename acquisitions", size=12)
+    event, values = prompt_with_help(layout)
+    if event == 'Ok' :
+        return values['name']
     else : return False
 
 def ask_detection_confirmation(used_threshold) :
