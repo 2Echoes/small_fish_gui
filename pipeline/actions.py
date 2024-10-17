@@ -128,6 +128,9 @@ def save_results(result_df, cell_result_df, coloc_df) :
             do_excel = dic['Excel']
             do_feather = dic['Feather']
             do_csv = dic['csv']
+
+            if 'rna_coords' in cell_result_df.columns : cell_result_df = cell_result_df.drop(columns='rna_coords')
+
             sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess3 = write_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)

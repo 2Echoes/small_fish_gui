@@ -173,6 +173,42 @@ def initiate_colocalisation(result_tables) :
                 break
         return colocalisation_distance
 
+def _global_coloc() :
+    pass
+
+def _cell_coloc(
+        result_tables : list, 
+        result_dataframe : pd.DataFrame, 
+        cell_dataframe : pd.DataFrame, 
+        colocalisation_distance : float
+        ) :
+    
+    acquisition1 = result_dataframe.iloc[result_tables[0]]
+    acquisition2 = result_dataframe.iloc[result_tables[1]]
+
+    acquisition_id1 = acquisition1['acquisition_id'].iat[0]
+    acquisition_id2 = acquisition2['acquisition_id'].iat[0]
+    result_dataframe = result_dataframe.set_index('acquisition_id', drop=False)
+
+    #Getting shape
+    if not result_dataframe.at[acquisition_id1, 'shape'] == result_dataframe.at[acquisition_id2, 'shape'] :
+        raise ValueError("Selected acquisitions have different shapes. Most likely they don't belong to the same fov.")
+    shape = result_dataframe.at[acquisition_id1, 'shape']
+
+    #Selecting relevant cells in Cell table
+    cell_dataframe = cell_dataframe.loc[(cell_dataframe['acquisition_id'] == acquisition_id1)|(cell_dataframe['acquisition_id'] == acquisition_id2)]
+    cell_dataframe.loc[cell_dataframe['acquisition_id'] == acquisition_id1]['spots_name'] = 'spots_{0}'.format(acquisition_id1)
+    cell_dataframe.loc[cell_dataframe['acquisition_id'] == acquisition_id2]['spots_name'] = 'spots_{0}'.format(acquisition_id2)
+    
+    #Putting spots lists in 2 cols for corresponding cells
+    cell_dataframe = cell_dataframe.pivot(
+        columns='spots_name',
+        values= 'rna_coords',
+        index= ['cell_id','cell_center_coord']
+
+    )
+
+
 @add_default_loading
 def launch_colocalisation(result_tables, result_dataframe, colocalisation_distance) :
     """
