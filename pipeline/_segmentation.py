@@ -7,7 +7,7 @@ from skimage.measure import label
 from ..gui.layout import _segmentation_layout
 from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
 from ..interface import open_image
-from ._napari_wrapper import show_segmentation as napari_show_segmentation
+from ..gui.napari import show_segmentation as napari_show_segmentation
 from .utils import from_label_get_centeroidscoords
 from matplotlib.colors import ListedColormap
 
@@ -149,7 +149,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
                             relaunch=True
                             values['other_nucleus_image'] = user_parameters.setdefault('other_nucleus_image', None)
                         
-                        elif nucleus_image.shape != image[cytoplasm_channel] :
+                        elif nucleus_image.shape != image[cytoplasm_channel].shape :
                             sg.popup("Nucleus image shape missmatched. Expected same shape as cytoplasm_image \ncytoplasm shape : {0}, nucleus shape : {1}".format(image[cytoplasm_channel].shape, nucleus_image.shape))
                             nucleus_image = None
                             relaunch=True
