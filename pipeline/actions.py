@@ -118,7 +118,7 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
     )
     return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
 
-def save_results(result_df, cell_result_df, coloc_df) :
+def save_results(result_df, cell_result_df, global_coloc_df, cell_coloc_df) :
     if len(result_df) != 0 :
         dic = output_image_prompt(filename=result_df.iloc[0].at['filename'])
 
@@ -133,32 +133,42 @@ def save_results(result_df, cell_result_df, coloc_df) :
 
             sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
-            sucess3 = write_results(coloc_df, path= path, filename=filename + '_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
-            if sucess1 and sucess2 and sucess3 : sg.popup("Sucessfully saved at {0}.".format(path))
+            sucess3 = write_results(global_coloc_df, path= path, filename=filename + 'global_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
+            sucess4 = write_results(cell_coloc_df, path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
+            #TODO : write a specific saving for cell2cell_coloc_df ; cas columns.level2 to str for feather format and don't reset index ('cell_id')
+            if all([sucess1,sucess2, sucess3, sucess4,]) : sg.popup("Sucessfully saved at {0}.".format(path))
 
     else :
         dic = None
         sg.popup('No results to save.') 
 
-def compute_colocalisation(result_tables, result_dataframe) :
+def compute_colocalisation(result_tables, result_dataframe, cell_result_dataframe, global_coloc_df, cell_coloc_df) :
     colocalisation_distance = initiate_colocalisation(result_tables)
 
     if colocalisation_distance == False :
-        res_coloc = pd.DataFrame() # popup handled in initiate_colocalisation
+        pass
     else :
-        res_coloc = launch_colocalisation(result_tables, result_dataframe=result_dataframe, colocalisation_distance=colocalisation_distance)
+        global_coloc_df, cell_coloc_df = launch_colocalisation(
+            result_tables, 
+            result_dataframe=result_dataframe, 
+            cell_result_dataframe=cell_result_dataframe,
+            colocalisation_distance=colocalisation_distance,
+            global_coloc_df=global_coloc_df,
+            cell_coloc_df=cell_coloc_df,
+            )
 
-    return res_coloc
+    return global_coloc_df, cell_coloc_df
 
 def delete_acquisitions(selected_acquisitions : pd.DataFrame, 
                         result_df : pd.DataFrame, 
                         cell_result_df : pd.DataFrame, 
-                        coloc_df : pd.DataFrame
+                        global_coloc_df : pd.DataFrame,
+                        cell_coloc_df : pd.DataFrame,
                         ) :
     
     if len(result_df) == 0 :
         sg.popup("No acquisition to delete.")
-        return result_df, cell_result_df, coloc_df
+        return result_df, cell_result_df, global_coloc_df
 
     if len(selected_acquisitions) == 0 :
         sg.popup("Please select the acquisitions you would like to delete.")
@@ -172,25 +182,33 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
             print("{0} cells deleted.".format(len(cell_result_df_drop_idx)))
             cell_result_df = cell_result_df.drop(cell_result_df_drop_idx, axis=0)
         
-        if len(coloc_df) > 0 :
-            coloc_df_drop_idx = coloc_df[(coloc_df["acquisition_id_1"].isin(acquisition_ids)) | (coloc_df['acquisition_id_2'].isin(acquisition_ids))].index
+        if len(global_coloc_df) > 0 :
+            coloc_df_drop_idx = global_coloc_df[(global_coloc_df["acquisition_id_1"].isin(acquisition_ids)) | (global_coloc_df['acquisition_id_2'].isin(acquisition_ids))].index
             print("{0} coloc measurement deleted.".format(len(coloc_df_drop_idx)))
-            coloc_df = coloc_df.drop(coloc_df_drop_idx, axis=0)
+            global_coloc_df = global_coloc_df.drop(coloc_df_drop_idx, axis=0)
+        
+        if len(cell_coloc_df) > 0 :
+            for acquisition_id in acquisition_ids :
+                cell_coloc_df = cell_coloc_df.drop(acquisition_id, axis=1, level=2) #Delete spot number and foci number
+                coloc_columns = cell_coloc_df.columns.get_level_values(1)
+                coloc_columns = coloc_columns[coloc_columns.str.contains(str(acquisition_id))]
+                cell_coloc_df = cell_coloc_df.drop(labels=coloc_columns, axis=1, level=1)
 
         result_df = result_df.drop(result_drop_idx, axis=0)
 
-    return result_df, cell_result_df, coloc_df
+    return result_df, cell_result_df, global_coloc_df, cell_coloc_df
 
 def rename_acquisitions(
         selected_acquisitions : pd.DataFrame, 
         result_df : pd.DataFrame, 
         cell_result_df : pd.DataFrame, 
-        coloc_df : pd.DataFrame
+        global_coloc_df : pd.DataFrame,
+        cell_coloc_df : pd.DataFrame,
         ) :
     
     if len(result_df) == 0 :
         sg.popup("No acquisition to rename.")
-        return result_df, cell_result_df, coloc_df
+        return result_df, cell_result_df, global_coloc_df
     
     if len(selected_acquisitions) == 0 :
         sg.popup("Please select the acquisitions you would like to rename.")
@@ -198,14 +216,29 @@ def rename_acquisitions(
     else :
         name = rename_prompt()
         print("entered : ",name)
-        if not name : return result_df, cell_result_df, coloc_df #User didn't put a name or canceled
+        if not name : return result_df, cell_result_df, global_coloc_df #User didn't put a name or canceled
         name : str = name.replace(' ','_')
         acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
+        old_names = list(result_df.loc[result_df['acquisition_id'].isin(acquisition_ids),['name']])
+        old_names.sort(key=len) #We order this list by elmt length
+        old_names.reverse() #From longer to smaller
 
         result_df.loc[result_df['acquisition_id'].isin(acquisition_ids),['name']] = name
         if len(cell_result_df) > 0 : cell_result_df.loc[cell_result_df['acquisition_id'].isin(acquisition_ids),['name']] = name
-        if len(coloc_df) > 0 : 
-            coloc_df.loc[coloc_df['acquisition_id_1'].isin(acquisition_ids), ['name1']] = name
-            coloc_df.loc[coloc_df['acquisition_id_2'].isin(acquisition_ids), ['name2']] = name
+        if len(global_coloc_df) > 0 : 
+            global_coloc_df.loc[global_coloc_df['acquisition_id_1'].isin(acquisition_ids), ['name1']] = name
+            global_coloc_df.loc[global_coloc_df['acquisition_id_2'].isin(acquisition_ids), ['name2']] = name
+        if len(cell_coloc_df) > 0 :
+            target_columns = cell_coloc_df.columns.get_level_values(1)
+            for old_name in old_names : #Note list was ordered by elmt len (decs) to avoid conflict when one name is contained by another one. if the shorter is processed first then the longer will not be able to be properly renamed.
+                target_columns = target_columns.str.replace(old_name, name)
+            
+            new_columns = zip(
+                cell_coloc_df.columns.get_level_values(0),
+                target_columns,
+                cell_coloc_df.columns.get_level_values(2),
+            )
 
-    return result_df, cell_result_df, coloc_df
+            cell_coloc_df.columns = pd.MultiIndex.from_tuples(new_columns)
+
+    return result_df, cell_result_df, global_coloc_df, cell_coloc_df
