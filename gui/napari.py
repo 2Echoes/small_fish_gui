@@ -7,11 +7,19 @@ import napari.types
 import numpy as np
 import napari
 
-from bigfish.stack import check_parameter
-from ..utils import compute_anisotropy_coef
-from ._colocalisation import spots_multicolocalisation
+from napari.layers import Labels
 
-def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, min_spot_number, shape) :
+from magicgui import widgets
+from magicgui import magicgui
+
+from bigfish.stack import check_parameter
+from ._napari_widgets import cell_label_eraser, segmentation_reseter, changes_propagater, free_label_picker
+from ..utils import compute_anisotropy_coef
+from ..pipeline._colocalisation import spots_multicolocalisation
+
+#Post detection
+
+def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, shape) :
     if len(new_clusters) == 0 : return new_clusters
     if len(spots) == 0 : return np.empty(shape=(0,2+len(voxel_size)))
 
@@ -28,7 +36,7 @@ def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cl
     new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:-2], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
 
     # delete too small clusters
-    new_clusters = np.delete(new_clusters, new_clusters[:,-2] < min_spot_number, 0)
+    new_clusters = np.delete(new_clusters, new_clusters[:,-2] == 0, 0)
 
     return new_clusters
 
@@ -96,10 +104,14 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
 
     if type(clusters) != type(None) :
         new_clusters = np.array(Viewer.layers['foci'].data, dtype= int)
-        new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, min_spot_number=min_spot_number, shape=image.shape)
+        new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, shape=image.shape)
     else : new_clusters = None
 
     return new_spots, new_clusters
+
+# Segmentation
+    
+
 
 def show_segmentation(
         nuc_image : np.ndarray,
@@ -131,21 +143,35 @@ def show_segmentation(
             )
 
     #Init Napari viewer
-    Viewer = napari.Viewer(ndisplay=2, title= 'Show segmentation', axis_labels=['z','y','x'] if dim == 3 else ['y', 'x'], show= False)
+    Viewer = napari.Viewer(ndisplay=2, title= 'Show segmentation', axis_labels=['z','y','x'] if dim == 3 else ['y', 'x'])
     
-    # Adding channels
+    # Adding nuclei
     nuc_signal_layer = Viewer.add_image(nuc_image, name= "nucleus signal", blending= 'additive', colormap='blue', contrast_limits=[nuc_image.min(), nuc_image.max()])
-    nuc_label_layer = Viewer.add_labels(nuc_label, opacity= 0.5, blending= 'additive', name= 'nucleus_label',)
+    nuc_label_layer = Viewer.add_labels(nuc_label, opacity= 0.6, name= 'nucleus_label',)
     nuc_label_layer.preserve_labels = True
+    labels_layer_list = [nuc_label_layer]
     
-    #Adding labels
-    if type(cyto_image) != type(None) : Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red', contrast_limits=[cyto_image.min(), cyto_image.max()])
+    #Adding cytoplasm
     if (type(cyto_label) != type(None) and not np.array_equal(cyto_label, nuc_label) ) or (type(cyto_label) != type(None) and cyto_label.max() == 0): 
-        cyto_label_layer = Viewer.add_labels(cyto_label, opacity= 0.4, blending= 'additive', name= 'cytoplasm_label')
+        Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red', contrast_limits=[cyto_image.min(), cyto_image.max()])
+        cyto_label_layer = Viewer.add_labels(cyto_label, opacity= 0.6, name= 'cytoplasm_label')
         cyto_label_layer.preserve_labels = True
-    
+        labels_layer_list += [cyto_label_layer]
+
+    #Adding widget
+    label_eraser = cell_label_eraser(labels_layer_list)
+    label_picker = free_label_picker(labels_layer_list)
+    label_reseter = segmentation_reseter(labels_layer_list)
+    changes_applier = changes_propagater(labels_layer_list)
+
+    buttons_container = widgets.Container(widgets=[label_picker.widget, changes_applier.widget, label_reseter.widget], labels=False, layout='horizontal')
+    tools_container = widgets.Container(
+        widgets = [buttons_container, label_eraser.widget],
+        labels=False,
+    )
+    Viewer.window.add_dock_widget(tools_container, name='SmallFish', area='left')
+
     #Launch Napari
-    Viewer.show(block=False)
     napari.run()
 
     new_nuc_label = Viewer.layers['nucleus_label'].data
