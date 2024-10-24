@@ -5,7 +5,7 @@ Contains code to handle detection as well as bigfish wrappers related to spot de
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
-from ._napari_wrapper import correct_spots, _update_clusters, threshold_selection
+from ..gui.napari import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt, input_image_prompt
 from ..utils import compute_anisotropy_coef
@@ -634,7 +634,7 @@ def launch_detection(
         
     if do_clustering : 
         clusters = launch_clustering(spots, user_parameters, hide_loading = hide_loading) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
-        clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], min_spot_number= user_parameters['min number of spots'], shape=image.shape)
+        clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], shape=image.shape)
 
     else : clusters = None
 
@@ -704,6 +704,7 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
     cell_result_dframe['name'] = name
     frame_results = frame_results.loc[:,['name'] + result_col]
     cell_result_dframe = cell_result_dframe.loc[:,['name'] + cell_result_col]
+    cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
         
     return frame_results, cell_result_dframe
 
