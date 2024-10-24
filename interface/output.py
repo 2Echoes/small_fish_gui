@@ -13,8 +13,6 @@ def _cast_spots_to_tuple(spots) :
 def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False, overwrite=False) :
     check_parameter(dataframe= pd.DataFrame, path= str, filename = str, do_excel = bool, do_feather = bool)
 
-    dataframe.columns = dataframe.columns.astype(str) # assert columns header are string for feather
-
     if len(dataframe) == 0 : return True
     if not do_excel and not do_feather and not do_csv : 
         return False
