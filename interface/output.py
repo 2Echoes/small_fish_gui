@@ -20,6 +20,15 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
     if not path.endswith('/') : path +='/'
     assert os.path.isdir(path)
 
+    #Casting cols name to str for feather format
+    index_dim = dataframe.columns.nlevels
+    if index_dim == 1 :
+        dataframe.columns = dataframe.columns.astype(str)
+    else :
+        casted_cols = [dataframe.columns.get_level_values(level).astype(str) for level in range(index_dim)]
+        casted_cols = zip(*casted_cols)
+        dataframe.columns = pd.MultiIndex.from_tuples(casted_cols)
+
 
     new_filename = filename
     i= 1

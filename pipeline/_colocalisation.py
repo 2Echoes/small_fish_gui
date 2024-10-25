@@ -322,7 +322,7 @@ def _cell_coloc(
             voxel_size=voxel_size
             ),axis=1
         )
-    colocalisation_df[("Spots_to_spots_fraction",coloc_name,"forward")] = colocalisation_df[("Spots_to_spots_count",coloc_name,"forward")] / colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)]
+    colocalisation_df[("Spots_to_spots_fraction",coloc_name,"forward")] = colocalisation_df[("Spots_to_spots_count",coloc_name,"forward")].div(colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)])
     
     colocalisation_df[("Spots_to_spots_count",coloc_name,"backward")] = colocalisation_df['rna_coords'].apply(
         lambda x: spots_colocalisation(
@@ -332,7 +332,7 @@ def _cell_coloc(
             voxel_size=voxel_size
             ),axis=1
         )
-    colocalisation_df[("Spots_to_spots_fraction",coloc_name,"backward")] = colocalisation_df[("Spots_to_spots_count",coloc_name,"backward")] / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)]
+    colocalisation_df[("Spots_to_spots_fraction",coloc_name,"backward")] = colocalisation_df[("Spots_to_spots_count",coloc_name,"backward")].div(colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)])
 
     if 'clusters' in cell_dataframe.columns :
         
