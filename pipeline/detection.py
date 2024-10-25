@@ -487,7 +487,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
     features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
     features_names += ['snr_mean', 'snr_median', 'snr_std']
     features_names += ['cell_center_coord','foci_number','foci_in_nuc_number']
-    features_names += ['rna_coords']
+    features_names += ['rna_coords','cluster_coords']
 
     result_frame = pd.DataFrame()
 
@@ -567,7 +567,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
         features += [cell_center, foci_number, foci_in_nuc_number]
 
         features = [acquisition_id, cell_id, cell_bbox] + features
-        features += [rna_coords]
+        features += [rna_coords, foci_coords]
         
         result_frame = pd.concat([
             result_frame,

@@ -136,8 +136,8 @@ def output_image_prompt(filename) :
         excel_filename = values['filename'] + ".xlsx"
         feather_filename = values['filename'] + ".feather"
 
-        if not values['Excel'] and not values['Feather'] :
-            sg.popup("Please check at least one box : Excel/Feather")
+        if not values['Excel'] and not values['Feather'] and not values['csv'] :
+            sg.popup("Please check at least one box : Excel/Feather/csv")
             relaunch = True
         elif not os.path.isdir(values['folder']) :
             sg.popup("Incorrect folder")

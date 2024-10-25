@@ -134,8 +134,7 @@ def save_results(result_df, cell_result_df, global_coloc_df, cell_coloc_df) :
             sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess3 = write_results(global_coloc_df, path= path, filename=filename + 'global_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
-            sucess4 = write_results(cell_coloc_df, path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
-            #TODO : write a specific saving for cell2cell_coloc_df ; cas columns.level2 to str for feather format and don't reset index ('cell_id')
+            sucess4 = write_results(cell_coloc_df, path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv, reset_index=False)
             if all([sucess1,sucess2, sucess3, sucess4,]) : sg.popup("Sucessfully saved at {0}.".format(path))
 
     else :
@@ -215,11 +214,10 @@ def rename_acquisitions(
 
     else :
         name = rename_prompt()
-        print("entered : ",name)
         if not name : return result_df, cell_result_df, global_coloc_df #User didn't put a name or canceled
         name : str = name.replace(' ','_')
         acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
-        old_names = list(result_df.loc[result_df['acquisition_id'].isin(acquisition_ids),['name']])
+        old_names = list(result_df.loc[result_df['acquisition_id'].isin(acquisition_ids)]['name'])
         old_names.sort(key=len) #We order this list by elmt length
         old_names.reverse() #From longer to smaller
 

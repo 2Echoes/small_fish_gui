@@ -10,7 +10,7 @@ def _cast_spot_to_tuple(spot) :
 def _cast_spots_to_tuple(spots) :
     return tuple(list(map(_cast_spot_to_tuple, spots)))
 
-def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False, overwrite=False) :
+def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False, overwrite=False, reset_index=True) :
     check_parameter(dataframe= pd.DataFrame, path= str, filename = str, do_excel = bool, do_feather = bool)
 
     if len(dataframe) == 0 : return True
@@ -29,7 +29,6 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
         casted_cols = zip(*casted_cols)
         dataframe.columns = pd.MultiIndex.from_tuples(casted_cols)
 
-
     new_filename = filename
     i= 1
 
@@ -38,23 +37,21 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
             new_filename = filename + '_{0}'.format(i)
             i+=1
 
-    if 'image' in dataframe.columns :
-        dataframe = dataframe.drop(['image'], axis=1)
+    COLUMNS_TO_DROP = ['image', 'spots', 'clusters', 'rna_coords', 'cluster_coords']
+    for col in COLUMNS_TO_DROP :
+        dataframe = dataframe.drop(columns=col)
 
-    if 'spots' in dataframe.columns : 
-        dataframe = dataframe.drop(['spots'], axis= 1)
-        
-    if 'clusters' in dataframe.columns : 
-        dataframe = dataframe.drop(['clusters'], axis= 1)
+    if reset_index : dataframe = dataframe.reset_index(drop=True)
 
-    if do_feather : dataframe.reset_index(drop=True).to_feather(path + new_filename + '.feather')
-    if do_csv : dataframe.reset_index(drop=True).to_csv(path + new_filename + '.csv', sep=";")
+    if do_csv : dataframe.to_csv(path + new_filename + '.csv', sep=";")
     if do_excel : 
         if len(dataframe) < MAX_LEN_EXCEL :
-            dataframe.reset_index(drop=True).to_excel(path + new_filename + '.xlsx')
+            dataframe.to_excel(path + new_filename + '.xlsx')
         else : 
             print("Error : Table too big to be saved in excel format.")
             return False
     
+    if do_feather : 
+        dataframe.to_parquet(path + new_filename + '.parquet')
 
     return True

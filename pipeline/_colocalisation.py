@@ -79,7 +79,7 @@ def spots_multicolocalisation(spots_list, anchor_list, radius_nm, image_shape, v
     Example in 2D
     --------
 
-    >>> Anchors         Spots           Radius (2px)    Count
+    >>> Anchors         spots           Radius (2px)    Count
     >>> 0 0 0 0 0 0     0 X 0 0 X 0       1             0 1 0 0 0 0
     >>> 0 X 0 0 0 0     X 0 0 X 0 0     1 1 1           1 0 0 0 0 0
     >>> 0 X 0 0 0 0     X X 0 0 0 0       1             1 2 0 0 0 0     --> 5
@@ -136,7 +136,6 @@ def spots_colocalisation(spot_list1:list, spot_list2:list, distance: float, voxe
     
     shape1 = np.max(spot_list1,axis=0)
     shape2 = np.max(spot_list2,axis=0)
-    print(shape2)
     image_shape = np.max([shape1, shape2],axis=0) + 1
 
     signal2 = reconstruct_boolean_signal(image_shape, spot_list2)
@@ -231,7 +230,7 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
         except MissMatchError as e :
             sg.popup(str(e))
             fraction_spots2_coloc_cluster1 = np.NaN
-        except TypeError : # Clusters not computed
+        except TypeError : # clusters not computed
             fraction_spots2_coloc_cluster1 = np.NaN
 
 
@@ -241,7 +240,7 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
         try :
             clusters2 = acquisition2['clusters'][:,:len(voxel_size)]
             fraction_spots1_coloc_cluster2 = spots_colocalisation(spot_list1=spots1, spot_list2=clusters2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
-        except MissMatchError as e :# Clusters not computed
+        except MissMatchError as e :# clusters not computed
             sg.popup(str(e))
             fraction_spots1_coloc_cluster2 = np.NaN
         except TypeError :
@@ -295,7 +294,6 @@ def _cell_coloc(
     #Getting shape
     if not result_dataframe.at[acquisition_id1, 'reordered_shape'] == result_dataframe.at[acquisition_id2, 'reordered_shape'] :
         raise ValueError("Selected acquisitions have different shapes. Most likely they don't belong to the same fov.")
-    shape = result_dataframe.at[acquisition_id1, 'reordered_shape']
 
     #Getting voxel_size
     if not result_dataframe.at[acquisition_id1, 'voxel_size'] == result_dataframe.at[acquisition_id2, 'voxel_size'] :
@@ -307,14 +305,15 @@ def _cell_coloc(
 
     #Putting spots lists in 2 cols for corresponding cells
     pivot_values_columns = ['rna_coords', 'total_rna_number']
-    if 'clusters' in cell_dataframe.columns : pivot_values_columns.extend(['clusters','foci_number'])
+    if 'clusters' in acquisition2.columns or 'clusters' in acquisition1.columns :
+        pivot_values_columns.extend(['cluster_coords','foci_number'])
     colocalisation_df = cell_dataframe.pivot(
         columns=['name', 'acquisition_id'],
         values= pivot_values_columns,
-        index= ['cell_id', 'cell_center_coord']
+        index= 'cell_id'
     )
-    #Spots _vs Spots
-    colocalisation_df[("Spots_to_spots_count",coloc_name,"forward")] = colocalisation_df['rna_coords'].apply(
+    #spots _vs spots
+    colocalisation_df[("spots_to_spots_count",coloc_name,"forward")] = colocalisation_df['rna_coords'].apply(
         lambda x: spots_colocalisation(
             spot_list1= x[(acquisition_name_id1,acquisition_id1)],
             spot_list2= x[(acquisition_name_id2,acquisition_id2)],
@@ -322,9 +321,9 @@ def _cell_coloc(
             voxel_size=voxel_size
             ),axis=1
         )
-    colocalisation_df[("Spots_to_spots_fraction",coloc_name,"forward")] = colocalisation_df[("Spots_to_spots_count",coloc_name,"forward")].div(colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)])
+    colocalisation_df[("spots_to_spots_fraction",coloc_name,"forward")] = colocalisation_df[("spots_to_spots_count",coloc_name,"forward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)].astype(float)
     
-    colocalisation_df[("Spots_to_spots_count",coloc_name,"backward")] = colocalisation_df['rna_coords'].apply(
+    colocalisation_df[("spots_to_spots_count",coloc_name,"backward")] = colocalisation_df['rna_coords'].apply(
         lambda x: spots_colocalisation(
             spot_list1= x[(acquisition_name_id2,acquisition_id2)],
             spot_list2= x[(acquisition_name_id1,acquisition_id1)],
@@ -332,59 +331,66 @@ def _cell_coloc(
             voxel_size=voxel_size
             ),axis=1
         )
-    colocalisation_df[("Spots_to_spots_fraction",coloc_name,"backward")] = colocalisation_df[("Spots_to_spots_count",coloc_name,"backward")].div(colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)])
+    colocalisation_df[("spots_to_spots_fraction",coloc_name,"backward")] = colocalisation_df[("spots_to_spots_count",coloc_name,"backward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)].astype(float)
 
-    if 'clusters' in cell_dataframe.columns :
+    if acquisition2['Cluster computation'].iat[0] :
+        if len(acquisition2['clusters'].iat[0]) > 0 :
+
+            #spots to clusters
+            colocalisation_df[("spots_to_clusters_count",coloc_name,"forward")] = colocalisation_df.apply(
+                lambda x: spots_colocalisation(
+                    spot_list1= x[('rna_coords',acquisition_name_id1,acquisition_id1)],
+                    spot_list2= x[('cluster_coords',acquisition_name_id2,acquisition_id2)][:,:len(voxel_size)],
+                    distance=colocalisation_distance + cluster_radius2,
+                    voxel_size=voxel_size
+                    ),axis=1
+                )
+            colocalisation_df[("spots_to_clusters_fraction",coloc_name,"forward")] = colocalisation_df[("spots_to_clusters_count",coloc_name,"forward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)].astype(float)
         
-        #Spots to clusters 
-        colocalisation_df[("Spots_to_clusters_count",coloc_name,"forward")] = colocalisation_df.apply(
-            lambda x: spots_colocalisation(
-                spot_list1= x[('rna_coords',acquisition_name_id1,acquisition_id1)],
-                spot_list2= x[('clusters',acquisition_name_id2,acquisition_id2)][:,:len(voxel_size)],
-                distance=colocalisation_distance + cluster_radius1,
-                voxel_size=voxel_size
-                ),axis=1
+    if acquisition1['Cluster computation'].iat[0] :
+        if len(acquisition1['clusters'].iat[0]) > 0 :
+            colocalisation_df[("spots_to_clusters_count",coloc_name,"backward")] = colocalisation_df.apply(
+                lambda x: spots_colocalisation(
+                    spot_list1= x[('rna_coords',acquisition_name_id2,acquisition_id2)],
+                    spot_list2= x[('cluster_coords',acquisition_name_id1,acquisition_id1)][:,:len(voxel_size)],
+                    distance=colocalisation_distance + cluster_radius1,
+                    voxel_size=voxel_size
+                    ),axis=1
+                )
+            colocalisation_df[("spots_to_clusters_fraction",coloc_name,"backward")] = colocalisation_df[("spots_to_clusters_count",coloc_name,"backward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)].astype(float)
+
+    if acquisition2['Cluster computation'].iat[0]  and acquisition1['Cluster computation'].iat[0] :
+        if len(acquisition1['clusters'].iat[0]) > 0 and len(acquisition2['clusters'].iat[0]) > 0 :
+            #clusters to clusters 
+            colocalisation_df[("clusters_to_clusters_count",coloc_name,"forward")] = colocalisation_df.apply(
+                lambda x: spots_colocalisation(
+                    spot_list1= x[('cluster_coords',acquisition_name_id1,acquisition_id1)][:,:len(voxel_size)],
+                    spot_list2= x[('cluster_coords',acquisition_name_id2,acquisition_id2)][:,:len(voxel_size)],
+                    distance=colocalisation_distance + cluster_radius1 + cluster_radius2, 
+                    voxel_size=voxel_size 
+                    ),axis=1
             )
-        colocalisation_df[("Spots_to_clusters_fraction",coloc_name,"forward")] = colocalisation_df[("Spots_to_clusters_count",coloc_name,"forward")] / colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)]
-        
-        colocalisation_df[("Spots_to_clusters_count",coloc_name,"backward")] = colocalisation_df.apply(
-            lambda x: spots_colocalisation(
-                spot_list1= x[('rna_coords',acquisition_name_id2,acquisition_id2)],
-                spot_list2= x[('clusters',acquisition_name_id1,acquisition_id1)][:,:len(voxel_size)],
-                distance=colocalisation_distance + cluster_radius2,
-                voxel_size=voxel_size
-                ),axis=1
+            colocalisation_df[("clusters_to_clusters_fraction",coloc_name,"forward")] = colocalisation_df[("clusters_to_clusters_count",coloc_name,"forward")].astype(float) / colocalisation_df[('foci_number',acquisition_name_id1,acquisition_id1)].astype(float)
+
+            colocalisation_df[("clusters_to_clusters_count",coloc_name,"backward")] = colocalisation_df.apply(
+                lambda x: spots_colocalisation(
+                    spot_list1= x[('cluster_coords',acquisition_name_id2,acquisition_id2)][:,:len(voxel_size)],
+                    spot_list2= x[('cluster_coords',acquisition_name_id1,acquisition_id1)][:,:len(voxel_size)],
+                    distance=colocalisation_distance + cluster_radius1 + cluster_radius2, 
+                    voxel_size=voxel_size 
+                    ),axis=1
             )
-        colocalisation_df[("Spots_to_clusters_fraction",coloc_name,"backward")] = colocalisation_df[("Spots_to_clusters_count",coloc_name,"backward")] / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)]
+            colocalisation_df[("clusters_to_clusters_fraction",coloc_name,"backward")] = colocalisation_df[("clusters_to_clusters_count",coloc_name,"backward")].astype(float) / colocalisation_df[('foci_number',acquisition_name_id2,acquisition_id2)].astype(float)
 
-        #clusters to clusters 
-        colocalisation_df[("Clusters_to_clusters_count",coloc_name,"forward")] = colocalisation_df.apply(
-            lambda x: spots_colocalisation(
-                spot_list1= x[('clusters',acquisition_name_id1,acquisition_id1)][:,:len(voxel_size)],
-                spot_list2= x[('clusters',acquisition_name_id2,acquisition_id2)][:,:len(voxel_size)],
-                distance=colocalisation_distance + cluster_radius1 + cluster_radius2, 
-                voxel_size=voxel_size 
-                ),axis=1
-        )
-        colocalisation_df[("Clusters_to_clusters_fraction",coloc_name,"forward")] = colocalisation_df[("Clusters_to_clusters_fraction",coloc_name,"forward")] / colocalisation_df[('foci_number',acquisition_name_id1,acquisition_id1)]
-        
-        colocalisation_df[("Clusters_to_clusters_count",coloc_name,"backward")] = colocalisation_df.apply(
-            lambda x: spots_colocalisation(
-                spot_list1= x[('clusters',acquisition_name_id1,acquisition_id1)][:,:len(voxel_size)],
-                spot_list2= x[('clusters',acquisition_name_id2,acquisition_id2)][:,:len(voxel_size)],
-                distance=colocalisation_distance + cluster_radius1 + cluster_radius2, 
-                voxel_size=voxel_size 
-                ),axis=1
-        )
-        colocalisation_df[("Clusters_to_clusters_fraction",coloc_name,"backward")] = colocalisation_df[("Clusters_to_clusters_fraction",coloc_name,"backward")] / colocalisation_df[('foci_number',acquisition_name_id2,acquisition_id2)]
+    colocalisation_df = colocalisation_df.sort_index(axis=0).sort_index(axis=1, level=0)
 
-        colocalisation_df = colocalisation_df.drop('clusters', axis=1)
+    if 'cluster_coords' in cell_dataframe.columns : colocalisation_df = colocalisation_df.drop('cluster_coords', axis=1)
     colocalisation_df = colocalisation_df.drop('rna_coords', axis=1)
 
     return colocalisation_df
 
 @add_default_loading
-def launch_colocalisation(result_tables, result_dataframe, cell_result_dataframe, colocalisation_distance, global_coloc_df, cell_coloc_df) :
+def launch_colocalisation(result_tables, result_dataframe, cell_result_dataframe, colocalisation_distance, global_coloc_df, cell_coloc_df: pd.DataFrame) :
     
     acquisition1 = result_dataframe.iloc[result_tables[0]]
     acquisition2 = result_dataframe.iloc[result_tables[1]]
@@ -403,7 +409,8 @@ def launch_colocalisation(result_tables, result_dataframe, cell_result_dataframe
         cell_coloc_df = pd.concat([
             cell_coloc_df,
             new_coloc,
-        ], axis=0).reset_index(drop=True)
+        ], axis=1).sort_index(axis=1, level=0)
+
 
     else :
         print("Launching global colocalisation.")
