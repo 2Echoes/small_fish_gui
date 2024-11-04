@@ -33,13 +33,13 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
     i= 1
 
     if not overwrite :
-        while new_filename + '.xlsx' in os.listdir(path) or new_filename + '.feather' in os.listdir(path) or new_filename + '.csv' in os.listdir(path) :
+        while new_filename + '.xlsx' in os.listdir(path) or new_filename + '.parquet' in os.listdir(path) or new_filename + '.csv' in os.listdir(path) :
             new_filename = filename + '_{0}'.format(i)
             i+=1
 
     COLUMNS_TO_DROP = ['image', 'spots', 'clusters', 'rna_coords', 'cluster_coords']
     for col in COLUMNS_TO_DROP :
-        dataframe = dataframe.drop(columns=col)
+        if col in dataframe.columns : dataframe = dataframe.drop(columns=col)
 
     if reset_index : dataframe = dataframe.reset_index(drop=True)
 
