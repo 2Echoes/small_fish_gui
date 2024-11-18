@@ -3,6 +3,7 @@ Contains code to handle detection as well as bigfish wrappers related to spot de
 """
 
 from ._preprocess import ParameterInputError
+from .hints import pipeline_parameters
 from ._preprocess import check_integrity, convert_parameters_types
 from ._signaltonoise import compute_snr_spots
 from ..gui.napari import correct_spots, _update_clusters, threshold_selection
@@ -262,7 +263,7 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
 
     return res
 
-def initiate_detection(user_parameters, segmentation_done, map, shape) :
+def initiate_detection(user_parameters : pipeline_parameters, segmentation_done, map, shape) :
     is_3D_stack= user_parameters['3D stack']
     is_multichannel = user_parameters['multichannel']
     do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
@@ -446,7 +447,7 @@ def _compute_cell_snr(image: np.ndarray, bbox, spots, voxel_size, spot_size) :
     return snr_dict
 
 @add_default_loading
-def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signal, cell_label, nucleus_label, user_parameters) :
+def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signal, cell_label, nucleus_label, user_parameters : pipeline_parameters) :
 
     #Extract parameters
     dim = user_parameters['dim']
@@ -579,7 +580,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
     return result_frame
 
 @add_default_loading
-def launch_clustering(spots, user_parameters): 
+def launch_clustering(spots, user_parameters : pipeline_parameters): 
 
     voxel_size = user_parameters['voxel_size']
     nb_min_spots = user_parameters['min number of spots']

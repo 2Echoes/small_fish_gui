@@ -4,6 +4,7 @@ Contains cellpose wrappers to segmentate images.
 
 from cellpose.core import use_gpu
 from skimage.measure import label
+from .hints import pipeline_parameters
 from ..gui.layout import _segmentation_layout
 from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
 from ..interface import open_image
@@ -32,7 +33,7 @@ def launch_segmentation(image: np.ndarray, user_parameters: dict) :
 
     Returns
     -------
-        cytoplasm_label, nucleus_label
+        cytoplasm_label, nucleus_label, user_parameters
     """
 
     while True : # Loop if show_segmentation 

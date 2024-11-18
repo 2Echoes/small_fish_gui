@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
-from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout
+from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout, radio_layout
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
 
@@ -359,3 +359,53 @@ def ask_cancel_detection() :
     else :
         return True
 
+
+def ask_confirmation(question_displayed : str) :
+    layout =[
+        [sg.Text(question_displayed, font= 'bold 10')],
+        [sg.Button("Yes"), sg.Button("No")]
+    ]
+
+    event, value = prompt(layout, add_ok_cancel=False, add_scrollbar=False)
+
+    if event == 'No' :
+        return False
+    else :
+        return True
+    
+
+def prompt_save_segmentation() :
+    while True :
+        relaunch = False
+        layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
+        layout += parameters_layout(["filename"], default_values= ["small_fish_segmentation"], size=25)
+        layout += radio_layout(['npy','npz_uncompressed', 'npz_compressed'], key= 'ext')
+        layout.append([sg.Button('Cancel')])
+
+        event,values= prompt(layout)
+
+        values['filename'] = values['filename'].replace(".npy","")
+        values['filename'] = values['filename'].replace(".npz","")
+
+        if not values['Excel'] and not values['Feather'] and not values['csv'] :
+            sg.popup("Please check at least one box : Excel/Feather/csv")
+            relaunch = True
+        elif not os.path.isdir(values['folder']) :
+            sg.popup("Incorrect folder")
+            relaunch = True
+        elif os.path.isfile(values['folder'] + excel_filename) and values['Excel']:
+            if ask_replace_file(excel_filename) :
+                pass
+            else :
+                relaunch = True
+        elif os.path.isfile(values['folder'] + feather_filename) and values['Feather']:
+            if ask_replace_file(feather_filename) :
+                pass
+            else :
+                relaunch = True
+
+        if not relaunch : break
+
+    if event == ('Cancel') : return None
+
+    else : return values

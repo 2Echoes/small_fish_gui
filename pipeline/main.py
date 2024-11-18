@@ -8,15 +8,15 @@ from ..gui import hub_prompt
 from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions
 from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
+from .hints import pipeline_parameters
 
 #'Global' parameters
-user_parameters = dict() # Very important instance containg all choice from user that will influence the behavior of the actions loops.
+user_parameters = pipeline_parameters({'segmentation_done' : False}) #TypedDict
 acquisition_id = -1
 result_df = pd.DataFrame()
 cell_result_df = pd.DataFrame()
 global_coloc_df = pd.DataFrame()
 cell_coloc_df = pd.DataFrame()
-segmentation_done = False
 cytoplasm_label = None
 nucleus_label = None
 
@@ -40,14 +40,13 @@ while True : #Break this loop to close small_fish
         global_coloc_df = global_coloc_df.reset_index(drop=True)
         cell_coloc_df = cell_coloc_df.reset_index(drop=True)
     try :
-        event, values = hub_prompt(result_df, segmentation_done)
+        event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
 
         if event == 'Add detection' :
             user_parameters = clean_unused_parameters_cache(user_parameters)
 
-            new_result_df, new_cell_result_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label =  add_detection(
+            new_result_df, new_cell_result_df, acquisition_id, user_parameters, cytoplasm_label, nucleus_label =  add_detection(
                 user_parameters=user_parameters,
-                segmentation_done=segmentation_done,
                 acquisition_id=acquisition_id,
                 cytoplasm_label = cytoplasm_label,
                 nucleus_label = nucleus_label,
@@ -80,12 +79,12 @@ while True : #Break this loop to close small_fish
             global_coloc_df = pd.DataFrame()
             cell_coloc_df = pd.DataFrame()
             acquisition_id = -1
-            segmentation_done = False
+            user_parameters['segmentation_done'] = False
             cytoplasm_label = None
             nucleus_label = None
 
         elif event == "Reset segmentation" :
-            segmentation_done = False
+            user_parameters['segmentation_done'] = False
             cytoplasm_label = None
             nucleus_label = None
 
@@ -94,7 +93,7 @@ while True : #Break this loop to close small_fish
             result_df, cell_result_df, global_coloc_df, cell_coloc_df = delete_acquisitions(selected_acquisitions, result_df, cell_result_df, global_coloc_df, cell_coloc_df)
 
         elif event == "Batch detection" :
-            result_df, cell_result_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label,nucleus_label = batch_promp(
+            result_df, cell_result_df, acquisition_id, user_parameters, user_parameters['segmentation_done'], cytoplasm_label,nucleus_label = batch_promp(
                 result_df,
                 cell_result_df,
                 acquisition_id=acquisition_id,

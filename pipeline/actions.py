@@ -2,24 +2,27 @@
 This submodule groups all the possible actions of the user in the main windows. It is the start of each action the user can do.
 """
 
-from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection, rename_prompt
+from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection, rename_prompt, ask_confirmation
 from ..interface.output import write_results
 from ._preprocess import map_channels, prepare_image_detection, reorder_shape, reorder_image_stack
 from .detection import ask_input_parameters, initiate_detection, launch_detection, launch_features_computation, get_nucleus_signal
 from ._segmentation import launch_segmentation
 from ._colocalisation import initiate_colocalisation, launch_colocalisation
 from .spots import launch_spots_extraction
+from .hints import pipeline_parameters
 
 import pandas as pd
 import PySimpleGUI as sg
+import numpy as np
 
-def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_label, nucleus_label) :
+def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytoplasm_label, nucleus_label) :
     """
-    #TODO : list all keys added to user_parameters when returned.
+    #TODO : Separate segmentation from detection in pipeline.
     """
 
     new_results_df = pd.DataFrame()
     new_cell_results_df = pd.DataFrame()
+    segmentation_done = user_parameters['segmentation_done']
 
     #Ask for image parameters
     new_parameters = ask_input_parameters(ask_for_segmentation= not segmentation_done) #The image is open and stored inside user_parameters
@@ -47,13 +50,17 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
         user_parameters['Segmentation'] = False
         segmentation_done = False
 
-    else : segmentation_done = True
+    else : 
+        segmentation_done = True
+
+    user_parameters['segmentation_done'] = segmentation_done
+
 
     #Detection
     while True : # This loop allow user to try detection with different thresholds or parameters before launching features computation
         detection_parameters = initiate_detection(
             user_parameters,
-            segmentation_done,
+            user_parameters['segmentation_done'],
             map= map,
             shape = user_parameters['image'].shape
             )
@@ -63,7 +70,7 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
         else : #If user clicks cancel
             cancel = ask_cancel_detection()
             if cancel : 
-                return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
+                return new_results_df, new_cell_results_df, acquisition_id, user_parameters, user_parameters['segmentation_done'], cytoplasm_label, nucleus_label
             else : continue
 
         acquisition_id += 1
@@ -116,7 +123,38 @@ def add_detection(user_parameters, segmentation_done, acquisition_id, cytoplasm_
     user_parameters=user_parameters,
     frame_results=frame_result,
     )
-    return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
+    return new_results_df, new_cell_results_df, acquisition_id, user_parameters, cytoplasm_label, nucleus_label
+
+def cell_segmentation(user_parameters : pipeline_parameters, nucleus_label, cytoplasm_label) :
+    proceed = True
+    if user_parameters['segmentation_done'] :
+        if ask_confirmation("A segmentation is in small fish memory, do you want to erase it ?") :
+            user_parameters['segmentation_done'] = False
+            nucleus_label = None
+            cell_label = None
+        else : 
+            return user_parameters, nucleus_label, cell_label
+    
+    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(
+        image = user_parameters['image'],
+        user_parameters=user_parameters,
+    )
+
+    return user_parameters, nucleus_label, cytoplasm_label
+
+def save_segmentation(nucleus_label : np.ndarray, cytoplasm_label: np.ndarray) :
+    answer = prompt_save_segmentation #TODO
+
+    path = answer['path'] + answer['filename']
+    extention = answer['ext']
+
+    save_segmentation(  #TODO
+        nucleus_label,
+        cytoplasm_label,
+        path,
+        extention
+        )
+
 
 def save_results(result_df, cell_result_df, global_coloc_df, cell_coloc_df) :
     if len(result_df) != 0 :

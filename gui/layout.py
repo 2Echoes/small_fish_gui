@@ -139,14 +139,14 @@ def combo_elmt(values, key, header=None, read_only=True, default_value=None) :
         layout = add_header(header) + layout
     return layout
 
-def radio_layout(values, header=None) :
+def radio_layout(values, header=None, key=None) :
     """
     Single choice buttons.
     """
     if len(values) == 0 : return []
     check_parameter(values= list, header= (str, type(None)))
     layout = [
-        [sg.Radio(value, group_id= 0) for value in values]
+        [sg.Radio(value, group_id= 0, key=key) for value in values]
     ]
     if isinstance(header, str) :
         layout = [add_header(header)] + layout
