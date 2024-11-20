@@ -195,6 +195,7 @@ def convert_parameters_types(values:dict) :
         try :
             tuple_values = tuple([float(values.get(tuple_parameter + '_{0}'.format(dimension))) for dimension in dim_tuple])
         except Exception : #execption when str cannot be converted to float or no parameter was given.
+            print(str(Exception))
             values[tuple_parameter] = None
         else : values[tuple_parameter] = tuple_values
 
@@ -232,7 +233,9 @@ def check_integrity(
     """
 
     #voxel_size
-    if type(values['voxel_size']) == type(None) : raise ParameterInputError('Incorrect voxel size parameter.')
+    if type(values['voxel_size']) == type(None) : 
+        print(values['voxel_size'])
+        raise ParameterInputError('Incorrect voxel size parameter.')
     
     #detection integrity :
     if not isinstance(values['spot_size'], (tuple, list)) and not(isinstance(values['minimum_distance'], (tuple, list)) and isinstance(values['log_kernel_size'], (tuple, list))) :

@@ -222,9 +222,9 @@ def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
             )
         if type(detection_parameters) == type(None) : return user_parameters
         try :
-            user_parameters = convert_parameters_types(user_parameters)
-            user_parameters = check_integrity(
-                user_parameters, 
+            detection_parameters = convert_parameters_types(detection_parameters)
+            detection_parameters = check_integrity(
+                detection_parameters, 
                 do_dense_region_deconvolution,
                 do_clustering, 
                 is_multichannel, 
