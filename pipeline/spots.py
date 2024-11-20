@@ -5,7 +5,7 @@ Sub-module to handle individual spot extraction.
 
 import numpy as np
 import pandas as pd
-from ..interface.output import write_results
+from ..interface.inoutput import write_results
 
 def launch_spots_extraction(
         acquisition_id,

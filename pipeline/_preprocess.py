@@ -2,6 +2,7 @@ import numpy as np
 import os
 import PySimpleGUI as sg
 from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt, prompt_with_help
+from ..gui.prompts import input_image_prompt
 
 class ParameterInputError(Exception) :
     """
@@ -13,20 +14,20 @@ class MappingError(ValueError) :
     """
     Raised when user inputs an incorrect image mapping.
     """
-    def __init__(self, map ,*args: object) -> None:
+    def __init__(self, map_ ,*args: object) -> None:
         super().__init__(*args)
-        self.map = map
+        self.map_ = map_
 
     def get_map(self) :
-        return self.map
+        return self.map_
 
-def prepare_image_detection(map, user_parameters) :
+def prepare_image_detection(map_, user_parameters) :
     """
     Return monochannel image for ready for spot detection; 
     if image is already monochannel, nothing happens.
     else : image is the image on which detection is performed, other_image are the other layer to show in Napari Viewer.
     """
-    image = reorder_image_stack(map, user_parameters)
+    image = reorder_image_stack(map_, user_parameters['image'])
     assert len(image.shape) != 5 , "Time stack not supported, should never be True"
     
     if user_parameters['multichannel'] :
@@ -41,13 +42,12 @@ def prepare_image_detection(map, user_parameters) :
 
     return image, other_image
 
-def reorder_image_stack(map, user_parameters) :
-    image_stack = user_parameters['image']
-    x = (int(map['x']),)
-    y = (int(map['y']),)
-    z = (int(map['z']),) if type(map.get('z')) != type(None) else ()
-    c = (int(map['c']),) if type(map.get('c')) != type(None) else ()
-    t = (int(map['t']),) if type(map.get('t')) != type(None) else ()
+def reorder_image_stack(map_, image_stack) :
+    x = (int(map_['x']),)
+    y = (int(map_['y']),)
+    z = (int(map_['z']),) if type(map_.get('z')) != type(None) else ()
+    c = (int(map_['c']),) if type(map_.get('c')) != type(None) else ()
+    t = (int(map_['t']),) if type(map_.get('t')) != type(None) else ()
 
     source = t+c+z+y+x
 
@@ -63,19 +63,19 @@ def map_channels(user_parameters) :
     
     image = user_parameters['image']
     is_3D_stack = user_parameters['3D stack']
-    is_time_stack = user_parameters['time stack']
+    is_time_stack = False
     multichannel = user_parameters['multichannel']
 
     try : 
-        map = _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image=image)
+        map_ = _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image=image)
     except MappingError as e :
         sg.popup("Automatic dimension mapping went wrong. Please indicate dimensions positions in the array.")
-        map = _ask_channel_map(image.shape, is_3D_stack, is_time_stack, multichannel, preset_map= e.get_map())
+        map_ = _ask_channel_map(image.shape, is_3D_stack, is_time_stack, multichannel, preset_map= e.get_map())
 
     else :
-        map = _show_mapping(image.shape, map, is_3D_stack, is_time_stack, multichannel,)
+        map_ = _show_mapping(image.shape, map_, is_3D_stack, is_time_stack, multichannel,)
 
-    return map
+    return map_
 
 def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarray=None, shape=None) :
     if type(shape) == type(None) :
@@ -85,7 +85,7 @@ def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarr
     #Set the biggest dimension to y
     y_val = max(reducing_list)
     y_idx = shape.index(y_val)
-    map = {'y' : y_idx}
+    map_ = {'y' : y_idx}
 
     #2nd biggest set to x
     reducing_list[y_idx] = -1
@@ -93,7 +93,7 @@ def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarr
     x_idx = reducing_list.index(x_val)
     reducing_list[y_idx] = y_val
 
-    map['x'] = x_idx
+    map_['x'] = x_idx
     reducing_list.remove(y_val)
     reducing_list.remove(x_val)
 
@@ -101,26 +101,26 @@ def _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image: np.ndarr
     if multichannel :
         c_val = min(reducing_list)
         c_idx = shape.index(c_val)
-        map['c'] = c_idx
+        map_['c'] = c_idx
         reducing_list.remove(c_val)
 
     if is_time_stack :
         t_val = reducing_list[0]
         t_idx = shape.index(t_val)
-        map['t'] = t_idx
+        map_['t'] = t_idx
         reducing_list.remove(t_val)
     
     if is_3D_stack :
         z_val = reducing_list[0]
         z_idx = shape.index(z_val)
-        map['z'] = z_idx
+        map_['z'] = z_idx
 
-    total_channels = len(map)
-    unique_channel = len(np.unique(list(map.values())))
+    total_channels = len(map_)
+    unique_channel = len(np.unique(list(map_.values())))
 
-    if total_channels != unique_channel : raise MappingError(map,"{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
+    if total_channels != unique_channel : raise MappingError(map_,"{0} channel(s) are not uniquely mapped.".format(total_channels - unique_channel))
 
-    return map
+    return map_
 
 def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map: dict= {}) :
     while True :
@@ -158,13 +158,13 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
 
     return preset_map
 
-def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
+def _show_mapping(shape, map_, is_3D_stack, is_time_stack, multichannel) :
     while True : 
         layout = [
             [sg.Text("Image shape : {0}".format(shape))],
             [sg.Text('Dimensions mapping was set to :')],
             [sg.Text('x : {0} \ny : {1} \nz : {2} \nc : {3} \nt : {4}'.format(
-                map['x'], map['y'], map.get('z'), map.get("c"), map.get('t')
+                map_['x'], map_['y'], map_.get('z'), map_.get("c"), map_.get('t')
             ))],
             [sg.Button('Change mapping')]
         ]
@@ -172,9 +172,9 @@ def _show_mapping(shape, map, is_3D_stack, is_time_stack, multichannel) :
         event, values = prompt_with_help(layout, help='mapping', add_scrollbar=False)
 
         if event == 'Ok' :
-            return map
+            return map_
         elif event == 'Change mapping':
-            map = _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map=map)
+            map_ = _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map=map_)
         elif event == 'Cancel' : 
             return None
         else : raise AssertionError('Unforseen event')
@@ -224,7 +224,7 @@ def check_integrity(
         do_clustering, 
         multichannel,
         segmentation_done, 
-        map, 
+        map_, 
         shape
         ):
     """
@@ -257,7 +257,7 @@ def check_integrity(
 
     #channel
     if multichannel :
-        ch_len = shape[int(map['c'])]
+        ch_len = shape[int(map_['c'])]
 
         if type(segmentation_done) == type(None) :
             pass
@@ -284,12 +284,12 @@ def check_integrity(
 
     return values
 
-def reorder_shape(shape, map) :
-    x = [int(map['x']),]
-    y = [int(map['y']),]
-    z = [int(map['z']),] if type(map.get('z')) != type(None) else []
-    c = [int(map['c']),] if type(map.get('c')) != type(None) else []
-    t = [int(map['t']),] if type(map.get('t')) != type(None) else []
+def reorder_shape(shape, map_) :
+    x = [int(map_['x']),]
+    y = [int(map_['y']),]
+    z = [int(map_['z']),] if type(map_.get('z')) != type(None) else []
+    c = [int(map_['c']),] if type(map_.get('c')) != type(None) else []
+    t = [int(map_['t']),] if type(map_.get('t')) != type(None) else []
 
     source = t + c + z + y + x
 
@@ -344,3 +344,49 @@ def clean_unused_parameters_cache(user_parameters: dict) :
                 del user_parameters[parameter]
     
     return user_parameters
+
+def ask_input_parameters(ask_for_segmentation=True) :
+    """
+    Prompt user with interface allowing parameters setting for bigFish detection / deconvolution.
+    """
+    
+    values = {}
+    image_input_values = {}
+    while True :
+        is_3D_preset = image_input_values.setdefault('3D stack', False)
+        is_time_preset = image_input_values.setdefault('time stack', False)
+        is_multichannel_preset = image_input_values.setdefault('multichannel', False)
+        denseregion_preset = image_input_values.setdefault('Dense regions deconvolution', False)
+        do_clustering_preset = image_input_values.setdefault('Cluster computation', False)
+        do_napari_preset = image_input_values.setdefault('Napari correction', False)
+
+        if ask_for_segmentation :
+            image_input_values = input_image_prompt(
+                is_3D_stack_preset=is_3D_preset,
+                multichannel_preset=is_multichannel_preset,
+                do_dense_regions_deconvolution_preset=None,
+                do_clustering_preset= None,
+                do_Napari_correction=None,
+            )
+        else :
+            image_input_values = input_image_prompt(
+                is_3D_stack_preset=is_3D_preset,
+                multichannel_preset=is_multichannel_preset,
+                do_dense_regions_deconvolution_preset=denseregion_preset,
+                do_clustering_preset= do_clustering_preset,
+                do_Napari_correction=do_napari_preset,
+            )
+
+        if type(image_input_values) == type(None) :
+            return image_input_values
+
+        if 'image' in image_input_values.keys() :
+            image_input_values['shape'] = image_input_values['image'].shape 
+            break
+
+
+    values.update(image_input_values)
+    values['dim'] = 3 if values['3D stack'] else 2
+    values['filename'] = os.path.basename(values['image path'])
+    
+    return values

@@ -19,10 +19,10 @@ def open_image(full_path:str) :
     return im
 
 
-def check_format(image, is_3D, is_time_stack, is_multichannel) :
+def check_format(image, is_3D, is_multichannel) :
     shape = list(image.shape)
     dim = image.ndim - (shape[image.ndim - 1] == 1)
-    if not dim == (2 + is_3D + is_time_stack + is_multichannel) :
+    if not dim == (2 + is_3D  + is_multichannel) :
         raise FormatError("Inconsistency in image format and parameters.")
 
 

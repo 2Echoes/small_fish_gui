@@ -7,10 +7,10 @@ from ._preprocess import reorder_image_stack
 from ._preprocess import prepare_image_detection
 from ._preprocess import convert_parameters_types
 
-from ._segmentation import launch_segmentation
-from ._segmentation import _cast_segmentation_parameters
-from ._segmentation import cell_segmentation
-from ._segmentation import plot_segmentation
+from .segmentation import launch_segmentation
+from .segmentation import _cast_segmentation_parameters
+from .segmentation import cell_segmentation
+from .segmentation import plot_segmentation
 
 from .detection import launch_detection
 from .detection import launch_features_computation

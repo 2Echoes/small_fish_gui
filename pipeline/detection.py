@@ -1,24 +1,25 @@
 """
 Contains code to handle detection as well as bigfish wrappers related to spot detection.
 """
+from .hints import pipeline_parameters
+
 
 from ._preprocess import ParameterInputError
-from .hints import pipeline_parameters
 from ._preprocess import check_integrity, convert_parameters_types
-from ._signaltonoise import compute_snr_spots
+
 from ..gui.napari import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
-from ..gui import detection_parameters_promt, input_image_prompt
+from ..gui import detection_parameters_promt
+
 from ..utils import compute_anisotropy_coef
-from .spots import compute_Spots
+from ._signaltonoise import compute_snr_spots
+
 from magicgui import magicgui
-from napari.layers import Image, Points
 from napari.types import LayerDataTuple
 
 import numpy as np
 import pandas as pd
 import PySimpleGUI as sg
-import os
 from numpy import NaN
 import bigfish.detection as detection
 import bigfish.stack as stack
@@ -29,66 +30,6 @@ from types import GeneratorType
 from skimage.measure import regionprops
 from scipy.ndimage import binary_dilation
 
-
-def ask_input_parameters(ask_for_segmentation=True) :
-    """
-    Prompt user with interface allowing parameters setting for bigFish detection / deconvolution.
-    
-    Keys :
-        - 'image path'
-        - '3D stack'
-        - 'time stack'
-        - 'multichannel'
-        - 'Dense regions deconvolution'
-        - 'Segmentation
-        - 'Napari correction'
-        - 'threshold'
-        - 'time step'
-        - 'channel to compute'
-        - 'alpha'
-        - 'beta'
-        - 'gamma'
-        - 'voxel_size_{(z,y,x)}'
-        - 'spot_size{(z,y,x)}'
-        - 'log_kernel_size{(z,y,x)}'
-        - 'minimum_distance{(z,y,x)}'
-    """
-    
-    values = {}
-    image_input_values = {}
-    while True :
-        is_3D_preset = image_input_values.setdefault('3D stack', False)
-        is_time_preset = image_input_values.setdefault('time stack', False)
-        is_multichannel_preset = image_input_values.setdefault('multichannel', False)
-        denseregion_preset = image_input_values.setdefault('Dense regions deconvolution', False)
-        do_clustering_preset = image_input_values.setdefault('Cluster computation', False)
-        do_segmentation_preset = image_input_values.setdefault('Segmentation', False)
-        do_napari_preset = image_input_values.setdefault('Napari correction', False)
-
-        image_input_values = input_image_prompt(
-            is_3D_stack_preset=is_3D_preset,
-            time_stack_preset=is_time_preset,
-            multichannel_preset=is_multichannel_preset,
-            do_dense_regions_deconvolution_preset=denseregion_preset,
-            do_clustering_preset= do_clustering_preset,
-            do_segmentation_preset=do_segmentation_preset,
-            do_Napari_correction=do_napari_preset,
-            ask_for_segmentation= ask_for_segmentation
-        )
-        if type(image_input_values) == type(None) :
-            return image_input_values
-
-        if 'image' in image_input_values.keys() :
-            image_input_values['shape'] = image_input_values['image'].shape 
-            break
-
-
-    values.update(image_input_values)
-    values['dim'] = 3 if values['3D stack'] else 2
-    values['filename'] = os.path.basename(values['image path'])
-    if values['Segmentation'] and values['time stack'] : sg.popup('Segmentation is not supported for time stack. Segmentation will be turned off.')
-    
-    return values
 
 
 def compute_auto_threshold(images, voxel_size=None, spot_radius=None, log_kernel_size=None, minimum_distance=None, im_number= 15, crop_zstack= None) :
@@ -263,24 +204,23 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
 
     return res
 
-def initiate_detection(user_parameters : pipeline_parameters, segmentation_done, map, shape) :
+def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
     is_3D_stack= user_parameters['3D stack']
     is_multichannel = user_parameters['multichannel']
     do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
     do_clustering = user_parameters['Cluster computation']
-    do_segmentation = user_parameters['Segmentation']
+    detection_parameters = user_parameters.copy()
     
     while True :
-        user_parameters = detection_parameters_promt(
+        detection_parameters = detection_parameters_promt(
             is_3D_stack=is_3D_stack,
             is_multichannel=is_multichannel,
             do_dense_region_deconvolution=do_dense_region_deconvolution,
             do_clustering=do_clustering,
-            do_segmentation=do_segmentation,
-            segmentation_done= segmentation_done,
-            default_dict=user_parameters
+            segmentation_done= user_parameters['segmentation_done'],
+            default_dict=detection_parameters
             )
-        if type(user_parameters) == type(None) : return user_parameters
+        if type(detection_parameters) == type(None) : return user_parameters
         try :
             user_parameters = convert_parameters_types(user_parameters)
             user_parameters = check_integrity(
@@ -288,13 +228,14 @@ def initiate_detection(user_parameters : pipeline_parameters, segmentation_done,
                 do_dense_region_deconvolution,
                 do_clustering, 
                 is_multichannel, 
-                segmentation_done, 
-                map, 
+                user_parameters['segmentation_done'], 
+                map_, 
                 shape
                 )
         except ParameterInputError as error:
             sg.popup(error)
         else :
+            user_parameters.update(detection_parameters)
             break
     return user_parameters
 
@@ -660,7 +601,7 @@ def launch_detection(
     return user_parameters, fov_result, spots, clusters
             
 
-def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters, frame_results) :
+def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters :pipeline_parameters, frame_results) :
 
     dim = image.ndim
             
@@ -705,7 +646,7 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
     cell_result_dframe['name'] = name
     frame_results = frame_results.loc[:,['name'] + result_col]
     cell_result_dframe = cell_result_dframe.loc[:,['name'] + cell_result_col]
-    cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
+    if user_parameters['segmentation_done'] : cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
         
     return frame_results, cell_result_dframe
 

@@ -1,8 +1,12 @@
-import imageio.v3 as iio
+import PySimpleGUI as sg
 
-path = '/home/flo/Documents/IGH projects/SohaQuantif/SCC/input/230723 n1 b-cat bac APC IF fitc ires neo smfish cy3 without puromycin-01.tif'
+layout = [
+    [sg.Radio(['A',], key='button', group_id=0, key='test1'),sg.Radio(['B'], key='button', group_id=0, key='test2'), sg.Radio(['C'], key='button', group_id=0, key='test3')],
+    [sg.Radio(['D',], key='button', group_id=1, key='test4')],
+    [sg.Button('Ok')]
+    ]
 
-props = iio.improps(path)
-meta = iio.immeta(path)
-print(props)
-print(meta['channels'], meta['slices'], meta['unit'], meta['hyperstack'], meta['spacing'])
+window = sg.Window(title= 'test', layout=layout)
+event, values = window.read()
+
+print(values)

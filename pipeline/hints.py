@@ -1,7 +1,7 @@
 
 #Add keys hinting to user_parameters instance keys.
 
-from typing import TypedDict
+from typing import TypedDict, Sequence
 from numpy import ndarray
     
 class pipeline_parameters(TypedDict) :
@@ -23,24 +23,24 @@ class pipeline_parameters(TypedDict) :
             image_path : str
             image : ndarray
             show_interactive_threshold_selector : bool # Interactive threshold selector
-            log_kernel_size : tuple[float,float,float]
+            log_kernel_size : 'Sequence[float,float,float]'
             log_kernel_size_x : float
             log_kernel_size_y : float
             log_kernel_size_z : float
-            minimum_distance : tuple[float,float,float]
+            minimum_distance : 'Sequence[float,float,float]'
             minimum_distance_x : float
             minimum_distance_y : float
             minimum_distance_z : float
             is_multichannel : bool #multichannel
             show_napari_corrector : bool #Napari correction
             nucleus_channel_signal : int
-            reodered_shape : tuple[int,int,int,int,int]
+            reodered_shape : 'Sequence[int,int,int,int,int]'
             do_segmentation : bool
             segmentation_done : bool
-            shape : tuple[int,int,int,int,int]
+            shape : 'Sequence[int,int,int,int,int]'
             spots_extraction_folder : str
             spots_filename : str
-            spot_size : tuple[int,int,int]
+            spot_size : 'Sequence[int,int,int]'
             spot_size_x : int
             spot_size_y : int
             spot_size_z : int
@@ -48,7 +48,7 @@ class pipeline_parameters(TypedDict) :
             threshold_penalty : int
             time_stack : None
             time_step : None
-            voxel_size : tuple[float,float,float]
+            voxel_size : 'Sequence[float,float,float]'
             voxel_size_x : float
             voxel_size_y : float
             voxel_size_z : float

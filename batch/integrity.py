@@ -9,7 +9,7 @@ import numpy as np
 import PySimpleGUI as sg
 
 from ..pipeline._preprocess import check_integrity, convert_parameters_types, ParameterInputError, _check_segmentation_parameters
-from ..pipeline._segmentation import _cast_segmentation_parameters
+from ..pipeline.segmentation import _cast_segmentation_parameters
 
 def check_file(filename:str) :
 

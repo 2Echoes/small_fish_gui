@@ -2,18 +2,51 @@
 This submodule groups all the possible actions of the user in the main windows. It is the start of each action the user can do.
 """
 
-from ..gui.prompts import output_image_prompt, ask_detection_confirmation, ask_cancel_detection, rename_prompt, ask_confirmation
-from ..interface.output import write_results
-from ._preprocess import map_channels, prepare_image_detection, reorder_shape, reorder_image_stack
-from .detection import ask_input_parameters, initiate_detection, launch_detection, launch_features_computation, get_nucleus_signal
-from ._segmentation import launch_segmentation
-from ._colocalisation import initiate_colocalisation, launch_colocalisation
+from ..gui.prompts import output_image_prompt, prompt_save_segmentation, prompt_load_segmentation
+from ..gui.prompts import ask_detection_confirmation, ask_cancel_detection, ask_confirmation
+from ..gui.prompts import rename_prompt
+
+from ..interface.inoutput import write_results
+from ..interface.inoutput import input_segmentation, output_segmentation
+
+from ._preprocess import map_channels
+from ._preprocess import prepare_image_detection
+from ._preprocess import reorder_shape, reorder_image_stack
+from ._preprocess import ask_input_parameters
+
+from .detection import initiate_detection, launch_detection, launch_features_computation
+from .detection import get_nucleus_signal
 from .spots import launch_spots_extraction
+
+from .segmentation import launch_segmentation
+from ._colocalisation import initiate_colocalisation, launch_colocalisation
+
 from .hints import pipeline_parameters
 
+import os
 import pandas as pd
 import PySimpleGUI as sg
 import numpy as np
+
+def segment_cells(user_parameters : pipeline_parameters, nucleus_label, cytoplasm_label) :
+    if user_parameters['segmentation_done'] :
+        if ask_confirmation("A segmentation is in small fish memory, do you want to erase it ? (you will not be able to undo)") :
+            user_parameters['segmentation_done'] = False
+            nucleus_label = None
+            cell_label = None
+        else : 
+            return nucleus_label, cell_label, user_parameters
+
+    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(
+        user_parameters,
+        nucleus_label=nucleus_label,
+        cytoplasm_label=cytoplasm_label,
+    )
+
+    if type(cytoplasm_label) != type(None) and type(nucleus_label) != type(None) :
+        user_parameters['segmentation_done'] = True
+
+    return nucleus_label, cytoplasm_label, user_parameters
 
 def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytoplasm_label, nucleus_label) :
     """
@@ -22,46 +55,24 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
 
     new_results_df = pd.DataFrame()
     new_cell_results_df = pd.DataFrame()
-    segmentation_done = user_parameters['segmentation_done']
 
     #Ask for image parameters
-    new_parameters = ask_input_parameters(ask_for_segmentation= not segmentation_done) #The image is open and stored inside user_parameters
+    new_parameters = ask_input_parameters(ask_for_segmentation= False) #The image is open and stored inside user_parameters
     if type(new_parameters) == type(None) : #if user clicks 'Cancel'
-        return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done,cytoplasm_label, nucleus_label
+        return new_results_df, new_cell_results_df, acquisition_id, user_parameters
     else :
         user_parameters.update(new_parameters)
 
-    map = map_channels(user_parameters)
-    if type(map) == type(None) : #User clicks Cancel 
-        return new_results_df, new_cell_results_df, acquisition_id, user_parameters, segmentation_done, cytoplasm_label, nucleus_label
-    user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map)
-
-
-    #Segmentation
-    if user_parameters['Segmentation'] and not segmentation_done:
-        im_seg = reorder_image_stack(map, user_parameters)
-        cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(im_seg, user_parameters=user_parameters)
-    elif segmentation_done :
-        pass
-    else :
-        cytoplasm_label, nucleus_label = None,None
-
-    if type(cytoplasm_label) == type(None) or type(nucleus_label) == type(None) :
-        user_parameters['Segmentation'] = False
-        segmentation_done = False
-
-    else : 
-        segmentation_done = True
-
-    user_parameters['segmentation_done'] = segmentation_done
-
+    map_ = map_channels(user_parameters)
+    if type(map_) == type(None) : #User clicks Cancel 
+        return new_results_df, new_cell_results_df, acquisition_id, user_parameters
+    user_parameters['reordered_shape'] = reorder_shape(user_parameters['shape'], map_)
 
     #Detection
     while True : # This loop allow user to try detection with different thresholds or parameters before launching features computation
         detection_parameters = initiate_detection(
             user_parameters,
-            user_parameters['segmentation_done'],
-            map= map,
+            map_= map_,
             shape = user_parameters['image'].shape
             )
 
@@ -70,11 +81,11 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
         else : #If user clicks cancel
             cancel = ask_cancel_detection()
             if cancel : 
-                return new_results_df, new_cell_results_df, acquisition_id, user_parameters, user_parameters['segmentation_done'], cytoplasm_label, nucleus_label
+                return new_results_df, new_cell_results_df, acquisition_id, user_parameters
             else : continue
 
         acquisition_id += 1
-        image, other_image = prepare_image_detection(map, user_parameters) 
+        image, other_image = prepare_image_detection(map_, user_parameters) 
         nucleus_signal = get_nucleus_signal(image, other_image, user_parameters)
         
         try : # Catch error raised if user enter a spot size too small compare to voxel size
@@ -123,38 +134,93 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
     user_parameters=user_parameters,
     frame_results=frame_result,
     )
-    return new_results_df, new_cell_results_df, acquisition_id, user_parameters, cytoplasm_label, nucleus_label
-
-def cell_segmentation(user_parameters : pipeline_parameters, nucleus_label, cytoplasm_label) :
-    proceed = True
-    if user_parameters['segmentation_done'] :
-        if ask_confirmation("A segmentation is in small fish memory, do you want to erase it ?") :
-            user_parameters['segmentation_done'] = False
-            nucleus_label = None
-            cell_label = None
-        else : 
-            return user_parameters, nucleus_label, cell_label
-    
-    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(
-        image = user_parameters['image'],
-        user_parameters=user_parameters,
-    )
-
-    return user_parameters, nucleus_label, cytoplasm_label
+    return new_results_df, new_cell_results_df, acquisition_id, user_parameters
 
 def save_segmentation(nucleus_label : np.ndarray, cytoplasm_label: np.ndarray) :
-    answer = prompt_save_segmentation #TODO
+    if type(nucleus_label) == type(None) or type(cytoplasm_label) == type(None) :
+        sg.popup("No segmentation to save.")
+    
+    else :
 
-    path = answer['path'] + answer['filename']
-    extention = answer['ext']
+        while True :
+            answer = prompt_save_segmentation()
+            if type(answer) == type(None) : 
+                return False #User clicks cancel
 
-    save_segmentation(  #TODO
-        nucleus_label,
-        cytoplasm_label,
-        path,
-        extention
-        )
+            path = answer['folder'] + '/' + answer['filename']
+            is_npy, is_npz, is_npz_compressed = answer['ext'], answer['ext0'], answer['ext1']
 
+            if is_npy + is_npz + is_npz_compressed == 1 : 
+                if is_npy : 
+                    extension = 'npy'
+                    if os.path.isfile(path + '_nucleus_segmentation.npy') or os.path.isfile(path + '_cytoplasm_segmentation.npy') : 
+                        if ask_confirmation("File exists. Replace ?") :
+                            break
+                        else :
+                            pass
+                    else :
+                        break
+
+                elif is_npz :
+                    extension = 'npz_uncompressed'
+                    if os.path.isfile(path + '_nucleus_segmentation.npz') or os.path.isfile(path + '_cytoplasm_segmentation.npz') : 
+                        if ask_confirmation("File exists. Replace ?") :
+                            break
+                        else :
+                            pass
+                    else :
+                        break
+
+                elif is_npz_compressed : 
+                    extension = 'npz_compressed'
+                    if os.path.isfile(path + '_nucleus_segmentation.npz') or os.path.isfile(path + '_cytoplasm_segmentation.npz') : 
+                        if ask_confirmation("File exists. Replace ?") :
+                            break
+                        else :
+                            pass
+                    else :
+                        break
+
+            else :
+                sg.popup("Please select an extension.")
+
+        saved = output_segmentation(
+            path,
+            extension,
+            nucleus_label,
+            cytoplasm_label,
+            )
+        if saved : sg.popup("Segmentation was saved at {0}.".format(path))
+        else : sg.popup("No segmentation was saved..")
+        return True
+    
+def load_segmentation(nucleus_label, cytoplasm_label, segmentation_done) :
+
+    if segmentation_done :
+        if ask_confirmation("Segmentation already in memory. Replace ?") :
+            pass
+        else :
+            return nucleus_label, cytoplasm_label, segmentation_done
+
+    answer = prompt_load_segmentation()
+    if type(answer) == type(None) : #user clicks cancel
+        return nucleus_label, cytoplasm_label, segmentation_done
+    nucleus_label, cytoplasm_label = input_segmentation(
+        answer['nucleus'],
+        answer['cytoplasm'],
+    )
+
+    if type(nucleus_label) != type(None) and type(nucleus_label) != np.ndarray :
+        nucleus_label = nucleus_label['arr_0']
+
+    if type(cytoplasm_label) != type(None) and type(cytoplasm_label) != np.ndarray :
+        cytoplasm_label = cytoplasm_label['arr_0']
+
+    segmentation_done = (type(nucleus_label) != type(None) and type(cytoplasm_label) != type(None))
+
+    if segmentation_done : assert type(nucleus_label) == np.ndarray and type(cytoplasm_label) == np.ndarray
+
+    return nucleus_label, cytoplasm_label, segmentation_done
 
 def save_results(result_df, cell_result_df, global_coloc_df, cell_coloc_df) :
     if len(result_df) != 0 :
@@ -245,14 +311,14 @@ def rename_acquisitions(
     
     if len(result_df) == 0 :
         sg.popup("No acquisition to rename.")
-        return result_df, cell_result_df, global_coloc_df
+        return result_df, cell_result_df, global_coloc_df, cell_coloc_df
     
     if len(selected_acquisitions) == 0 :
         sg.popup("Please select the acquisitions you would like to rename.")
 
     else :
         name = rename_prompt()
-        if not name : return result_df, cell_result_df, global_coloc_df #User didn't put a name or canceled
+        if not name : return result_df, cell_result_df, global_coloc_df, cell_coloc_df #User didn't put a name or canceled
         name : str = name.replace(' ','_')
         acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
         old_names = list(result_df.loc[result_df['acquisition_id'].isin(acquisition_ids)]['name'])

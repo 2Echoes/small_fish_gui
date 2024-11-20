@@ -5,7 +5,7 @@ This script is called when software starts; it is the main loop.
 import pandas as pd
 import PySimpleGUI as sg
 from ..gui import hub_prompt
-from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions
+from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions, save_segmentation, load_segmentation, segment_cells
 from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
 from .hints import pipeline_parameters
@@ -45,7 +45,7 @@ while True : #Break this loop to close small_fish
         if event == 'Add detection' :
             user_parameters = clean_unused_parameters_cache(user_parameters)
 
-            new_result_df, new_cell_result_df, acquisition_id, user_parameters, cytoplasm_label, nucleus_label =  add_detection(
+            new_result_df, new_cell_result_df, acquisition_id, user_parameters =  add_detection(
                 user_parameters=user_parameters,
                 acquisition_id=acquisition_id,
                 cytoplasm_label = cytoplasm_label,
@@ -54,6 +54,13 @@ while True : #Break this loop to close small_fish
             result_df = pd.concat([result_df, new_result_df], axis=0)
             cell_result_df = pd.concat([cell_result_df, new_cell_result_df], axis=0)
 
+        elif event == 'Segment cells' :
+            nucleus_label, cytoplasm_label, user_parameters = segment_cells(
+                user_parameters=user_parameters,
+                nucleus_label=nucleus_label,
+                cytoplasm_label = cytoplasm_label,
+            )
+
         elif event == 'Save results' :
             save_results(
                 result_df=result_df,
@@ -61,7 +68,16 @@ while True : #Break this loop to close small_fish
                 global_coloc_df=global_coloc_df,
                 cell_coloc_df = cell_coloc_df,
             )
-            
+        
+        elif event == 'Save segmentation' :
+            save_segmentation(
+                nucleus_label=nucleus_label,
+                cytoplasm_label=cytoplasm_label,
+            )
+
+        elif event == 'Load segmentation' :
+            nucleus_label, cytoplasm_label, user_parameters['segmentation_done'] = load_segmentation(nucleus_label, cytoplasm_label, user_parameters['segmentation_done'])
+        
         elif event == 'Compute colocalisation' :
             result_tables = values.setdefault('result_table', []) #Contains the lines selected by the user on the sum-up array.
 

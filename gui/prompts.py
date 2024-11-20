@@ -2,6 +2,7 @@ import PySimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
+from typing import Literal, Union, Any
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout, radio_layout
 from ..interface import open_image, check_format, FormatError
 from .help_module import ask_help
@@ -63,13 +64,10 @@ def prompt_with_help(layout, help =None, add_scrollbar=True, vertical_scroll_onl
 
 def input_image_prompt(
         is_3D_stack_preset=False,
-        time_stack_preset=False,
         multichannel_preset = False,
         do_dense_regions_deconvolution_preset= False,
         do_clustering_preset = False,
-        do_segmentation_preset= False,
         do_Napari_correction= False,
-        ask_for_segmentation= True
 ) :
     """
         Keys :
@@ -85,11 +83,9 @@ def input_image_prompt(
 
     """
     layout_image_path = path_layout(['image path'], header= "Image")
-    layout_image_path += bool_layout(['3D stack', 'time stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
+    layout_image_path += bool_layout(['3D stack', 'multichannel'], preset= [is_3D_stack_preset, multichannel_preset])
     
-    if ask_for_segmentation : 
-        layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Segmentation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], header= "Pipeline settings")
-    else : 
+    if type(do_dense_regions_deconvolution_preset) != type(None) and type(do_clustering_preset) != type(None) and type(do_Napari_correction) != type(None): 
         layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
     
     event, values = prompt_with_help(layout_image_path, help= 'general', add_scrollbar=False)
@@ -99,17 +95,11 @@ def input_image_prompt(
 
     im_path = values['image path']
     is_3D_stack = values['3D stack']
-    is_time_stack = values['time stack']
     is_multichannel = values['multichannel']
-    if not ask_for_segmentation : values['Segmentation'] = False
-
-    if is_time_stack :
-        sg.popup("Sorry time stack images are not yet supported.")
-        return values
     
     try :
         image = open_image(im_path)
-        check_format(image, is_3D_stack, is_time_stack, is_multichannel)
+        check_format(image, is_3D_stack, is_multichannel)
         values.update({'image' : image})
     except FormatError as error:
         sg.popup("Inconsistency between image format and options selected.\n Image shape : {0}".format(image.shape))
@@ -159,23 +149,15 @@ def output_image_prompt(filename) :
 
     else : return values
 
-def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_deconvolution, do_clustering, do_segmentation, segmentation_done, default_dict: dict) :
+def detection_parameters_promt(
+        is_3D_stack, 
+        is_multichannel, 
+        do_dense_region_deconvolution, 
+        do_clustering, 
+        segmentation_done, 
+        default_dict: dict
+        ):
     """
-
-    keys :
-        - 'threshold'
-        - 'threshold penalty
-        - 'time step'
-        - 'channel to compute'
-        - 'alpha'
-        - 'beta'
-        - 'gamma'
-        - 'voxel_size_{(z,y,x)}'
-        - 'spot_size{(z,y,x)}'
-        - 'log_kernel_size{(z,y,x)}'
-        - 'minimum_distance{(z,y,x)}'
-        - 'cluster size'
-        - 'min number of spots'
 
     Returns Values
         
@@ -213,7 +195,7 @@ def detection_parameters_promt(is_3D_stack, is_multichannel, do_dense_region_dec
         layout += parameters_layout(['cluster size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster size',400)])
         layout += parameters_layout(['min number of spots'], default_values=[default_dict.setdefault('min number of spots', 5)])
 
-    if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
+    if is_multichannel and segmentation_done :
         default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
         layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
@@ -290,7 +272,7 @@ def _sumup_df(results: pd.DataFrame) :
 
     return res
 
-def hub_prompt(fov_results, do_segmentation=False) :
+def hub_prompt(fov_results, do_segmentation=False) -> 'Union[Literal["Add detection", "Compute colocalisation", "Batch detection", "Rename acquisition", "Save results", "Delete acquisitions", "Reset segmentation", "Reset results", "Segment cells"], dict[Literal["result_table", ""]]]':
 
     sumup_df = _sumup_df(fov_results)
     
@@ -302,9 +284,9 @@ def hub_prompt(fov_results, do_segmentation=False) :
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
-        [sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
-        [sg.Button('Rename acquisition', button_color= 'green'), sg.Button('Save results', button_color= 'green'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset results',button_color= 'gray')]
-        # [sg.Button('Save results', button_color= 'green'), sg.Button('Reset results',button_color= 'gray')]
+        [sg.Button('Segment cells'), sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
+        [sg.Button('Save results', button_color= 'green'), sg.Button('Save segmentation', button_color= 'green'), sg.Button('Load segmentation', button_color= 'green')],
+        [sg.Button('Rename acquisition', button_color= 'gray'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset all',button_color= 'gray')],
     ]
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))
@@ -374,38 +356,54 @@ def ask_confirmation(question_displayed : str) :
         return True
     
 
-def prompt_save_segmentation() :
+def prompt_save_segmentation() -> 'dict[Literal["folder","filename","ext"]]':
     while True :
         relaunch = False
         layout = path_layout(['folder'], look_for_dir= True, header= "Output parameters :")
         layout += parameters_layout(["filename"], default_values= ["small_fish_segmentation"], size=25)
         layout += radio_layout(['npy','npz_uncompressed', 'npz_compressed'], key= 'ext')
-        layout.append([sg.Button('Cancel')])
 
         event,values= prompt(layout)
+        if event == ('Cancel') : 
+            return None
 
         values['filename'] = values['filename'].replace(".npy","")
         values['filename'] = values['filename'].replace(".npz","")
+        filename = values['filename']
 
-        if not values['Excel'] and not values['Feather'] and not values['csv'] :
-            sg.popup("Please check at least one box : Excel/Feather/csv")
-            relaunch = True
-        elif not os.path.isdir(values['folder']) :
+        if not os.path.isdir(values['folder']) :
             sg.popup("Incorrect folder")
             relaunch = True
-        elif os.path.isfile(values['folder'] + excel_filename) and values['Excel']:
-            if ask_replace_file(excel_filename) :
-                pass
-            else :
-                relaunch = True
-        elif os.path.isfile(values['folder'] + feather_filename) and values['Feather']:
-            if ask_replace_file(feather_filename) :
+        elif os.path.isfile(values['folder'] + filename):
+            if ask_replace_file(filename) :
                 pass
             else :
                 relaunch = True
 
         if not relaunch : break
 
-    if event == ('Cancel') : return None
+    return values
 
-    else : return values
+def prompt_load_segmentation() -> 'dict[Literal["nucleus","cytoplasm"]]':
+    while True :
+        relaunch = False
+        layout = path_layout(['nucleus'], look_for_dir= False, header= "Load segmentation :")
+        layout += path_layout(['cytoplasm'], look_for_dir= False)
+
+        event,values= prompt(layout)
+        if event == ('Cancel') : 
+            return None
+        
+        if not os.path.isfile(values['nucleus']) :
+            sg.popup("Incorrect nucleus file selected.")
+            relaunch = True
+
+        if not os.path.isfile(values['cytoplasm']) and values['cytoplasm'] != "" :
+            sg.popup("Incorrect cytoplasm file selected.")
+            relaunch = True
+                
+
+        if not relaunch : break
+
+
+    return values
