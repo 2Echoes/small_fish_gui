@@ -1,7 +1,7 @@
 """
 Contains code to handle detection as well as bigfish wrappers related to spot detection.
 """
-from .hints import pipeline_parameters
+from ..hints import pipeline_parameters
 
 
 from ._preprocess import ParameterInputError
@@ -205,10 +205,10 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
     return res
 
 def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
-    is_3D_stack= user_parameters['3D stack']
-    is_multichannel = user_parameters['multichannel']
-    do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
-    do_clustering = user_parameters['Cluster computation']
+    is_3D_stack= user_parameters['is_3D_stack']
+    is_multichannel = user_parameters['is_multichannel']
+    do_dense_region_deconvolution = user_parameters['do_dense_regions_deconvolution']
+    do_clustering = user_parameters['do_cluster_computation']
     detection_parameters = user_parameters.copy()
     
     while True :
@@ -253,7 +253,7 @@ def _launch_detection(image, image_input_values: dict) :
     spot_size = image_input_values.get('spot_size')
     log_kernel_size = image_input_values.get('log_kernel_size')
     minimum_distance = image_input_values.get('minimum_distance')
-    threshold_user_selection = image_input_values.get('Interactive threshold selector')
+    threshold_user_selection = image_input_values['show_interactive_threshold_selector']
     
     if type(threshold) == type(None) :     
         threshold = threshold_penalty * compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
@@ -392,7 +392,7 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
 
     #Extract parameters
     dim = user_parameters['dim']
-    do_clustering = user_parameters['Cluster computation']
+    do_clustering = user_parameters['do_cluster_computation']
     voxel_size = user_parameters['voxel_size']
 
     if do_clustering : other_coords = {'clusters_coords' : clusters} if len(clusters) > 0 else None
@@ -566,8 +566,8 @@ def launch_detection(
         'threshold'
     """
     fov_result = {}
-    do_dense_region_deconvolution = user_parameters['Dense regions deconvolution']
-    do_clustering = user_parameters['Cluster computation']
+    do_dense_region_deconvolution = user_parameters['do_dense_regions_deconvolution']
+    do_clustering = user_parameters['do_cluster_computation']
 
     spots, threshold  = _launch_detection(image, user_parameters, hide_loading = hide_loading)
         
@@ -582,7 +582,7 @@ def launch_detection(
 
     user_parameters['threshold'] = threshold
 
-    if user_parameters['Napari correction'] :
+    if user_parameters['show_napari_corrector'] :
 
         spots, clusters = correct_spots(
             image, 
@@ -604,8 +604,7 @@ def launch_detection(
 def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters :pipeline_parameters, frame_results) :
 
     dim = image.ndim
-            
-    if user_parameters['Cluster computation'] : 
+    if user_parameters['do_cluster_computation'] : 
         frame_results['cluster_number'] = len(clusters)
         if dim == 3 :
             frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[3] if len(clusters) >0 else  0
@@ -613,16 +612,22 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
             frame_results['total_spots_in_clusters'] = clusters.sum(axis=0)[2] if len(clusters) >0 else  0
     
     if type(cell_label) != type(None) and type(nucleus_label) != type(None): 
-        cell_result_dframe = launch_cell_extraction(
-            acquisition_id=acquisition_id,
-            spots=spots,
-            clusters=clusters,
-            image=image,
-            nucleus_signal=nucleus_signal,
-            cell_label= cell_label,
-            nucleus_label=nucleus_label,
-            user_parameters=user_parameters,
-        )
+        
+        try :
+            cell_result_dframe = launch_cell_extraction(
+                acquisition_id=acquisition_id,
+                spots=spots,
+                clusters=clusters,
+                image=image,
+                nucleus_signal=nucleus_signal,
+                cell_label= cell_label,
+                nucleus_label=nucleus_label,
+                user_parameters=user_parameters,
+            )
+
+        except IndexError as e: #User loaded a segmentation and no cells can be extracted out of it.
+            raise Exception("No cell was fit for quantification in segmentation. This can happen if you loaded empty segmentation or there is a missmatch between cytoplasm and nuclei.\nIf you didn't load segmentation please report the issue as this should not happen.")
+
     else :
         cell_result_dframe = pd.DataFrame()
 
@@ -643,10 +648,11 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
     cell_result_col = list(cell_result_dframe.columns)
     name = "acquisition_{0}".format(acquisition_id)
     frame_results['name'] = name
-    cell_result_dframe['name'] = name
     frame_results = frame_results.loc[:,['name'] + result_col]
-    cell_result_dframe = cell_result_dframe.loc[:,['name'] + cell_result_col]
-    if user_parameters['segmentation_done'] : cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
+    if user_parameters['segmentation_done'] : 
+        cell_result_dframe['name'] = name
+        cell_result_dframe = cell_result_dframe.loc[:,['name'] + cell_result_col]
+        cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
         
     return frame_results, cell_result_dframe
 
@@ -683,8 +689,8 @@ def _compute_cluster_dataframe(clusters) :
     return df
 
 def get_nucleus_signal(image, other_images, user_parameters) :
-    if user_parameters['multichannel'] :
-        rna_signal_channel = user_parameters['channel to compute']
+    if user_parameters['is_multichannel'] :
+        rna_signal_channel = user_parameters['channel_to_compute']
         nucleus_signal_channel = user_parameters['nucleus channel signal']
         if type(nucleus_signal_channel) == type(None) :
             return np.zeros(shape=image.shape)

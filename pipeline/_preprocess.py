@@ -30,8 +30,8 @@ def prepare_image_detection(map_, user_parameters) :
     image = reorder_image_stack(map_, user_parameters['image'])
     assert len(image.shape) != 5 , "Time stack not supported, should never be True"
     
-    if user_parameters['multichannel'] :
-        channel_to_compute = user_parameters['channel to compute']
+    if user_parameters['is_multichannel'] :
+        channel_to_compute = user_parameters['channel_to_compute']
         other_image = image.copy()
         other_image = np.delete(other_image, channel_to_compute, axis=0)
         other_image = [layer for layer in other_image]
@@ -62,9 +62,9 @@ def reorder_image_stack(map_, image_stack) :
 def map_channels(user_parameters) :
     
     image = user_parameters['image']
-    is_3D_stack = user_parameters['3D stack']
+    is_3D_stack = user_parameters['is_3D_stack']
     is_time_stack = False
-    multichannel = user_parameters['multichannel']
+    multichannel = user_parameters['is_multichannel']
 
     try : 
         map_ = _auto_map_channels(is_3D_stack, is_time_stack, multichannel, image=image)
@@ -194,13 +194,12 @@ def convert_parameters_types(values:dict) :
     for tuple_parameter in tuples_list :
         try :
             tuple_values = tuple([float(values.get(tuple_parameter + '_{0}'.format(dimension))) for dimension in dim_tuple])
-        except Exception : #execption when str cannot be converted to float or no parameter was given.
-            print(str(Exception))
+        except Exception as e : #execption when str cannot be converted to float or no parameter was given.
             values[tuple_parameter] = None
         else : values[tuple_parameter] = tuple_values
 
     #Parameters
-    int_list = ['threshold', 'channel_to_compute', 'channel to compute', 'min number of spots', 'cluster size','nucleus channel signal']
+    int_list = ['threshold', 'channel_to_compute', 'channel_to_compute', 'min number of spots', 'cluster size','nucleus channel signal']
     float_list = ['alpha', 'beta', 'gamma', 'threshold penalty']
 
     for parameter in int_list :
@@ -273,12 +272,12 @@ def check_integrity(
             values['nucleus channel signal'] = nuc_signal_ch
 
         try :
-            ch = int(values['channel to compute'])
+            ch = int(values['channel_to_compute'])
         except Exception :
-            raise ParameterInputError("Incorrect channel to compute parameter.")
+            raise ParameterInputError("Incorrect channel_to_compute parameter.")
         if ch >= ch_len :
-            raise ParameterInputError("Channel to compute is out of range for image.\nPlease select from {0}".format(list(range(ch_len))))
-        values['channel to compute'] = ch
+            raise ParameterInputError("channel_to_compute is out of range for image.\nPlease select from {0}".format(list(range(ch_len))))
+        values['channel_to_compute'] = ch
 
     #Spot extraction
     if not os.path.isdir(values['spots_extraction_folder']) and values['spots_extraction_folder'] != '':
@@ -356,12 +355,12 @@ def ask_input_parameters(ask_for_segmentation=True) :
     values = {}
     image_input_values = {}
     while True :
-        is_3D_preset = image_input_values.setdefault('3D stack', False)
+        is_3D_preset = image_input_values.setdefault('is_3D_stack', False)
         is_time_preset = image_input_values.setdefault('time stack', False)
-        is_multichannel_preset = image_input_values.setdefault('multichannel', False)
-        denseregion_preset = image_input_values.setdefault('Dense regions deconvolution', False)
-        do_clustering_preset = image_input_values.setdefault('Cluster computation', False)
-        do_napari_preset = image_input_values.setdefault('Napari correction', False)
+        is_multichannel_preset = image_input_values.setdefault('is_multichannel', False)
+        denseregion_preset = image_input_values.setdefault('do_dense_regions_deconvolution', False)
+        do_clustering_preset = image_input_values.setdefault('do_cluster_computation', False)
+        do_napari_preset = image_input_values.setdefault('show_napari_corrector', False)
 
         if ask_for_segmentation :
             image_input_values = input_image_prompt(
@@ -389,7 +388,7 @@ def ask_input_parameters(ask_for_segmentation=True) :
 
 
     values.update(image_input_values)
-    values['dim'] = 3 if values['3D stack'] else 2
+    values['dim'] = 3 if values['is_3D_stack'] else 2
     values['filename'] = os.path.basename(values['image path'])
     
     return values
