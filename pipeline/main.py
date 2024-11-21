@@ -8,37 +8,20 @@ from ..gui import hub_prompt
 from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions, save_segmentation, load_segmentation, segment_cells
 from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
-from .hints import pipeline_parameters
+from ..hints import pipeline_parameters
 
 #'Global' parameters
 user_parameters = pipeline_parameters({'segmentation_done' : False}) #TypedDict
 acquisition_id = -1
-result_df = pd.DataFrame()
-cell_result_df = pd.DataFrame()
+result_df = pd.DataFrame(columns=['acquisition_id'])
+cell_result_df = pd.DataFrame(columns=['acquisition_id'])
 global_coloc_df = pd.DataFrame()
 cell_coloc_df = pd.DataFrame()
 cytoplasm_label = None
 nucleus_label = None
 
-#Use for dev purpose
-MAKE_NEW_SAVE = False
-PATH = "/home/floricslimani/Documents/small_fish_workshop/save"
-LOAD_SAVE = False
-
 while True : #Break this loop to close small_fish
 
-    if LOAD_SAVE :
-        result_df = pd.read_csv(PATH + "/result.csv", sep='|')
-        cell_result_df = pd.read_csv(PATH + "/cell_result_df.csv", sep='|')
-        global_coloc_df = pd.read_csv(PATH + "/global_coloc_df.csv", sep='|')
-        cell_coloc_df = pd.read_csv(PATH + "/cell_coloc_df.csv", sep='|')
-
-
-    else :
-        result_df = result_df.reset_index(drop=True)
-        cell_result_df = cell_result_df.reset_index(drop=True)
-        global_coloc_df = global_coloc_df.reset_index(drop=True)
-        cell_coloc_df = cell_coloc_df.reset_index(drop=True)
     try :
         event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
 
@@ -89,7 +72,7 @@ while True : #Break this loop to close small_fish
                 cell_coloc_df=cell_coloc_df,
             )
 
-        elif event == "Reset results" :
+        elif event == "Reset all" :
             result_df = pd.DataFrame()
             cell_result_df = pd.DataFrame()
             global_coloc_df = pd.DataFrame()
@@ -123,11 +106,6 @@ while True : #Break this loop to close small_fish
         else :
             break
         
-        if MAKE_NEW_SAVE :
-            result_df.reset_index(drop=True).to_csv(PATH + "/result.csv", sep='|')
-            cell_result_df.reset_index(drop=True).to_csv(PATH + "/cell_result_df.csv", sep='|')
-            cell_coloc_df.reset_index(drop=True).to_csv(PATH + "/cell_coloc_df.csv", sep='|')
-            global_coloc_df.reset_index(drop=True).to_csv(PATH + "/global_coloc_df.csv", sep='|')
 
     except Exception as error :
         sg.popup(str(error))
