@@ -43,11 +43,11 @@ def _general_help() :
     help_text = """
     Pipeline settings :
 
-        Dense regions deconvolution : (Recommanded for cluster computations) Detect dense and bright regions with potential clustered 
+        do_dense_regions_deconvolution : (Recommanded for cluster computations) Detect dense and bright regions with potential clustered 
             spots and simulate a more realistic number of spots in these regions.
             See bigfish documentation : https://big-fish.readthedocs.io/en/stable/detection/dense.html
 
-        Cluster computation :
+        do_cluster_computation :
             DBScan algorithm is ran by big-fish to detecte clusters of spots. Use is you want to quantify one of the following : 
             Transcription sites, foci, colocalisation of spots near foci...
         
@@ -73,7 +73,7 @@ def _detection_help() :
     Access fully detailed documentation : 
     
         DETECTION : https://big-fish.readthedocs.io/en/stable/detection/spots.html
-        DENSE REGIONS DECONVOLUTION : https://big-fish.readthedocs.io/en/stable/detection/dense.html
+        do_dense_regions_deconvolution : https://big-fish.readthedocs.io/en/stable/detection/dense.html
         CLUSTERING : https://big-fish.readthedocs.io/en/stable/detection/cluster.html
         
     """
@@ -114,7 +114,7 @@ def _detection_help() :
 
     """
     deconv_header="""    
-    DENSE REGIONS DECONVOLUTION PARAMETERS
+    do_dense_regions_deconvolution PARAMETERS
 
     """
     deconv_text="""
