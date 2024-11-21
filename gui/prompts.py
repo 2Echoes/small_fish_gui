@@ -35,7 +35,6 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', 
 
 def prompt_with_help(layout, help =None, add_scrollbar=True, vertical_scroll_only=True) :
     layout += [[]]
-    layout += [[sg.Button('Help')]]
     layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
     
     if add_scrollbar :
@@ -72,21 +71,21 @@ def input_image_prompt(
     """
         Keys :
         - 'image path'
-        - '3D stack'
+        - 'is_3D_stack'
         - 'time stack'
-        - 'multichannel'
-        - 'Dense regions deconvolution'
+        - 'is_multichannel'
+        - 'do_dense_regions_deconvolution'
         - 'Segmentation'
-        - 'Napari correction'
+        - 'show_napari_corrector'
 
     Returns Values
 
     """
     layout_image_path = path_layout(['image path'], header= "Image")
-    layout_image_path += bool_layout(['3D stack', 'multichannel'], preset= [is_3D_stack_preset, multichannel_preset])
+    layout_image_path += bool_layout(['3D stack', 'Multichannel stack'],keys= ['is_3D_stack', 'is_multichannel'], preset= [is_3D_stack_preset, multichannel_preset])
     
     if type(do_dense_regions_deconvolution_preset) != type(None) and type(do_clustering_preset) != type(None) and type(do_Napari_correction) != type(None): 
-        layout_image_path += bool_layout(['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
+        layout_image_path += bool_layout(['Dense regions deconvolution', 'Compute clusters', 'Open results in Napari'], keys = ['do_dense_regions_deconvolution', 'do_cluster_computation', 'show_napari_corrector'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
     
     event, values = prompt_with_help(layout_image_path, help= 'general', add_scrollbar=False)
 
@@ -94,8 +93,8 @@ def input_image_prompt(
         return None
 
     im_path = values['image path']
-    is_3D_stack = values['3D stack']
-    is_multichannel = values['multichannel']
+    is_3D_stack = values['is_3D_stack']
+    is_multichannel = values['is_multichannel']
     
     try :
         image = open_image(im_path)
@@ -170,9 +169,9 @@ def detection_parameters_promt(
     default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
     opt= [True, True]
     if is_multichannel : 
-        detection_parameters += ['channel to compute']
+        detection_parameters += ['channel_to_compute']
         opt += [False]
-        default_detection += [default_dict.setdefault('channel to compute', '')]
+        default_detection += [default_dict.setdefault('channel_to_compute', '')]
     layout = [[sg.Text("Green parameters", text_color= 'green'), sg.Text(" are optional parameters.")]]
     layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt, default_values=default_detection)
     
@@ -186,7 +185,7 @@ def detection_parameters_promt(
     #Deconvolution
     if do_dense_region_deconvolution :
         default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
-        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'Dense regions deconvolution')
+        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'do_dense_regions_deconvolution')
         layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',5)])
         layout += tuple_layout(opt= {"deconvolution_kernel" : True}, unit= {"deconvolution_kernel" : 'px'}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
     
@@ -199,7 +198,7 @@ def detection_parameters_promt(
         default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
         layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
-    layout += bool_layout(['Interactive threshold selector'], preset=[False])
+    layout += bool_layout(['Interactive threshold selector'], keys=['show_interactive_threshold_selector'], preset=[False])
     layout += path_layout(
         keys=['spots_extraction_folder'],
         look_for_dir=True,
@@ -212,7 +211,8 @@ def detection_parameters_promt(
         size= 13
     )
     layout += bool_layout(
-        parameters= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
+        ['.csv','.excel','.feather'],
+        keys= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
         preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
     )
 
@@ -262,10 +262,10 @@ def _warning_popup(warning:str) :
 
 def _sumup_df(results: pd.DataFrame) :
 
-    COLUMNS = ['acquisition_id','name','threshold', 'spot_number', 'cell_number', 'filename', 'channel to compute']
+    COLUMNS = ['acquisition_id','name','threshold', 'spot_number', 'cell_number', 'filename', 'channel_to_compute']
 
     if len(results) > 0 :
-        if 'channel to compute' not in results : results['channel to compute'] = np.NaN
+        if 'channel_to_compute' not in results : results['channel_to_compute'] = np.NaN
         res = results.loc[:,COLUMNS]
     else :
         res = pd.DataFrame(columns= COLUMNS)

@@ -21,7 +21,7 @@ from .spots import launch_spots_extraction
 from .segmentation import launch_segmentation
 from ._colocalisation import initiate_colocalisation, launch_colocalisation
 
-from .hints import pipeline_parameters
+from ..hints import pipeline_parameters
 
 import os
 import pandas as pd
@@ -33,11 +33,11 @@ def segment_cells(user_parameters : pipeline_parameters, nucleus_label, cytoplas
         if ask_confirmation("A segmentation is in small fish memory, do you want to erase it ? (you will not be able to undo)") :
             user_parameters['segmentation_done'] = False
             nucleus_label = None
-            cell_label = None
+            cytoplasm_label = None
         else : 
-            return nucleus_label, cell_label, user_parameters
+            return nucleus_label, cytoplasm_label, user_parameters
 
-    cytoplasm_label, nucleus_label, user_parameters = launch_segmentation(
+    nucleus_label, cytoplasm_label, user_parameters = launch_segmentation(
         user_parameters,
         nucleus_label=nucleus_label,
         cytoplasm_label=cytoplasm_label,
@@ -105,7 +105,7 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
                 raise(error)
 
 
-        if user_parameters['Napari correction'] :
+        if user_parameters['show_napari_corrector'] :
             if ask_detection_confirmation(user_parameters.get('threshold')) : break
         else :
             break

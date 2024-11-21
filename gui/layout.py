@@ -101,7 +101,7 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
         layout = [add_header(header)] + layout
     return layout
 
-def bool_layout(parameters= [], header=None, preset=None) :
+def bool_layout(parameters= [], header=None, preset=None, keys=None) :
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header= (str, type(None)), preset=(type(None), list, tuple, bool))
     for key in parameters : check_parameter(key = str)
@@ -112,11 +112,19 @@ def bool_layout(parameters= [], header=None, preset=None) :
     else : 
         for key in preset : check_parameter(key = bool)
 
-
-
     max_length = len(max(parameters, key=len))
+
+    if type(keys) == type(None) :
+        keys = parameters
+    elif isinstance(keys,(list,tuple)) :
+        if len(keys) != len(parameters) : raise ValueError("keys arguement must be of same length than parameters argument")
+    elif len(parameters) == 1 and isinstance(keys, str) :
+        keys = [keys]
+    else :
+        raise ValueError('Incorrect keys parameters. Expected list of same length than parameters or None.')
+
     layout = [
-        [sg.Checkbox(pad_right(name, max_length, ' '), key= name, default=box_preset)] for name, box_preset in zip(parameters,preset)
+        [sg.Checkbox(pad_right(name, max_length, ' '), key=key, default=box_preset)] for name, box_preset, key in zip(parameters,preset,keys)
     ]
     if isinstance(header, str) :
         layout = [add_header(header)] + layout
@@ -219,16 +227,16 @@ def _input_parameters_layout(
 
 ) :
     layout_image_path = path_layout(['image path'], header= "Image")
-    layout_image_path += bool_layout(['3D stack', 'multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
+    layout_image_path += bool_layout(['is_3D_stack', 'is_multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
     
     if ask_for_segmentation : 
         layout_image_path += bool_layout(
-            ['Dense regions deconvolution', 'Cluster computation', 'Segmentation', 'Napari correction'], 
+            ['do_dense_regions_deconvolution', 'do_cluster_computation', 'Segmentation', 'show_napari_corrector'], 
             preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], 
             header= "Pipeline settings")
     else : 
         layout_image_path += bool_layout(
-            ['Dense regions deconvolution', 'Cluster computation', 'Napari correction'], 
+            ['do_dense_regions_deconvolution', 'do_cluster_computation', 'show_napari_corrector'], 
             preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], 
             header= "Pipeline settings")
 
@@ -251,9 +259,9 @@ def _detection_layout(
     default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
     opt= [True, True]
     if is_multichannel : 
-        detection_parameters += ['channel to compute']
+        detection_parameters += ['channel_to_compute']
         opt += [False]
-        default_detection += [default_dict.setdefault('channel to compute', '')]
+        default_detection += [default_dict.setdefault('channel_to_compute', '')]
     
     layout = [[sg.Text("Green parameters", text_color= 'green'), sg.Text(" are optional parameters.")]]
     layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt, default_values=default_detection)
@@ -273,7 +281,7 @@ def _detection_layout(
     #Deconvolution
     if do_dense_region_deconvolution :
         default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
-        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'Dense regions deconvolution')
+        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'do_dense_regions_deconvolution')
         layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',5)])
         layout += tuple_layout(opt= {"deconvolution_kernel" : True}, unit= {"deconvolution_kernel" : 'px'}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
     
@@ -284,7 +292,7 @@ def _detection_layout(
 
     
 
-    layout += bool_layout(['Interactive threshold selector'], preset=[False])
+    layout += bool_layout(['Interactive threshold selector'],keys = ['show_interactive_threshold_selector'], preset=[False])
     layout += path_layout(
         keys=['spots_extraction_folder'],
         look_for_dir=True,

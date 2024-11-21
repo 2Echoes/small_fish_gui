@@ -191,12 +191,15 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
     acquisition1 = result_dataframe.loc[result_dataframe['acquisition_id'] == acquisition_id1]
     acquisition2 = result_dataframe.loc[result_dataframe['acquisition_id'] == acquisition_id2]
 
+    assert len(acquisition1) == 1
+    assert len(acquisition2) == 1
+
     acquisition_couple = (acquisition_id1,acquisition_id2)
 
-    voxel_size1 = acquisition1.at['voxel_size']
-    voxel_size2 = acquisition2.at['voxel_size']
-    shape1 = acquisition1.at['reordered_shape']
-    shape2 = acquisition2.at['reordered_shape']
+    voxel_size1 = acquisition1.iloc[0].at['voxel_size']
+    voxel_size2 = acquisition2.iloc[0].at['voxel_size']
+    shape1 = acquisition1.iloc[0].at['reordered_shape']
+    shape2 = acquisition2.iloc[0].at['reordered_shape']
 
     if voxel_size1 != voxel_size2 : 
         raise MissMatchError("voxel size 1 different than voxel size 2")
@@ -209,8 +212,8 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
         shape = shape1
 
 
-    spots1 = acquisition1['spots']
-    spots2 = acquisition2['spots']
+    spots1 = acquisition1.iloc[0].at['spots']
+    spots2 = acquisition2.iloc[0].at['spots']
 
     spot1_total = len(spots1)
     spot2_total = len(spots2)
@@ -225,7 +228,7 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
 
     if 'clusters' in acquisition1.index :
         try : 
-            clusters1 = acquisition1['clusters'][:,:len(voxel_size)]
+            clusters1 = acquisition1.iloc[0].at['clusters'][:,:len(voxel_size)]
             fraction_spots2_coloc_cluster1 = spots_colocalisation(spot_list1=spots2, spot_list2=clusters1, distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
         except MissMatchError as e :
             sg.popup(str(e))
@@ -238,7 +241,7 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
 
     if 'clusters' in acquisition2.index :
         try :
-            clusters2 = acquisition2['clusters'][:,:len(voxel_size)]
+            clusters2 = acquisition2.iloc[0].at['clusters'][:,:len(voxel_size)]
             fraction_spots1_coloc_cluster2 = spots_colocalisation(spot_list1=spots1, spot_list2=clusters2, distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
         except MissMatchError as e :# clusters not computed
             sg.popup(str(e))
@@ -267,8 +270,8 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
 
     #Add names
     coloc_df_col = list(coloc_df.columns)
-    coloc_df['name1'] = acquisition1.at['name']
-    coloc_df['name2'] = acquisition2.at['name']
+    coloc_df['name1'] = acquisition1.iloc[0].at['name']
+    coloc_df['name2'] = acquisition2.iloc[0].at['name']
     coloc_df = coloc_df.loc[:,['name1','name2'] + coloc_df_col]
 
     return coloc_df
@@ -333,7 +336,7 @@ def _cell_coloc(
         )
     colocalisation_df[("spots_to_spots_fraction",coloc_name,"backward")] = colocalisation_df[("spots_to_spots_count",coloc_name,"backward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)].astype(float)
 
-    if acquisition2['Cluster computation'].iat[0] :
+    if acquisition2['do_cluster_computation'].iat[0] :
         if len(acquisition2['clusters'].iat[0]) > 0 :
 
             #spots to clusters
@@ -347,7 +350,7 @@ def _cell_coloc(
                 )
             colocalisation_df[("spots_to_clusters_fraction",coloc_name,"forward")] = colocalisation_df[("spots_to_clusters_count",coloc_name,"forward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)].astype(float)
         
-    if acquisition1['Cluster computation'].iat[0] :
+    if acquisition1['do_cluster_computation'].iat[0] :
         if len(acquisition1['clusters'].iat[0]) > 0 :
             colocalisation_df[("spots_to_clusters_count",coloc_name,"backward")] = colocalisation_df.apply(
                 lambda x: spots_colocalisation(
@@ -359,7 +362,7 @@ def _cell_coloc(
                 )
             colocalisation_df[("spots_to_clusters_fraction",coloc_name,"backward")] = colocalisation_df[("spots_to_clusters_count",coloc_name,"backward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)].astype(float)
 
-    if acquisition2['Cluster computation'].iat[0]  and acquisition1['Cluster computation'].iat[0] :
+    if acquisition2['do_cluster_computation'].iat[0]  and acquisition1['do_cluster_computation'].iat[0] :
         if len(acquisition1['clusters'].iat[0]) > 0 and len(acquisition2['clusters'].iat[0]) > 0 :
             #clusters to clusters 
             colocalisation_df[("clusters_to_clusters_count",coloc_name,"forward")] = colocalisation_df.apply(
@@ -397,7 +400,7 @@ def launch_colocalisation(result_tables, result_dataframe, cell_result_dataframe
 
     acquisition_id1, acquisition_id2 = (acquisition1.at['acquisition_id'], acquisition2.at['acquisition_id'])
 
-    if acquisition_id1 in cell_result_dataframe['acquisition_id'] and acquisition_id2 in cell_result_dataframe['acquisition_id'] :
+    if acquisition_id1 in list(cell_result_dataframe['acquisition_id']) and acquisition_id2 in list(cell_result_dataframe['acquisition_id']) :
         print("Launching cell to cell colocalisation.")
         new_coloc = _cell_coloc(
             acquisition_id1 = acquisition_id1,
@@ -410,6 +413,8 @@ def launch_colocalisation(result_tables, result_dataframe, cell_result_dataframe
             cell_coloc_df,
             new_coloc,
         ], axis=1).sort_index(axis=1, level=0)
+
+        cell_coloc_df.index = cell_coloc_df.index.rename('cell_id')
 
 
     else :
