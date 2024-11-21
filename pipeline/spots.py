@@ -42,6 +42,9 @@ def compute_Spots(
         cell_label = None,
 ) :
 
+    if len(spots) == 0 :
+        return pd.DataFrame()
+
     index = list(zip(*spots))
     index = tuple(index)
     spot_intensities_list = list(image[index])
