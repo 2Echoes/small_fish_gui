@@ -4,7 +4,7 @@ Contains cellpose wrappers to segmentate images.
 
 from cellpose.core import use_gpu
 from skimage.measure import label
-from .hints import pipeline_parameters
+from ..hints import pipeline_parameters
 from ..gui.layout import _segmentation_layout
 from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
 from ..interface import open_image
@@ -67,7 +67,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
         segment_only_nuclei = segmentation_parameters.setdefault('Segment only nuclei', False)
         filename = segmentation_parameters['filename']
         available_channels = list(range(image.shape[0]))
-        multichannel = segmentation_parameters.get('multichannel')
+        multichannel = segmentation_parameters.get('is_multichannel')
 
 
     #Ask user for parameters
