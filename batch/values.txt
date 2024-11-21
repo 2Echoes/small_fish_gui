@@ -6,7 +6,7 @@ image path
 3D stack 
 multichannel 
 Dense regions deconvolution 
-Cluster computation 
+do_cluster_computation 
 Segmentation 
 Napari correction 
 x 
@@ -48,7 +48,7 @@ deconvolution_kernel_y
 deconvolution_kernel_x 
 cluster size 
 min number of spots 
-Interactive threshold selector 
+show_interactive_threshold_selector 
 spots_extraction_folder 
 spots_filename 
 do_spots_csv 

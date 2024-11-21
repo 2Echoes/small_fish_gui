@@ -36,7 +36,7 @@ def update_detection_tab(
     
     #Acess elements
     ##Detection
-    channel_to_compute = get_elmt_from_key(tab_elmt, key= 'channel to compute')
+    channel_to_compute = get_elmt_from_key(tab_elmt, key= 'channel_to_compute')
     voxel_size_z = get_elmt_from_key(tab_elmt, key= 'voxel_size_z')
     spot_size_z = get_elmt_from_key(tab_elmt, key= 'spot_size_z')
     log_kernel_size_z = get_elmt_from_key(tab_elmt, key= 'log_kernel_size_z')
@@ -58,7 +58,7 @@ def update_detection_tab(
     nucleus_channel_signal = get_elmt_from_key(tab_elmt, key= 'nucleus channel signal')
     
     #disable
-    interactive_threshold_selector = get_elmt_from_key(tab_elmt, key= 'Interactive threshold selector')
+    interactive_threshold_selector = get_elmt_from_key(tab_elmt, key= 'show_interactive_threshold_selector')
 
     update_dict={
         'is_3D' : is_3D,

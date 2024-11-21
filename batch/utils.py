@@ -16,12 +16,12 @@ def call_auto_map(
     ) :
     
     if len(shape) < 2 + is_3D + is_multichannel :
-        sg.popup("Image is of dimension {0} and you're trying to map {1} dimensions".format(len(shape), 2+is_3D+is_multichannel))
+        sg.popup("Image is of dimension {0} and you're trying to map_ {1} dimensions".format(len(shape), 2+is_3D+is_multichannel))
         return {}
 
-    #Get auto map
+    #Get auto map_
     try :
-        map = _auto_map_channels(
+        map_ = _auto_map_channels(
             is_3D_stack=is_3D,
             is_time_stack=False,
             multichannel=is_multichannel,
@@ -41,12 +41,12 @@ def call_auto_map(
         c_elmt = get_elmt_from_key(tab_elmt, 'c')
 
         #Update values
-        x_elmt.update(value=map.get('x'))
-        y_elmt.update(value=map.get('y'))
-        z_elmt.update(value=map.get('z'))
-        c_elmt.update(value=map.get('c'))
+        x_elmt.update(value=map_.get('x'))
+        y_elmt.update(value=map_.get('y'))
+        z_elmt.update(value=map_.get('z'))
+        c_elmt.update(value=map_.get('c'))
 
-        return map
+        return map_
 
 def create_map(
         values:dict,

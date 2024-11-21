@@ -105,7 +105,7 @@ def check_detection_parameters(
         do_clustering,
         is_multichannel,
         is_3D,
-        map,
+        map_,
         shape
 ) :
     
@@ -118,7 +118,7 @@ def check_detection_parameters(
             do_clustering=do_clustering,
             multichannel=is_multichannel,
             segmentation_done=None,
-            map=map,
+            map_=map_,
             shape=shape
         )
     except ParameterInputError as e: 

@@ -49,7 +49,7 @@ def batch_promp(
         time_stack_preset=False,
         multichannel_preset=preset.setdefault("multichannel" ,False),
         do_dense_regions_deconvolution_preset=preset.setdefault("Dense regions deconvolution" ,False),
-        do_clustering_preset= preset.setdefault("Cluster computation", False),
+        do_clustering_preset= preset.setdefault("do_cluster_computation", False),
         do_Napari_correction=False,
         do_segmentation_preset= preset.setdefault("Segmentation", False),
     )
@@ -232,7 +232,7 @@ def batch_promp(
             is_3D = values.get('3D stack')
             do_segmentation = values.get('Segmentation')
             do_dense_regions_deconvolution = values.get('Dense regions deconvolution')
-            do_clustering = values.get('Cluster computation')
+            do_clustering = values.get('do_cluster_computation')
 
             if type(batch_folder) != type(None)  and event == 'Load':
 
@@ -321,7 +321,7 @@ def batch_promp(
                     do_clustering=do_clustering,
                     is_multichannel=is_multichanel,
                     is_3D=is_3D,
-                    map= Master_parameters_dict.get('_map'),
+                    map_= Master_parameters_dict.get('_map'),
                     shape=last_shape
                 )
 
@@ -350,7 +350,7 @@ def batch_promp(
                     parameters=values,
                     filenames_list=filename_list,
                     do_segmentation=do_segmentation,
-                    map= Master_parameters_dict['_map'],
+                    map_= Master_parameters_dict['_map'],
                     results_df=results_df,
                     cell_results_df=cell_results_df,
                     is_3D=is_3D,

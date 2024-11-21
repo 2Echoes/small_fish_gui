@@ -6,6 +6,8 @@ import os
 import pandas as pd
 import PySimpleGUI as sg
 
+from ..hints import pipeline_parameters
+
 from .input import open_image
 from ..interface import write_results
 from ..pipeline import reorder_shape, reorder_image_stack, prepare_image_detection
@@ -24,10 +26,10 @@ def batch_pipeline(
         batch_window : sg.Window,
         batch_progress_bar : sg.ProgressBar,
         progress_count : sg.Text,
-        parameters : dict,
+        parameters : pipeline_parameters,
         filenames_list : list,
         do_segmentation : bool,
-        map : dict,
+        map_ : dict,
         results_df : pd.DataFrame,
         cell_results_df : pd.DataFrame,
         is_3D,
@@ -73,12 +75,12 @@ def batch_pipeline(
         #1. Re-order shape
         shape = image.shape
         parameters['shape'] = shape
-        parameters['reordered_shape'] = reorder_shape(shape, map=map)
+        parameters['reordered_shape'] = reorder_shape(shape, map_=map_)
 
         #2. Segmentation (opt)
         if do_segmentation :
             window_print(batch_window,"Segmenting cells...")
-            im_seg = reorder_image_stack(map, parameters)
+            im_seg = reorder_image_stack(map_, image)
             parameters = _cast_segmentation_parameters(parameters)
             cytoplasm_label, nucleus_label = cell_segmentation(
                 im_seg,
@@ -90,6 +92,8 @@ def batch_pipeline(
                 do_only_nuc=parameters['Segment only nuclei']
                 )
             
+            parameters['segmentation_done'] = True
+
             if cytoplasm_label.max() == 0 : #No cell segmented
                 window_print(batch_window,"No cell was segmented, computing next image.")
                 continue
@@ -108,11 +112,12 @@ def batch_pipeline(
 
         else :
             cytoplasm_label, nucleus_label = None,None
+            parameters['segmentation_done'] = False
 
         #3. Detection, deconvolution, clusterisation
         window_print(batch_window,"Detecting spots...")
         parameters = convert_parameters_types(parameters)
-        image, other_image = prepare_image_detection(map, parameters) 
+        image, other_image = prepare_image_detection(map_, parameters) 
         nucleus_signal = get_nucleus_signal(image, other_image, parameters)
         try : # Catch error raised if user enter a spot size too small compare to voxel size
             parameters, frame_result, spots, clusters = launch_detection(
@@ -132,7 +137,7 @@ def batch_pipeline(
                 raise(error)
         
         if parameters['save detection'] :
-            if parameters['Cluster computation'] : spots_list = [spots, clusters[:,:parameters['dim']]]
+            if parameters['do_cluster_computation'] : spots_list = [spots, clusters[:,:parameters['dim']]]
             else : spots_list = [spots]
             output_spot_tiffvisual(
                 image,
