@@ -45,18 +45,18 @@ def batch_promp(
     #Input tab
     input_layout = _input_parameters_layout(
         ask_for_segmentation=True,
-        is_3D_stack_preset= preset.setdefault("3D stack" ,False),
+        is_3D_stack_preset= preset.setdefault("is_3D_stack" ,False),
         time_stack_preset=False,
-        multichannel_preset=preset.setdefault("multichannel" ,False),
-        do_dense_regions_deconvolution_preset=preset.setdefault("Dense regions deconvolution" ,False),
+        multichannel_preset=preset.setdefault("is_multichannel" ,False),
+        do_dense_regions_deconvolution_preset=preset.setdefault("do_dense_regions_deconvolution" ,False),
         do_clustering_preset= preset.setdefault("do_cluster_computation", False),
         do_Napari_correction=False,
-        do_segmentation_preset= preset.setdefault("Segmentation", False),
+        do_segmentation_preset= preset.setdefault("segmentation_done", False),
     )
     input_layout += [[sg.Button('Ok')]]
     input_tab = sg.Tab("Input", input_layout)
 
-    napari_correction_elmt = get_elmt_from_key(input_tab, key='Napari correction')
+    napari_correction_elmt = get_elmt_from_key(input_tab, key='show_napari_corrector')
 
     #Maptab
     map_layout = _ask_channel_map_layout(
@@ -86,7 +86,7 @@ def batch_promp(
     
     apply_segmentation_button = sg.Button('apply', key='apply-segmentation')
     segmentation_layout += [[apply_segmentation_button]]
-    seg_keys_to_hide = ['show segmentation', 'saving path', 'filename']
+    seg_keys_to_hide = ['show segmentation', 'saving path', 'filename', 'other_nucleus_image']
     segmentation_tab = sg.Tab("Segmentation", segmentation_layout, visible=False)
 
     #Detection tab
@@ -228,10 +228,10 @@ def batch_promp(
                 print("Welcome to small fish batch analysis. Please start by loading some files and setting parameters.")
 
             batch_folder = values.get('Batch_folder')
-            is_multichanel = values.get('multichannel')
-            is_3D = values.get('3D stack')
-            do_segmentation = values.get('Segmentation')
-            do_dense_regions_deconvolution = values.get('Dense regions deconvolution')
+            is_multichanel = values.get('is_multichannel')
+            is_3D = values.get('is_3D_stack')
+            do_segmentation = values.get('do_segmentation')
+            do_dense_regions_deconvolution = values.get('do_dense_regions_deconvolution')
             do_clustering = values.get('do_cluster_computation')
 
             if type(batch_folder) != type(None)  and event == 'Load':

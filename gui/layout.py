@@ -227,18 +227,14 @@ def _input_parameters_layout(
 
 ) :
     layout_image_path = path_layout(['image path'], header= "Image")
-    layout_image_path += bool_layout(['is_3D_stack', 'is_multichannel'], preset= [is_3D_stack_preset, time_stack_preset, multichannel_preset])
+    layout_image_path += bool_layout(['3D stack', 'Multichannel stack'], keys=['is_3D_stack', 'is_multichannel'], preset= [is_3D_stack_preset, multichannel_preset])
     
-    if ask_for_segmentation : 
-        layout_image_path += bool_layout(
-            ['do_dense_regions_deconvolution', 'do_cluster_computation', 'Segmentation', 'show_napari_corrector'], 
-            preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], 
-            header= "Pipeline settings")
-    else : 
-        layout_image_path += bool_layout(
-            ['do_dense_regions_deconvolution', 'do_cluster_computation', 'show_napari_corrector'], 
-            preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], 
-            header= "Pipeline settings")
+    layout_image_path += bool_layout(
+        ['Dense regions deconvolution', 'Compute clusters', 'Cell segmentation', 'Open Napari corrector'],
+        keys= ['do_dense_regions_deconvolution', 'do_cluster_computation', 'do_segmentation', 'show_napari_corrector'], 
+        preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_segmentation_preset, do_Napari_correction], 
+        header= "Pipeline settings")
+
 
     return layout_image_path
 

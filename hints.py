@@ -8,7 +8,6 @@ class pipeline_parameters(TypedDict) :
             """
             At run time is a regular dict instance, this class is used for keys hinting
             """
-            is_3D_stack : bool
             alpha : float
             beta : float
             channel_to_compute : int
@@ -31,6 +30,7 @@ class pipeline_parameters(TypedDict) :
             minimum_distance_x : float
             minimum_distance_y : float
             minimum_distance_z : float
+            is_3D_stack : bool
             is_multichannel : bool
             show_napari_corrector : bool
             nucleus_channel_signal : int
