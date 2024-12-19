@@ -527,20 +527,23 @@ def launch_clustering(spots, user_parameters : pipeline_parameters):
     nb_min_spots = user_parameters['min number of spots']
     cluster_size = user_parameters['cluster size']
 
-    clusters = cluster_detection(
+    cluster_result_dict = cluster_detection(
         spots=spots,
         voxel_size=voxel_size,
         radius=cluster_size,
         nb_min_spots=nb_min_spots,
-        keys_to_compute= 'clusters'
-    )['clusters']
+        keys_to_compute= ['clusters','clustered_spots']
+    )
 
-    return clusters
+    clusters = cluster_result_dict['clusters']
+    clustered_spots = cluster_result_dict['clustered_spots']
+
+    return clusters, clustered_spots
 
 def launch_detection(
         image,
         other_image,
-        user_parameters,
+        user_parameters : pipeline_parameters,
         cell_label= None,
         nucleus_label = None,
         hide_loading=False,
@@ -575,7 +578,8 @@ def launch_detection(
         spots = launch_dense_region_deconvolution(image, spots, user_parameters, hide_loading = hide_loading)
         
     if do_clustering : 
-        clusters = launch_clustering(spots, user_parameters, hide_loading = hide_loading) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
+        clusters, clustered_spots = launch_clustering(spots, user_parameters, hide_loading = hide_loading) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
+        spots, spots_cluster_id = clustered_spots[:-1], clustered_spots[-1]
         clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], shape=image.shape)
 
     else : clusters = None

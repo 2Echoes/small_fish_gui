@@ -105,7 +105,7 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
                 raise(error)
 
 
-        if user_parameters['show_napari_corrector'] :
+        if user_parameters['show_napari_corrector'] or user_parameters['show_interactive_threshold_selector']:
             if ask_detection_confirmation(user_parameters.get('threshold')) : break
         else :
             break

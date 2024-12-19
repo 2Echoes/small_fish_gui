@@ -70,7 +70,6 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     other_colors = ['green', 'blue', 'gray', 'cyan', 'bop orange', 'bop purple'] * ((len(other_images)-1 // 7) + 1)
     for im, color in zip(other_images, other_colors) : 
         Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color, contrast_limits=[im.min(), im.max()])
-    layer_offset = len(other_images)
 
     Viewer.add_points(  # single molecule spots; this layer can be update by user.
         spots, 
