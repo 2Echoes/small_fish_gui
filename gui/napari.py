@@ -7,19 +7,87 @@ import napari.types
 import numpy as np
 import napari
 
-from napari.layers import Labels
+from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 
 from magicgui import widgets
-from magicgui import magicgui
 
 from bigfish.stack import check_parameter
+from bigfish.detection.cluster_detection import _extract_information
 from ._napari_widgets import cell_label_eraser, segmentation_reseter, changes_propagater, free_label_picker
 from ..utils import compute_anisotropy_coef
 from ..pipeline._colocalisation import spots_multicolocalisation
 
 #Post detection
 
-def _update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, shape) :
+def _update_clusters(
+        new_spots : np.ndarray, 
+        old_clusters : np.ndarray, 
+        new_clusters : np.ndarray,
+        cluster_size : int,
+        min_number_spot = int,
+        ) :
+    """
+
+    new_spots get weight of 1.
+    spots already in cluster get weight 1
+    spots not in cluster before but now in cluster radius get weigth = min_number_spot/*number of spot in new cluster radius (>=1)*
+    spots in radius of deleted cluster get weight = 0 unless they are in radius of a new cluster.
+
+    Parameters
+    ----------
+        old_spots : array (spots_number, space_dim + 1,) containing coordinates of each spots before napari correction as well as the id of belonging cluster. -1 if free spot.
+        new_spots : array (spots_number, space_dim + 1,) containing coordinates of each spots after napari correction as well as the id of belonging cluster. -1 if free spot, np.NaN if unknown.
+        old_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid before napari correction, number of spots in cluster and the id of cluster.
+        new_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid after napari correction, number of spots in cluster and the id of cluster. number of spots is NaN if new cluster.
+
+    Returns
+    -------
+        corrected_spots : array with updated cluster id.
+        corrected_clusters : array with updated number of spot.
+
+    """
+
+    spots_weights = np.ones(len(new_spots), dtype=float)
+
+    #Finding new and deleted clusters
+    deleted_cluster = old_clusters[~(np.isin(old_clusters, new_clusters).all(axis=1))]
+    added_cluster = new_clusters[np.isnan(new_clusters[:,-2])]
+
+    #Removing cluster_id from points clustered in deleted clusters
+    spots_weights[np.isin(new_spots[:,-1], deleted_cluster[:,-1])] = 0 #Setting weigth to 0 for spots in deleted clusters.
+    new_spots[:,-1][np.isin(new_spots[:,-1], deleted_cluster[:,-1])] = -1 #Removing deleted clusters ids.
+
+    #Finding spots in range of new clusters
+    points_neighbors = NearestNeighbors(radius= cluster_size)
+    points_neighbors.fit(new_spots[:-1])
+    neighbor_query = points_neighbors.radius_neighbors(added_cluster[:-2], return_distance=False)
+
+    for cluster_neighbor in neighbor_query :
+        neighboring_spot_number = len(cluster_neighbor)
+        weight = min_number_spot / neighboring_spot_number # >1
+        if weight <= 1 : print("napari._update_clusters warning : weight <= 1; this  should not happen some clusters might be missed during post napari computation.")
+        if any(spots_weights[cluster_neighbor] > weight) : # Not replacing a weight for a smaller weigth to ensure all new clusters will be added.
+            mask = spots_weights[cluster_neighbor] > weight
+            cluster_neighbor = np.delete(cluster_neighbor, mask)
+        if len(cluster_neighbor) > 0 : spots_weights[cluster_neighbor] = weight
+
+    #Initiating new DBSCAN model
+    dbscan_model = DBSCAN(cluster_size, min_samples=min_number_spot)
+    dbscan_model.fit(new_spots, sample_weight=spots_weights)
+
+    #Constructing corrected_arrays
+    spots_labels = dbscan_model.labels_.reshape(len(new_spots), 1)
+    corrected_spots = np.concatenate([new_spots[:-1], spots_labels], axis=1).astype(int)
+    corrected_cluster = _extract_information(correct_spots)
+
+    return corrected_spots, corrected_cluster
+
+
+def __update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, shape) :
+    """
+    Outdated. previous behaviour.
+    """
     if len(new_clusters) == 0 : return new_clusters
     if len(spots) == 0 : return np.empty(shape=(0,2+len(voxel_size)))
 
