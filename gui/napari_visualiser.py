@@ -25,7 +25,9 @@ def _update_clusters(
         old_clusters : np.ndarray, 
         new_clusters : np.ndarray,
         cluster_size : int,
-        min_number_spot = int,
+        min_number_spot : int,
+        voxel_size : tuple,
+        null_value = -2,
         ) :
     """
 
@@ -51,8 +53,8 @@ def _update_clusters(
     spots_weights = np.ones(len(new_spots), dtype=float)
 
     #Finding new and deleted clusters
-    deleted_cluster = old_clusters[~(np.isin(old_clusters, new_clusters).all(axis=1))]
-    added_cluster = new_clusters[np.isnan(new_clusters[:,-2])]
+    deleted_cluster = old_clusters[~(np.isin(old_clusters[:,-1], new_clusters[:,-1]).all(axis=1))]
+    added_cluster = new_clusters[new_clusters[:,-1] == null_value]
 
     #Removing cluster_id from points clustered in deleted clusters
     spots_weights[np.isin(new_spots[:,-1], deleted_cluster[:,-1])] = 0 #Setting weigth to 0 for spots in deleted clusters.
@@ -139,6 +141,10 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     for im, color in zip(other_images, other_colors) : 
         Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color, contrast_limits=[im.min(), im.max()])
 
+    """
+    TODO : update code so new cluster are returned with their previous cluster_id, and new_clusters have cluster_id = np.NaN
+    """
+
     Viewer.add_points(  # single molecule spots; this layer can be update by user.
         spots, 
         size = 5, 
@@ -158,7 +164,7 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         symbol= 'diamond', 
         name= 'foci', 
         features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, 
-        feature_defaults= {"spot_number" : 0, "id" : -1}
+        feature_defaults= {"spot_number" : 0, "id" : -2} # napari features default will not work with np.NaN passing -2 instead.
         )
 
     if type(cell_label) != type(None) and not np.array_equal(nucleus_label, cell_label) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
@@ -170,16 +176,30 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     new_spots = np.array(Viewer.layers['single spots'].data, dtype= int)
 
     if type(clusters) != type(None) :
-        new_clusters = np.array(Viewer.layers['foci'].data, dtype= int)
-        new_clusters = _update_clusters(new_clusters, new_spots, voxel_size=voxel_size, cluster_size=cluster_size, shape=image.shape)
+        new_clusters = np.round(Viewer.layers['foci'].data).astype(int)
+        new_cluster_id = Viewer.layers['foci'].features.to_numpy()
+        new_clusters = np.concatenate([new_clusters, new_cluster_id], axis=1)
+
+        print("After concatenate new clusters shape = {0}".format(new_clusters.shape))
+
+        new_spots, new_clusters = _update_clusters(
+            new_spots=new_spots,
+            old_clusters=clusters,
+            new_clusters=new_clusters,
+            cluster_size=cluster_size,
+            min_number_spot=min_spot_number,
+            voxel_size=voxel_size,
+            null_value= -2
+        )
+
+        print("After _update_cluster\nnew_clusters shape = {0}\nnew_spots shape = {1}".format(new_clusters.shape, new_spots.shape))
+
     else : new_clusters = None
 
     return new_spots, new_clusters
 
+
 # Segmentation
-    
-
-
 def show_segmentation(
         nuc_image : np.ndarray,
         nuc_label : np.ndarray,

@@ -7,7 +7,7 @@ from ..hints import pipeline_parameters
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 
-from ..gui.napari import correct_spots, _update_clusters, threshold_selection
+from ..gui.napari_visualiser import correct_spots, _update_clusters, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt
 

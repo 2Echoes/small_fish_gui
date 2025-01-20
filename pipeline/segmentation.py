@@ -8,7 +8,7 @@ from ..hints import pipeline_parameters
 from ..gui.layout import _segmentation_layout
 from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
 from ..interface import open_image
-from ..gui.napari import show_segmentation as napari_show_segmentation
+from ..gui.napari_visualiser import show_segmentation as napari_show_segmentation
 from .utils import from_label_get_centeroidscoords
 from ._preprocess import ask_input_parameters
 from ._preprocess import map_channels, reorder_shape, reorder_image_stack
