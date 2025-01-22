@@ -21,6 +21,8 @@ from ..pipeline._colocalisation import spots_multicolocalisation
 #Post detection
 
 def _update_clusters(
+        old_spots : np.ndarray,
+        spot_cluster_id : np.ndarray,
         new_spots : np.ndarray, 
         old_clusters : np.ndarray, 
         new_clusters : np.ndarray,
@@ -28,6 +30,7 @@ def _update_clusters(
         min_number_spot : int,
         voxel_size : tuple,
         null_value = -2,
+        talks = True,
         ) :
     """
 
@@ -38,7 +41,6 @@ def _update_clusters(
 
     Parameters
     ----------
-        old_spots : array (spots_number, space_dim + 1,) containing coordinates of each spots before napari correction as well as the id of belonging cluster. -1 if free spot.
         new_spots : array (spots_number, space_dim + 1,) containing coordinates of each spots after napari correction as well as the id of belonging cluster. -1 if free spot, np.NaN if unknown.
         old_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid before napari correction, number of spots in cluster and the id of cluster.
         new_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid after napari correction, number of spots in cluster and the id of cluster. number of spots is NaN if new cluster.
@@ -53,27 +55,45 @@ def _update_clusters(
 
     spots_weights = np.ones(len(new_spots), dtype=float)
 
+    if talks :
+        print("\nTALKS IN napari_visualiser._update_clusters")
+        print('new_spots_shape : ', new_spots.shape)
+        print('old_clusters : ', old_clusters.shape)
+        print('new_clusters : ', new_clusters.shape)
+
     #Finding new and deleted clusters
-    deleted_cluster = old_clusters[~(np.isin(old_clusters[:,-1], new_clusters[:,-1]).all(axis=1))]
+    deleted_cluster = old_clusters[~(np.isin(old_clusters[:,-1], new_clusters[:,-1]))]
     added_cluster = new_clusters[new_clusters[:,-1] == null_value]
 
+    if talks :
+        print('deleted_cluster : ', deleted_cluster.shape)
+        print('added_cluster : ', added_cluster.shape)
+
+
+
     #Removing cluster_id from points clustered in deleted clusters
-    spots_weights[np.isin(new_spots[:,-1], deleted_cluster[:,-1])] = 0 #Setting weigth to 0 for spots in deleted clusters.
-    new_spots[:,-1][np.isin(new_spots[:,-1], deleted_cluster[:,-1])] = -1 #Removing deleted clusters ids.
-
+    spots_0_weights = old_spots[np.isin(spot_cluster_id, deleted_cluster[:,-1])]    
+    spots_weights[np.isin(new_spots, spots_0_weights).all(axis=1)] = 0 #Setting weigth to 0 for spots in deleted clusters.
+    
+    if talks : 
+        print("deleted cluster ids : ", deleted_cluster[:,-1])
+        print("spots in deleted cluster : \n", spots_0_weights)
+    
     #Finding spots in range of new clusters
-    points_neighbors = NearestNeighbors(radius= cluster_size)
-    points_neighbors.fit(new_spots[:-1]*voxel_size)
-    neighbor_query = points_neighbors.radius_neighbors(added_cluster[:-2]*voxel_size, return_distance=False)
+    if len(added_cluster) > 0 :
+        points_neighbors = NearestNeighbors(radius= cluster_size)
+        points_neighbors.fit(new_spots*voxel_size)
+        neighbor_query = points_neighbors.radius_neighbors(added_cluster[:,:-2]*voxel_size, return_distance=False)
 
-    for cluster_neighbor in neighbor_query :
-        neighboring_spot_number = len(cluster_neighbor)
-        weight = min_number_spot / neighboring_spot_number # >1
-        if weight <= 1 : print("napari._update_clusters warning : weight <= 1; this  should not happen some clusters might be missed during post napari computation.")
-        if any(spots_weights[cluster_neighbor] > weight) : # Not replacing a weight for a smaller weigth to ensure all new clusters will be added.
-            mask = spots_weights[cluster_neighbor] > weight
-            cluster_neighbor = np.delete(cluster_neighbor, mask)
-        if len(cluster_neighbor) > 0 : spots_weights[cluster_neighbor] = weight
+        for cluster_neighbor in neighbor_query :
+            neighboring_spot_number = len(cluster_neighbor)
+            if neighboring_spot_number == 0 : continue # will not add a cluster if there is not even one spot nearby.
+            weight = min_number_spot / neighboring_spot_number # >1
+            if weight <= 1 : print("napari._update_clusters warning : weight <= 1; this  should not happen some clusters might be missed during post napari computation.")
+            if any(spots_weights[cluster_neighbor] > weight) : # Not replacing a weight for a smaller weigth to ensure all new clusters will be added.
+                mask = spots_weights[cluster_neighbor] > weight
+                cluster_neighbor = np.delete(cluster_neighbor, mask)
+            if len(cluster_neighbor) > 0 : spots_weights[cluster_neighbor] = weight
 
     #Initiating new DBSCAN model
     dbscan_model = DBSCAN(cluster_size, min_samples=min_number_spot)
@@ -81,8 +101,19 @@ def _update_clusters(
 
     #Constructing corrected_arrays
     spots_labels = dbscan_model.labels_.reshape(len(new_spots), 1)
-    corrected_spots = np.concatenate([new_spots[:-1], spots_labels], axis=1).astype(int)
+    corrected_spots = np.concatenate([new_spots, spots_labels], axis=1).astype(int)
     corrected_cluster = _extract_information(corrected_spots)
+
+    if talks :
+        print("spots with weigth 0 :", len(spots_weights[spots_weights == 0]))
+        print("spots with weigth > 1 :", len(spots_weights[spots_weights > 1]))
+        print("spots with weigth == 1 :", len(spots_weights[spots_weights == 1]))
+        print("spots with weigth < 1 :", len(spots_weights[np.logical_and(spots_weights < 1,spots_weights > 0)]))
+
+        print('corrected_spots : ', corrected_spots.shape)
+        print('corrected_cluster : ', corrected_cluster.shape)
+        print("END TALK\n")
+
 
     return corrected_spots, corrected_cluster
 
@@ -111,7 +142,18 @@ def __update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, c
 
     return new_clusters
 
-def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_size=None, min_spot_number=0, cell_label= None, nucleus_label= None, other_images =[]):
+def correct_spots(
+        image, 
+        spots, 
+        voxel_size= (1,1,1), 
+        clusters= None, 
+        spot_cluster_id= None, 
+        cluster_size=None, 
+        min_spot_number=0, 
+        cell_label= None, 
+        nucleus_label= None, 
+        other_images =[]
+        ):
     """
     Open Napari viewer for user to visualize and corrects spots, clusters.
 
@@ -190,6 +232,8 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
             print("After concatenate new clusters shape = {0}".format(new_clusters.shape))
     
             new_spots, new_clusters = _update_clusters(
+                old_spots =spots,
+                spot_cluster_id = spot_cluster_id,
                 new_spots=new_spots,
                 old_clusters=clusters,
                 new_clusters=new_clusters,

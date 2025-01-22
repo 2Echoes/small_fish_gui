@@ -620,6 +620,7 @@ def launch_detection(
             spots, 
             user_parameters['voxel_size'],
             clusters=clusters,
+            spot_cluster_id = spots_cluster_id,
             cluster_size= user_parameters.get('cluster size'),
             min_spot_number= user_parameters.setdefault('min number of spots', 0),
             cell_label=cell_label,
