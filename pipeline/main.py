@@ -16,15 +16,13 @@ acquisition_id = -1
 result_df = pd.DataFrame(columns=['acquisition_id'])
 cell_result_df = pd.DataFrame(columns=['acquisition_id'])
 global_coloc_df = pd.DataFrame()
-cell_coloc_df = pd.DataFrame()
+cell_coloc_df = list()
 cytoplasm_label = None
 nucleus_label = None
 
 while True : #Break this loop to close small_fish
 
     try :
-        print("RESULT_DF_INDEX :\n", result_df.index)
-        print("RESULT_DF_COLUMNS :\n", result_df.columns)
         result_df = result_df.reset_index(drop=True)
         event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
 
@@ -79,7 +77,7 @@ while True : #Break this loop to close small_fish
             result_df = pd.DataFrame()
             cell_result_df = pd.DataFrame()
             global_coloc_df = pd.DataFrame()
-            cell_coloc_df = pd.DataFrame()
+            cell_coloc_df = list()
             acquisition_id = -1
             user_parameters['segmentation_done'] = False
             cytoplasm_label = None

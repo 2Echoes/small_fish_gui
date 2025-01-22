@@ -12,6 +12,64 @@ def _cast_spot_to_tuple(spot) :
 def _cast_spots_to_tuple(spots) :
     return tuple(list(map(_cast_spot_to_tuple, spots)))
 
+def write_list_of_results(
+        result_list : list,
+        path : str,
+        filename : str,
+        do_excel = True,
+        do_feather = False,
+        do_csv = False,
+        ) :
+    
+
+    # FORMAT CHECKING
+    if len(result_list) == 0 : return True
+    if not do_excel and not do_feather and not do_csv : 
+        return False
+    elif do_feather and not do_csv and not do_excel: 
+        print("WARNING : cell_to_cell colocalisation : .feather is depreciated saving as csv instead.")
+        do_csv = True
+    elif do_feather :
+        print("WARNING : cell_to_cell colocalisation : .feather is depreciated will be removed in future version.")
+    
+    #PATH CHECKING
+    if not path.endswith('/') : path +='/'
+    assert os.path.isdir(path)
+
+    #NO OVERWRITE CHECKING
+    new_filename = filename
+
+    i= 1
+    while new_filename + '.xlsx' in os.listdir(path) or new_filename + '.csv' in os.listdir(path) :
+        new_filename = filename + '_{0}'.format(i)
+        i+=1
+
+    if do_excel :
+        start_row = 0
+        sheet_number = 1
+        sheet_name = "Sheet" + str(sheet_number)
+        with pd.ExcelWriter(path + new_filename + '.xlsx', engine='openpyxl') as writer:
+            for df in result_list :
+
+                if start_row + len(df) > 1e6 : #Excel limit of 1 milion line.
+                    sheet_number += 1
+                    sheet_name = "Sheet" + str(sheet_number)
+                    start_row = 0
+
+                #writing
+                df.to_excel(writer, sheet_name=sheet_name, startrow=0)
+                start_row += len(df) + 2
+                
+    
+    if do_csv :
+        with open(path + new_filename + '.csv', 'w') as f:
+            for df in result_list :
+                df.to_csv(f)
+                f.write("\n\n")  # Add 2 lines in between DataFrames.
+    
+    return True
+
+
 def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False, overwrite=False, reset_index=True) :
     check_parameter(dataframe= pd.DataFrame, path= str, filename = str, do_excel = bool, do_feather = bool)
 
@@ -33,7 +91,6 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
 
     new_filename = filename
     i= 1
-
     if not overwrite :
         while new_filename + '.xlsx' in os.listdir(path) or new_filename + '.parquet' in os.listdir(path) or new_filename + '.csv' in os.listdir(path) :
             new_filename = filename + '_{0}'.format(i)

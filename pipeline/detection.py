@@ -7,7 +7,7 @@ from ..hints import pipeline_parameters
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 
-from ..gui.napari_visualiser import correct_spots, _update_clusters, threshold_selection
+from ..gui.napari_visualiser import correct_spots, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt
 
@@ -388,14 +388,36 @@ def _compute_cell_snr(image: np.ndarray, bbox, spots, voxel_size, spot_size) :
     return snr_dict
 
 @add_default_loading
-def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signal, cell_label, nucleus_label, user_parameters : pipeline_parameters) :
+def launch_cell_extraction(
+    acquisition_id, 
+    spots, 
+    clusters, 
+    spots_cluster_id,
+    image, 
+    nucleus_signal, 
+    cell_label, 
+    nucleus_label, 
+    user_parameters : pipeline_parameters
+    ) :
 
     #Extract parameters
     dim = user_parameters['dim']
     do_clustering = user_parameters['do_cluster_computation']
     voxel_size = user_parameters['voxel_size']
 
-    if do_clustering : other_coords = {'clusters_coords' : clusters} if len(clusters) > 0 else None
+    if do_clustering :
+        if len(clusters) > 0 :
+
+            free_spots = spots[spots_cluster_id == -1]
+            clustered_spots = spots[spots_cluster_id != -1]
+
+            other_coords = {
+                'clusters_coords' : clusters,
+                'clustered_spots' : clustered_spots,
+                'free_spots' : free_spots,
+                }
+        else :
+            other_coords = None
     else : other_coords = None
     if do_clustering : do_clustering = len(clusters) > 0
 
@@ -429,7 +451,8 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
     features_names += ['nucleus_mean_signal', 'nucleus_median_signal', 'nucleus_max_signal', 'nucleus_min_signal']
     features_names += ['snr_mean', 'snr_median', 'snr_std']
     features_names += ['cell_center_coord','foci_number','foci_in_nuc_number']
-    features_names += ['rna_coords','cluster_coords']
+    features_names += ['rna_coords','cluster_coords', 'clustered_spots_coords', 'free_spots_coords']
+    features_names += ['clustered_spot_number', 'free_spot_number']
 
     result_frame = pd.DataFrame()
 
@@ -444,6 +467,8 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
         nuc_signal = nucleus_signal[min_y:max_y, min_x:max_x]
         rna_coords = cell['rna_coord']
         foci_coords = cell.get('clusters_coords')
+        clustered_spots_coords = cell.get('clustered_spots')
+        free_spots_coords = cell.get('free_spots')
         signal = cell['image']
 
         with np.errstate(divide= 'ignore', invalid= 'ignore') :
@@ -509,7 +534,8 @@ def launch_cell_extraction(acquisition_id, spots, clusters, image, nucleus_signa
         features += [cell_center, foci_number, foci_in_nuc_number]
 
         features = [acquisition_id, cell_id, cell_bbox] + features
-        features += [rna_coords, foci_coords]
+        features += [rna_coords, foci_coords, clustered_spots_coords, free_spots_coords]
+        features += [len(clustered_spots_coords), len(free_spots_coords)]
         
         result_frame = pd.concat([
             result_frame,
@@ -612,7 +638,18 @@ def launch_detection(
     return user_parameters, fov_result, spots, clusters, spots_cluster_id
             
 
-def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, spots_cluster_id, nucleus_label, cell_label, user_parameters :pipeline_parameters, frame_results) :
+def launch_features_computation(
+        acquisition_id, 
+        image, 
+        nucleus_signal, 
+        spots, 
+        clusters, 
+        spots_cluster_id, 
+        nucleus_label, 
+        cell_label, 
+        user_parameters : pipeline_parameters, 
+        frame_results
+        ) :
 
     dim = image.ndim
     if user_parameters['do_cluster_computation'] : 
@@ -629,6 +666,7 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
                 acquisition_id=acquisition_id,
                 spots=spots,
                 clusters=clusters,
+                spots_cluster_id = spots_cluster_id,
                 image=image,
                 nucleus_signal=nucleus_signal,
                 cell_label= cell_label,
