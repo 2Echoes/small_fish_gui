@@ -89,7 +89,7 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
         nucleus_signal = get_nucleus_signal(image, other_image, user_parameters)
         
         try : # Catch error raised if user enter a spot size too small compare to voxel size
-            user_parameters, frame_result, spots, clusters = launch_detection(
+            user_parameters, frame_result, spots, clusters, spots_cluster_id = launch_detection(
                 image,
                 other_image,
                 user_parameters,
@@ -118,6 +118,7 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
                     user_parameters=user_parameters,
                     image=image,
                     spots=spots,
+                    cluster_id= spots_cluster_id,
                     nucleus_label= nucleus_label,
                     cell_label= cytoplasm_label,
                 )
@@ -129,6 +130,7 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
     nucleus_signal = nucleus_signal,
     spots=spots,
     clusters=clusters,
+    spots_cluster_id = spots_cluster_id,
     nucleus_label = nucleus_label,
     cell_label= cytoplasm_label,
     user_parameters=user_parameters,
@@ -277,7 +279,10 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
         sg.popup("Please select the acquisitions you would like to delete.")
     else :
         acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
+        print("selected_ids :", acquisition_ids)
+        print(result_df)
         result_drop_idx = result_df[result_df['acquisition_id'].isin(acquisition_ids)].index
+        print("result_drop_idx : ", result_drop_idx)
         print("{0} acquisitions deleted.".format(len(result_drop_idx)))
         
         if len(cell_result_df) > 0 :
@@ -293,6 +298,7 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
         if len(cell_coloc_df) > 0 :
             for acquisition_id in acquisition_ids :
                 cell_coloc_df = cell_coloc_df.drop(acquisition_id, axis=1, level=2) #Delete spot number and foci number
+                print("{0} coloc measurement deleted for acquisition_id = {1}.".format(len(cell_coloc_df, acquisition_id)))
                 coloc_columns = cell_coloc_df.columns.get_level_values(1)
                 coloc_columns = coloc_columns[coloc_columns.str.contains(str(acquisition_id))]
                 cell_coloc_df = cell_coloc_df.drop(labels=coloc_columns, axis=1, level=1)

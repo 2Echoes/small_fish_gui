@@ -12,6 +12,7 @@ def launch_spots_extraction(
         user_parameters,
         image,
         spots,
+        cluster_id,
         nucleus_label,
         cell_label,
 ) :
@@ -19,6 +20,7 @@ def launch_spots_extraction(
         acquisition_id=acquisition_id,
         image=image,
         spots=spots,
+        cluster_id= cluster_id,
         nucleus_label=nucleus_label,
         cell_label=cell_label,
     )
@@ -38,12 +40,16 @@ def compute_Spots(
         acquisition_id : int,
         image : np.ndarray,
         spots : np.ndarray,
+        cluster_id : np.ndarray,
         nucleus_label = None,
         cell_label = None,
 ) :
 
     if len(spots) == 0 :
         return pd.DataFrame()
+
+    if type(cluster_id) == type(None) : #When user doesn't select cluster
+        cluster_id = [np.NaN]*len(spots)
 
     index = list(zip(*spots))
     index = tuple(index)
@@ -67,6 +73,7 @@ def compute_Spots(
         'cell_label' : cell_label_list,
         'in_nucleus' : in_nuc_list,
         'coordinates' : coord_list,
+        'cluster_id' : cluster_id,
     })
 
     return Spots

@@ -23,6 +23,9 @@ nucleus_label = None
 while True : #Break this loop to close small_fish
 
     try :
+        print("RESULT_DF_INDEX :\n", result_df.index)
+        print("RESULT_DF_COLUMNS :\n", result_df.columns)
+        result_df = result_df.reset_index(drop=True)
         event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
 
         if event == 'Add detection' :

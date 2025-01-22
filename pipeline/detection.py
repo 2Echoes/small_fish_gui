@@ -579,10 +579,11 @@ def launch_detection(
         
     if do_clustering : 
         clusters, clustered_spots = launch_clustering(spots, user_parameters, hide_loading = hide_loading) #012 are coordinates #3 is number of spots per cluster, #4 is cluster index
-        spots, spots_cluster_id = clustered_spots[:-1], clustered_spots[-1]
-        clusters = _update_clusters(clusters, spots, voxel_size=user_parameters['voxel_size'], cluster_size=user_parameters['cluster size'], shape=image.shape)
+        spots, spots_cluster_id = clustered_spots[:,:-1], clustered_spots[:,-1]
 
-    else : clusters = None
+    else : 
+        clusters = None
+        spots_cluster_id = None
 
     user_parameters['threshold'] = threshold
 
@@ -599,13 +600,19 @@ def launch_detection(
             nucleus_label=nucleus_label,
             other_images=other_image
             )
+        
+        if do_clustering :
+            spots, spots_cluster_id = spots[:,:-1], spots[:,-1]
+        else :
+            spots_cluster_id = None
+
     post_detection_dict = launch_post_detection(image, spots, user_parameters, hide_loading = hide_loading)
     fov_result.update(post_detection_dict)
     
-    return user_parameters, fov_result, spots, clusters
+    return user_parameters, fov_result, spots, clusters, spots_cluster_id
             
 
-def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, nucleus_label, cell_label, user_parameters :pipeline_parameters, frame_results) :
+def launch_features_computation(acquisition_id, image, nucleus_signal, spots, clusters, spots_cluster_id, nucleus_label, cell_label, user_parameters :pipeline_parameters, frame_results) :
 
     dim = image.ndim
     if user_parameters['do_cluster_computation'] : 
@@ -642,6 +649,7 @@ def launch_features_computation(acquisition_id, image, nucleus_signal, spots, cl
         frame_results['cell_number'] = NaN
     frame_results['spots'] = spots
     frame_results['clusters'] = clusters
+    frame_results['spots_cluster_id'] = spots_cluster_id
     frame_results.update(user_parameters)
     frame_results['threshold'] = user_parameters['threshold']
 
