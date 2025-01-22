@@ -30,7 +30,7 @@ def _update_clusters(
         min_number_spot : int,
         voxel_size : tuple,
         null_value = -2,
-        talks = True,
+        talks = False,
         ) :
     """
 
