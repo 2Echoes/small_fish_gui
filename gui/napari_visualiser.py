@@ -42,6 +42,7 @@ def _update_clusters(
         new_spots : array (spots_number, space_dim + 1,) containing coordinates of each spots after napari correction as well as the id of belonging cluster. -1 if free spot, np.NaN if unknown.
         old_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid before napari correction, number of spots in cluster and the id of cluster.
         new_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid after napari correction, number of spots in cluster and the id of cluster. number of spots is NaN if new cluster.
+        cluster_size : size of cluster in nanometer passed to DBSCAN.
 
     Returns
     -------
@@ -62,8 +63,8 @@ def _update_clusters(
 
     #Finding spots in range of new clusters
     points_neighbors = NearestNeighbors(radius= cluster_size)
-    points_neighbors.fit(new_spots[:-1])
-    neighbor_query = points_neighbors.radius_neighbors(added_cluster[:-2], return_distance=False)
+    points_neighbors.fit(new_spots[:-1]*voxel_size)
+    neighbor_query = points_neighbors.radius_neighbors(added_cluster[:-2]*voxel_size, return_distance=False)
 
     for cluster_neighbor in neighbor_query :
         neighboring_spot_number = len(cluster_neighbor)
@@ -76,12 +77,12 @@ def _update_clusters(
 
     #Initiating new DBSCAN model
     dbscan_model = DBSCAN(cluster_size, min_samples=min_number_spot)
-    dbscan_model.fit(new_spots, sample_weight=spots_weights)
+    dbscan_model.fit(new_spots*voxel_size, sample_weight=spots_weights)
 
     #Constructing corrected_arrays
     spots_labels = dbscan_model.labels_.reshape(len(new_spots), 1)
     corrected_spots = np.concatenate([new_spots[:-1], spots_labels], axis=1).astype(int)
-    corrected_cluster = _extract_information(correct_spots)
+    corrected_cluster = _extract_information(corrected_spots)
 
     return corrected_spots, corrected_cluster
 
@@ -138,12 +139,8 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
     Viewer = napari.Viewer(ndisplay=2, title= 'Spot correction', axis_labels=['z','y','x'], show= False)
     Viewer.add_image(image, scale=scale, name= "rna signal", blending= 'additive', colormap='red', contrast_limits=[image.min(), image.max()])
     other_colors = ['green', 'blue', 'gray', 'cyan', 'bop orange', 'bop purple'] * ((len(other_images)-1 // 7) + 1)
-    for im, color in zip(other_images, other_colors) : 
+    for im, color in zip(other_images, other_colors) :  
         Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color, contrast_limits=[im.min(), im.max()])
-
-    """
-    TODO : update code so new cluster are returned with their previous cluster_id, and new_clusters have cluster_id = np.NaN
-    """
 
     Viewer.add_points(  # single molecule spots; this layer can be update by user.
         spots, 
@@ -155,16 +152,21 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
         name= 'single spots'
         )
     
-    if type(clusters) != type(None) : Viewer.add_points( # cluster; this layer can be update by user.
-        clusters[:,:dim], 
-        size = 10, 
-        scale=scale, 
-        face_color= 'blue', 
-        opacity= 0.7, 
-        symbol= 'diamond', 
-        name= 'foci', 
-        features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, 
-        feature_defaults= {"spot_number" : 0, "id" : -2} # napari features default will not work with np.NaN passing -2 instead.
+    if type(clusters) != type(None) :
+        if len(clusters) > 0 :
+            clusters_coordinates = clusters[:, :dim]
+        else :
+            clusters_coordinates = np.empty(shape=(0,3)) 
+        Viewer.add_points( # cluster; this layer can be update by user.
+            clusters_coordinates, 
+            size = 10, 
+            scale=scale, 
+            face_color= 'blue', 
+            opacity= 0.7, 
+            symbol= 'diamond', 
+            name= 'foci', 
+            features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, 
+            feature_defaults= {"spot_number" : 0, "id" : -2} # napari features default will not work with np.NaN passing -2 instead.
         )
 
     if type(cell_label) != type(None) and not np.array_equal(nucleus_label, cell_label) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
@@ -177,22 +179,27 @@ def correct_spots(image, spots, voxel_size= (1,1,1), clusters= None, cluster_siz
 
     if type(clusters) != type(None) :
         new_clusters = np.round(Viewer.layers['foci'].data).astype(int)
-        new_cluster_id = Viewer.layers['foci'].features.to_numpy()
-        new_clusters = np.concatenate([new_clusters, new_cluster_id], axis=1)
+        if len(new_clusters) == 0 :
+            new_clusters = np.empty(shape=(0,5))
+            new_cluster_id = -1 * np.ones(len(new_spots))
+            new_spots = np.concatenate([new_spots, new_cluster_id], axis=1)
+        else :
+            new_cluster_id = Viewer.layers['foci'].features.to_numpy()
+            new_clusters = np.concatenate([new_clusters, new_cluster_id], axis=1)
 
-        print("After concatenate new clusters shape = {0}".format(new_clusters.shape))
-
-        new_spots, new_clusters = _update_clusters(
-            new_spots=new_spots,
-            old_clusters=clusters,
-            new_clusters=new_clusters,
-            cluster_size=cluster_size,
-            min_number_spot=min_spot_number,
-            voxel_size=voxel_size,
-            null_value= -2
-        )
-
-        print("After _update_cluster\nnew_clusters shape = {0}\nnew_spots shape = {1}".format(new_clusters.shape, new_spots.shape))
+            print("After concatenate new clusters shape = {0}".format(new_clusters.shape))
+    
+            new_spots, new_clusters = _update_clusters(
+                new_spots=new_spots,
+                old_clusters=clusters,
+                new_clusters=new_clusters,
+                cluster_size=cluster_size,
+                min_number_spot=min_spot_number,
+                voxel_size=voxel_size,
+                null_value= -2
+            )
+    
+            print("After _update_cluster\nnew_clusters shape = {0}\nnew_spots shape = {1}".format(new_clusters.shape, new_spots.shape))
 
     else : new_clusters = None
 
