@@ -272,7 +272,7 @@ def _sumup_df(results: pd.DataFrame) :
 
     return res
 
-def hub_prompt(fov_results, do_segmentation=False) -> 'Union[Literal["Add detection", "Compute colocalisation", "Batch detection", "Rename acquisition", "Save results", "Delete acquisitions", "Reset segmentation", "Reset results", "Segment cells"], dict[Literal["result_table", ""]]]':
+def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Literal["Add detection", "Compute colocalisation", "Batch detection", "Rename acquisition", "Save results", "Delete acquisitions", "Reset segmentation", "Reset results", "Segment cells"], dict[Literal["result_table", ""]]]':
 
     sumup_df = _sumup_df(fov_results)
     
