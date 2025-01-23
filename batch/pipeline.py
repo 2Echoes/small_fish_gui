@@ -120,7 +120,7 @@ def batch_pipeline(
         image, other_image = prepare_image_detection(map_, parameters) 
         nucleus_signal = get_nucleus_signal(image, other_image, parameters)
         try : # Catch error raised if user enter a spot size too small compare to voxel size
-            parameters, frame_result, spots, clusters = launch_detection(
+            parameters, frame_result, spots, clusters, spot_cluster_id = launch_detection(
                 image,
                 other_image,
                 parameters,
@@ -139,7 +139,7 @@ def batch_pipeline(
         if parameters['save detection'] :
             if parameters['do_cluster_computation'] : 
                 if len(clusters) > 0 :
-                    spots_list = [spots, clusters[:,:parameters['dim']]]
+                    spots_list = [spots, clusters[:,:-2]]
                 else : spots_list = [spots]
             else : spots_list = [spots]
             output_spot_tiffvisual(
@@ -166,6 +166,7 @@ def batch_pipeline(
                     user_parameters=parameters,
                     image=image,
                     spots=spots,
+                    cluster_id=spot_cluster_id,
                     nucleus_label= nucleus_label,
                     cell_label= cytoplasm_label,
                 )
@@ -178,6 +179,7 @@ def batch_pipeline(
         nucleus_signal = nucleus_signal,
         spots=spots,
         clusters=clusters,
+        spots_cluster_id=spot_cluster_id,
         nucleus_label = nucleus_label,
         cell_label= cytoplasm_label,
         user_parameters=parameters,
