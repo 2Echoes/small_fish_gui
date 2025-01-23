@@ -52,13 +52,14 @@ def write_list_of_results(
             for df in result_list :
 
                 if start_row + len(df) > 1e6 : #Excel limit of 1 milion line.
+                    print("To many excel lines, changing excel sheet.")
                     sheet_number += 1
                     sheet_name = "Sheet" + str(sheet_number)
                     start_row = 0
 
                 #writing
-                df.to_excel(writer, sheet_name=sheet_name, startrow=0)
-                start_row += len(df) + 2
+                df.to_excel(writer, sheet_name=sheet_name, startrow=start_row)
+                start_row += len(df) + 5
                 
     
     if do_csv :
