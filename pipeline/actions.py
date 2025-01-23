@@ -6,7 +6,7 @@ from ..gui.prompts import output_image_prompt, prompt_save_segmentation, prompt_
 from ..gui.prompts import ask_detection_confirmation, ask_cancel_detection, ask_confirmation
 from ..gui.prompts import rename_prompt
 
-from ..interface.inoutput import write_results
+from ..interface.inoutput import write_results, write_list_of_results
 from ..interface.inoutput import input_segmentation, output_segmentation
 
 from ._preprocess import map_channels
@@ -49,9 +49,6 @@ def segment_cells(user_parameters : pipeline_parameters, nucleus_label, cytoplas
     return nucleus_label, cytoplasm_label, user_parameters
 
 def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytoplasm_label, nucleus_label) :
-    """
-    #TODO : Separate segmentation from detection in pipeline.
-    """
 
     new_results_df = pd.DataFrame()
     new_cell_results_df = pd.DataFrame()
@@ -224,7 +221,12 @@ def load_segmentation(nucleus_label, cytoplasm_label, segmentation_done) :
 
     return nucleus_label, cytoplasm_label, segmentation_done
 
-def save_results(result_df, cell_result_df, global_coloc_df, cell_coloc_df) :
+def save_results(
+        result_df : pd.DataFrame, 
+        cell_result_df : pd.DataFrame, 
+        global_coloc_df : pd.DataFrame, 
+        cell_coloc_df : dict, #TODO : Rename to cell_coloc_dict
+        ) :
     if len(result_df) != 0 :
         dic = output_image_prompt(filename=result_df.iloc[0].at['filename'])
 
@@ -240,7 +242,7 @@ def save_results(result_df, cell_result_df, global_coloc_df, cell_coloc_df) :
             sucess1 = write_results(result_df, path= path, filename=filename, do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess2 = write_results(cell_result_df, path= path, filename=filename + '_cell_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess3 = write_results(global_coloc_df, path= path, filename=filename + 'global_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
-            sucess4 = write_results(cell_coloc_df, path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv, reset_index=False)
+            sucess4 = write_list_of_results(cell_coloc_df.values(), path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             if all([sucess1,sucess2, sucess3, sucess4,]) : sg.popup("Sucessfully saved at {0}.".format(path))
 
     else :
@@ -268,7 +270,7 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
                         result_df : pd.DataFrame, 
                         cell_result_df : pd.DataFrame, 
                         global_coloc_df : pd.DataFrame,
-                        cell_coloc_df : pd.DataFrame,
+                        cell_coloc_df : dict,
                         ) :
     
     if len(result_df) == 0 :
@@ -279,10 +281,7 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
         sg.popup("Please select the acquisitions you would like to delete.")
     else :
         acquisition_ids = list(result_df.iloc[list(selected_acquisitions)]['acquisition_id'])
-        print("selected_ids :", acquisition_ids)
-        print(result_df)
         result_drop_idx = result_df[result_df['acquisition_id'].isin(acquisition_ids)].index
-        print("result_drop_idx : ", result_drop_idx)
         print("{0} acquisitions deleted.".format(len(result_drop_idx)))
         
         if len(cell_result_df) > 0 :
@@ -296,12 +295,14 @@ def delete_acquisitions(selected_acquisitions : pd.DataFrame,
             global_coloc_df = global_coloc_df.drop(coloc_df_drop_idx, axis=0)
         
         if len(cell_coloc_df) > 0 :
+            keys_to_delete = []
             for acquisition_id in acquisition_ids :
-                cell_coloc_df = cell_coloc_df.drop(acquisition_id, axis=1, level=2) #Delete spot number and foci number
-                print("{0} coloc measurement deleted for acquisition_id = {1}.".format(len(cell_coloc_df, acquisition_id)))
-                coloc_columns = cell_coloc_df.columns.get_level_values(1)
-                coloc_columns = coloc_columns[coloc_columns.str.contains(str(acquisition_id))]
-                cell_coloc_df = cell_coloc_df.drop(labels=coloc_columns, axis=1, level=1)
+                for coloc_key in cell_coloc_df.keys() :
+                    if acquisition_id in coloc_key :
+                        keys_to_delete.append(coloc_key) 
+
+            for key in keys_to_delete : 
+                if key in cell_coloc_df.keys() : cell_coloc_df.pop(key)
 
         result_df = result_df.drop(result_drop_idx, axis=0)
 
@@ -312,7 +313,7 @@ def rename_acquisitions(
         result_df : pd.DataFrame, 
         cell_result_df : pd.DataFrame, 
         global_coloc_df : pd.DataFrame,
-        cell_coloc_df : pd.DataFrame,
+        cell_coloc_df : dict,
         ) :
     
     if len(result_df) == 0 :
@@ -337,16 +338,19 @@ def rename_acquisitions(
             global_coloc_df.loc[global_coloc_df['acquisition_id_1'].isin(acquisition_ids), ['name1']] = name
             global_coloc_df.loc[global_coloc_df['acquisition_id_2'].isin(acquisition_ids), ['name2']] = name
         if len(cell_coloc_df) > 0 :
-            target_columns = cell_coloc_df.columns.get_level_values(1)
-            for old_name in old_names : #Note list was ordered by elmt len (decs) to avoid conflict when one name is contained by another one. if the shorter is processed first then the longer will not be able to be properly renamed.
-                target_columns = target_columns.str.replace(old_name, name)
-            
-            new_columns = zip(
-                cell_coloc_df.columns.get_level_values(0),
-                target_columns,
-                cell_coloc_df.columns.get_level_values(2),
-            )
+            for key in cell_coloc_df.keys() :
+                df = cell_coloc_df[key]
+                target_columns = df.columns.get_level_values(1)
+                for old_name in old_names : #Note list was ordered by elmt len (decs) to avoid conflict when one name is contained by another one. if the shorter is processed first then the longer will not be able to be properly renamed.
+                    target_columns = target_columns.str.replace(old_name, name)
 
-            cell_coloc_df.columns = pd.MultiIndex.from_tuples(new_columns)
+                new_columns = zip(
+                    df.columns.get_level_values(0),
+                    target_columns,
+                    df.columns.get_level_values(2),
+                )
+
+                df.columns = pd.MultiIndex.from_tuples(new_columns)
+                cell_coloc_df[key] = df
 
     return result_df, cell_result_df, global_coloc_df, cell_coloc_df

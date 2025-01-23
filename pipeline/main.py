@@ -16,12 +16,11 @@ acquisition_id = -1
 result_df = pd.DataFrame(columns=['acquisition_id'])
 cell_result_df = pd.DataFrame(columns=['acquisition_id'])
 global_coloc_df = pd.DataFrame()
-cell_coloc_df = list()
+cell_coloc_df = dict()
 cytoplasm_label = None
 nucleus_label = None
 
 while True : #Break this loop to close small_fish
-
     try :
         result_df = result_df.reset_index(drop=True)
         event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
@@ -35,8 +34,8 @@ while True : #Break this loop to close small_fish
                 cytoplasm_label = cytoplasm_label,
                 nucleus_label = nucleus_label,
                 )
-            result_df = pd.concat([result_df, new_result_df], axis=0)
-            cell_result_df = pd.concat([cell_result_df, new_cell_result_df], axis=0)
+            result_df = pd.concat([result_df, new_result_df], axis=0).reset_index(drop=True)
+            cell_result_df = pd.concat([cell_result_df, new_cell_result_df], axis=0).reset_index(drop=True)
 
         elif event == 'Segment cells' :
             nucleus_label, cytoplasm_label, user_parameters = segment_cells(
@@ -74,10 +73,10 @@ while True : #Break this loop to close small_fish
             )
 
         elif event == "Reset all" :
-            result_df = pd.DataFrame()
-            cell_result_df = pd.DataFrame()
+            result_df = pd.DataFrame(columns=['acquisition_id'])
+            cell_result_df = pd.DataFrame(columns=['acquisition_id'])
             global_coloc_df = pd.DataFrame()
-            cell_coloc_df = list()
+            cell_coloc_df = dict()
             acquisition_id = -1
             user_parameters['segmentation_done'] = False
             cytoplasm_label = None
