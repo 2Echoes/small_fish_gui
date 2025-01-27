@@ -123,7 +123,7 @@ def __update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, c
     Outdated. previous behaviour.
     """
     if len(new_clusters) == 0 : return new_clusters
-    if len(spots) == 0 : return np.empty(shape=(0,2+len(voxel_size)))
+    if len(spots) == 0 : return np.empty(shape=(0,2+len(voxel_size)), dtype=int)
 
     if len(new_clusters[0]) in [2,3] :
         new_clusters = np.concatenate([
@@ -198,7 +198,7 @@ def correct_spots(
         if len(clusters) > 0 :
             clusters_coordinates = clusters[:, :dim]
         else :
-            clusters_coordinates = np.empty(shape=(0,3)) 
+            clusters_coordinates = np.empty(shape=(0,3), dtype=int) 
         Viewer.add_points( # cluster; this layer can be update by user.
             clusters_coordinates, 
             size = 10, 
@@ -222,7 +222,7 @@ def correct_spots(
     if type(clusters) != type(None) :
         new_clusters = np.round(Viewer.layers['foci'].data).astype(int)
         if len(new_clusters) == 0 :
-            new_clusters = np.empty(shape=(0,5))
+            new_clusters = np.empty(shape=(0,5), dtype=int)
             new_cluster_id = -1 * np.ones(len(new_spots))
             new_spots = np.concatenate([new_spots, new_cluster_id], axis=1)
         else :

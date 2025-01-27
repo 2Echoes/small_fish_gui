@@ -183,7 +183,7 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
     elif isinstance(keys_to_compute, list) : pass
     else : raise TypeError("Wrong type for keys_to_compute. Should be list[str] or str. It is {0}".format(type(keys_to_compute)))
     if len(spots) == 0 :
-        res = {'clustered_spots' : np.empty(shape=(0,len(voxel_size) + 1)), 'clusters' : np.empty(shape=(0,len(voxel_size) + 2)), 'clustered_spots_dataframe' : pd.DataFrame(columns= ["id", "cluster_id", "z", "y", "x"]), 'clusters_dataframe' : pd.DataFrame(columns= ["id", "z", "y", "x", "spot_number"])}
+        res = {'clustered_spots' : np.empty(shape=(0,len(voxel_size) + 1), dtype=int), 'clusters' : np.empty(shape=(0,len(voxel_size) + 2), dtype=int), 'clustered_spots_dataframe' : pd.DataFrame(columns= ["id", "cluster_id", "z", "y", "x"]), 'clusters_dataframe' : pd.DataFrame(columns= ["id", "z", "y", "x", "spot_number"])}
         return {key : res[key] for key in keys_to_compute}
     else : res = {}
     voxel_size = tuple([int(d) for d in voxel_size])
@@ -407,9 +407,8 @@ def launch_cell_extraction(
 
     if do_clustering :
         if len(clusters) > 0 :
-
-            free_spots = spots[spots_cluster_id == -1]
-            clustered_spots = spots[spots_cluster_id != -1]
+            free_spots = spots[spots_cluster_id == -1].astype(int)
+            clustered_spots = spots[spots_cluster_id != -1].astype(int)
 
             other_coords = {
                 'clusters_coords' : clusters,
@@ -542,7 +541,8 @@ def launch_cell_extraction(
 
         features = [acquisition_id, cell_id, cell_bbox] + features
         features += [rna_coords, foci_coords, clustered_spots_coords, free_spots_coords]
-        features += [len(clustered_spots_coords), len(free_spots_coords)]
+        features += [len(clustered_spots_coords) if type(clustered_spots_coords) != type(None) else None]
+        features += [len(free_spots_coords) if type(free_spots_coords) != type(None) else None]
         
         result_frame = pd.concat([
             result_frame,
