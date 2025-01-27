@@ -183,7 +183,7 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
     elif isinstance(keys_to_compute, list) : pass
     else : raise TypeError("Wrong type for keys_to_compute. Should be list[str] or str. It is {0}".format(type(keys_to_compute)))
     if len(spots) == 0 :
-        res = {'clustered_spots' : [], 'clusters' : [], 'clustered_spots_dataframe' : pd.DataFrame(columns= ["id", "cluster_id", "z", "y", "x"]), 'clusters_dataframe' : pd.DataFrame(columns= ["id", "z", "y", "x", "spot_number"])}
+        res = {'clustered_spots' : np.empty(shape=(0,len(voxel_size) + 1)), 'clusters' : np.empty(shape=(0,len(voxel_size) + 2)), 'clustered_spots_dataframe' : pd.DataFrame(columns= ["id", "cluster_id", "z", "y", "x"]), 'clusters_dataframe' : pd.DataFrame(columns= ["id", "z", "y", "x", "spot_number"])}
         return {key : res[key] for key in keys_to_compute}
     else : res = {}
     voxel_size = tuple([int(d) for d in voxel_size])
@@ -192,7 +192,7 @@ def cluster_detection(spots, voxel_size, radius = 350, nb_min_spots = 4, keys_to
 
     if 'clustered_spots' in keys_to_compute :
         res['clustered_spots'] = clustered_spots
-        
+        voxel_size
     if 'clusters' in keys_to_compute : 
         res['clusters'] = clusters
 
@@ -471,6 +471,13 @@ def launch_cell_extraction(
         free_spots_coords = cell.get('free_spots')
         signal = cell['image']
 
+        if do_clustering :
+            if len(clusters) > 0 :
+                compute_foci = True
+            else : 
+                compute_foci = False
+        else : compute_foci = False
+
         with np.errstate(divide= 'ignore', invalid= 'ignore') :
             features = classification.compute_features(
                 cell_mask=cell_mask,
@@ -485,7 +492,7 @@ def launch_cell_extraction(
                 compute_area=True,
                 compute_dispersion=True,
                 compute_distance=True,
-                compute_foci= do_clustering and len(clusters) > 0,
+                compute_foci= compute_foci,
                 compute_intranuclear=True,
                 compute_protrusion=False,
                 compute_topography=True

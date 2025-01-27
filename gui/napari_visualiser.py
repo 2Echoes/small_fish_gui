@@ -229,7 +229,6 @@ def correct_spots(
             new_cluster_id = Viewer.layers['foci'].features.to_numpy()
             new_clusters = np.concatenate([new_clusters, new_cluster_id], axis=1)
 
-            print("After concatenate new clusters shape = {0}".format(new_clusters.shape))
     
             new_spots, new_clusters = _update_clusters(
                 old_spots =spots,
@@ -243,7 +242,6 @@ def correct_spots(
                 null_value= -2
             )
     
-            print("After _update_cluster\nnew_clusters shape = {0}\nnew_spots shape = {1}".format(new_clusters.shape, new_spots.shape))
 
     else : new_clusters = None
 
