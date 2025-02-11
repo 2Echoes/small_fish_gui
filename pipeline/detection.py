@@ -710,7 +710,13 @@ def launch_features_computation(
     if user_parameters['segmentation_done'] : 
         cell_result_dframe['name'] = name
         cell_result_dframe = cell_result_dframe.loc[:,['name'] + cell_result_col]
-        cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
+        if 'nb_rna_in_nuc' in cell_result_dframe.columns and 'nb_rna_out_nuc' in cell_result_dframe.columns :
+            cell_result_dframe['total_rna_number'] = cell_result_dframe['nb_rna_in_nuc'] + cell_result_dframe['nb_rna_out_nuc']
+        else : # This can happen when segmentation is performed and detects cells but they are on fov edges and thus removed by big-fish.
+            cell_result_dframe['nb_rna_in_nuc'] = np.NaN
+            cell_result_dframe['nb_rna_out_nuc'] = np.NaN
+            cell_result_dframe['total_rna_number'] = np.NaN
+
         
     return frame_results, cell_result_dframe
 
