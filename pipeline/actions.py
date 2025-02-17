@@ -76,6 +76,7 @@ def add_detection(user_parameters : pipeline_parameters, acquisition_id, cytopla
         if type(detection_parameters) != type(None) :
             user_parameters.update(detection_parameters) 
         else : #If user clicks cancel
+            
             cancel = ask_cancel_detection()
             if cancel : 
                 return new_results_df, new_cell_results_df, acquisition_id, user_parameters

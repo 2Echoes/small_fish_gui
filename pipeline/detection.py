@@ -220,7 +220,7 @@ def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
             segmentation_done= user_parameters['segmentation_done'],
             default_dict=detection_parameters
             )
-        if type(detection_parameters) == type(None) : return user_parameters
+        if type(detection_parameters) == type(None) : return None
         try :
             detection_parameters = convert_parameters_types(detection_parameters)
             detection_parameters = check_integrity(

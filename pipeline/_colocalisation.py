@@ -413,7 +413,8 @@ def _cell_coloc(
     colocalisation_df = colocalisation_df.drop('rna_coords', axis=1)
     colocalisation_df['voxel_size'] = [voxel_size]*len(colocalisation_df)
     colocalisation_df['pair_name'] = [(acquisition_name_id1, acquisition_name_id2)] * len(colocalisation_df)
-    colocalisation_df['pair_acquisition_id'] = [(acquisition_id1, acquisition_id2)] * len(colocalisation_df)
+    colocalisation_df['acquisition_id_1'] = [acquisition_id1] * len(colocalisation_df)
+    colocalisation_df['acquisition_id_2'] = [acquisition_id2] * len(colocalisation_df)
     colocalisation_df['colocalisation_distance'] = colocalisation_distance
 
     return colocalisation_df
