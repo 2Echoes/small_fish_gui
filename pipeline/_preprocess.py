@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt, prompt_with_help
 from ..gui.prompts import input_image_prompt
 

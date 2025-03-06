@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import os
 from ..utils import check_parameter
 import cellpose.models as models

@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from ..pipeline._preprocess import _auto_map_channels
 from ..pipeline._preprocess import MappingError
 

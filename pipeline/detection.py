@@ -19,7 +19,7 @@ from napari.types import LayerDataTuple
 
 import numpy as np
 import pandas as pd
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from numpy import NaN
 import bigfish.detection as detection
 import bigfish.stack as stack

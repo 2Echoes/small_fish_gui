@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import small_fish_gui.batch as batch
 import pandas as pd
 

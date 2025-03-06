@@ -6,7 +6,7 @@ import os
 import czifile as czi
 import bigfish.stack as stack
 import numpy as np
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from ..pipeline._preprocess import check_integrity, convert_parameters_types, ParameterInputError, _check_segmentation_parameters
 from ..pipeline.segmentation import _cast_segmentation_parameters

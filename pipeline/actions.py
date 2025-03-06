@@ -25,7 +25,7 @@ from ..hints import pipeline_parameters
 
 import os
 import pandas as pd
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import numpy as np
 
 def segment_cells(user_parameters : pipeline_parameters, nucleus_label, cytoplasm_label) :

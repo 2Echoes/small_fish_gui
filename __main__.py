@@ -1,5 +1,5 @@
 import sys, subprocess
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from small_fish_gui import __version__
 

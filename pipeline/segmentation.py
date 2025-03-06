@@ -20,7 +20,7 @@ import numpy as np
 import bigfish.multistack as multistack
 import bigfish.stack as stack
 import bigfish.plot as plot
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import matplotlib.pyplot as plt
 import os
 

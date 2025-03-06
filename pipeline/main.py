@@ -3,7 +3,7 @@ This script is called when software starts; it is the main loop.
 """
 
 import pandas as pd
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from ..gui import hub_prompt
 from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions, save_segmentation, load_segmentation, segment_cells
 from ._preprocess import clean_unused_parameters_cache

@@ -3,7 +3,7 @@ Submodule with main function to call to launch batch mode.
 """
 
 import os
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from .utils import get_elmt_from_key, create_map, call_auto_map
 from .pipeline import batch_pipeline

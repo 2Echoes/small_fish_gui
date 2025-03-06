@@ -1,7 +1,7 @@
 """
 Functions handling GUI update while user is interacting with software.
 """
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 from .utils import get_elmt_from_key
 

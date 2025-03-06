@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 layout = [
     [sg.Radio(['A',], key='button', group_id=0, key='test1'),sg.Radio(['B'], key='button', group_id=0, key='test2'), sg.Radio(['C'], key='button', group_id=0, key='test3')],

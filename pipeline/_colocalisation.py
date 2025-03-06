@@ -3,7 +3,7 @@ from ..gui import coloc_prompt, add_default_loading
 
 import numpy as np
 import pandas as pd
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from scipy.ndimage import distance_transform_edt
 from scipy.signal import fftconvolve
 
