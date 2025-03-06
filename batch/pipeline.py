@@ -60,6 +60,7 @@ def batch_pipeline(
     
 
     error_log = open(main_dir + "error_log", mode='w')
+    error_count = 0
 
     for acquisition_id, file in enumerate(filenames_list) :
         try :
@@ -227,7 +228,8 @@ def batch_pipeline(
             window_print(batch_window,"Sucessfully saved.")
 
         except Exception as error :
-
+            
+            error_count +=1
             print("Exception raised for acquisition, writting error in error log.")
 
             log = [
@@ -240,9 +242,13 @@ def batch_pipeline(
             print("Ignoring current acquisition and proceeding to next one.")
             continue
 
-
+    
         
     batch_progress_bar.update(current_count= acquisition_id+1, max= len(filenames_list))
     progress_count.update(value=str(acquisition_id+1))
     batch_window = batch_window.refresh()
+
+    if error_count > 0 :
+        sg.popup(f"Batch processing finished but {error_count} acquisitions were skipped during quantification.\nFor more informations check error_log in result folder.")
+
     return results_df, cell_results_df, acquisition_id
