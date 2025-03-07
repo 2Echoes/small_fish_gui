@@ -95,5 +95,11 @@ Note that for training it is recommended to first set up your GPU as training co
 ## Developpement
 
 Optional features to include in future versions : 
+
+**Major Dev**
 - time stack (which would include cell tracking)
 - 3D segmentation
+
+**Minor features**
+- allows npz files with multiple masks in load segmentation by asking user which one to select
+- fix parquet format or replace to another compressed format

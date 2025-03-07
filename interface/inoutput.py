@@ -4,7 +4,7 @@ import numpy as np
 from bigfish.stack import check_parameter
 from typing import Literal
 
-MAX_LEN_EXCEL = 1048576
+MAX_LEN_EXCEL = 1048576 #Maximum number of lines that can be written in an excel file
 
 def _cast_spot_to_tuple(spot) :
     return tuple([coord for coord in spot])
@@ -120,10 +120,21 @@ def input_segmentation(
         nucleus_path : str,
         cytoplasm_path : str,
 ) :
-    nucleus_label = np.load(nucleus_path)
+    
+    if nucleus_path.endswith('.npy') or nucleus_path.endswith('.npz') :
+        nucleus_label = np.load(nucleus_path)
+    else :
+        raise ValueError("Wrong extension for mask file, only npy and npz are supported")
+
 
     if cytoplasm_path != '' :
-        cytoplasm_label = np.load(cytoplasm_path)
+
+        if cytoplasm_path.endswith('.npy') or cytoplasm_path.endswith('.npz') :
+            cytoplasm_label = np.load(cytoplasm_path)
+        else :
+            raise ValueError("Wrong extension for mask file, only npy and npz are supported")
+
+
     else : 
         cytoplasm_label = nucleus_label
 

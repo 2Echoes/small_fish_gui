@@ -202,13 +202,22 @@ def load_segmentation(nucleus_label, cytoplasm_label, segmentation_done) :
         else :
             return nucleus_label, cytoplasm_label, segmentation_done
 
-    answer = prompt_load_segmentation()
-    if type(answer) == type(None) : #user clicks cancel
-        return nucleus_label, cytoplasm_label, segmentation_done
-    nucleus_label, cytoplasm_label = input_segmentation(
-        answer['nucleus'],
-        answer['cytoplasm'],
-    )
+    while True :
+        answer = prompt_load_segmentation()
+
+        if type(answer) == type(None) : #user clicks cancel
+            return nucleus_label, cytoplasm_label, segmentation_done
+
+        try :
+            nucleus_label, cytoplasm_label = input_segmentation(
+                answer['nucleus'],
+                answer['cytoplasm'],
+            )
+        
+        except ValueError as e :
+            sg.popup(str(e))
+        else :
+            break
 
     if type(nucleus_label) != type(None) and type(nucleus_label) != np.ndarray :
         nucleus_label = nucleus_label['arr_0']
