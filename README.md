@@ -1,4 +1,5 @@
 ***INSTALATTION ISSUE : Currently the package cannot be installed due to a package deletion on pypi. I will migrate the code to a free, open source gui package and update the dependecies list***
+  --> Requirements have been updated, pip installation is still not working but it is possible to install through git cloning
 
 # Small Fish
 **Small Fish** is a python application for the analysis of smFish images. It provides a ready to use graphical interface to combine famous python packages for cell analysis without any need for coding.
@@ -7,7 +8,7 @@ Cell segmentation (**2D**) is peformed using *cellpose* (published work) : https
 
 Spot detection is performed via *big-fish* (published work) : https://github.com/fish-quant/big-fish
 
-**Time stacks are not supported.**
+Small Fish is bulding a [wiki](https://github.com/2Echoes/small_fish_gui/wiki) ! Make sure to check it out.
 
 ## What can you do with small fish ?
 
