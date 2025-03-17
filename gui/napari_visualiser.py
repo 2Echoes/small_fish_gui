@@ -198,7 +198,7 @@ def correct_spots(
         if len(clusters) > 0 :
             clusters_coordinates = clusters[:, :dim]
         else :
-            clusters_coordinates = np.empty(shape=(0,3), dtype=int) 
+            clusters_coordinates = np.empty(shape=(0,dim), dtype=int) 
         Viewer.add_points( # cluster; this layer can be update by user.
             clusters_coordinates, 
             size = 10, 
@@ -222,8 +222,8 @@ def correct_spots(
     if type(clusters) != type(None) :
         new_clusters = np.round(Viewer.layers['foci'].data).astype(int)
         if len(new_clusters) == 0 :
-            new_clusters = np.empty(shape=(0,5), dtype=int)
-            new_cluster_id = -1 * np.ones(len(new_spots))
+            new_clusters = np.empty(shape=(0,dim + 2), dtype=int)
+            new_cluster_id = -1 * np.ones(shape=(len(new_spots), 1), dtype=int)
             new_spots = np.concatenate([new_spots, new_cluster_id], axis=1)
         else :
             new_cluster_id = Viewer.layers['foci'].features.to_numpy()
