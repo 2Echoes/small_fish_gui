@@ -1,7 +1,3 @@
-***INSTALATTION ISSUE : Currently the package cannot be installed due to a package deletion on pypi. I will migrate the code to a free, open source gui package and update the dependecies list***
-  
-  --> Requirements have been updated, pip installation is still not working but it is possible to install through git cloning
-
 # Small Fish
 **Small Fish** is a python application for the analysis of smFish images. It provides a ready to use graphical interface to combine famous python packages for cell analysis without any need for coding.
 
