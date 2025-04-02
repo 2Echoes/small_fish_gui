@@ -95,9 +95,10 @@ Note that for training it is recommended to first set up your GPU as training co
 Optional features to include in future versions : 
 
 **Major Dev**
-- time stack (which would include cell tracking)
-- 3D segmentation
+* time stack (which would include cell tracking)
+* 3D segmentation
 
 **Minor features**
-- allows npz files with multiple masks in load segmentation by asking user which one to select
-- fix parquet format or replace to another compressed format
+* allows npz files with multiple masks in load segmentation by asking user which one to select
+* fix parquet format or replace to another compressed format
+* In Napari viewer, or add an extra spot layer to visualsize spots that are in foci or color spots that are in clusters in specific color.
