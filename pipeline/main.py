@@ -2,9 +2,10 @@
 This script is called when software starts; it is the main loop.
 """
 
+import traceback
 import pandas as pd
 import FreeSimpleGUI as sg
-from ..gui import hub_prompt
+from ..gui import hub_prompt, prompt_restore_main_menu
 from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions, save_segmentation, load_segmentation, segment_cells
 from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
@@ -109,5 +110,21 @@ while True : #Break this loop to close small_fish
 
     except Exception as error :
         sg.popup(str(error))
-        raise error
+
+        save_quit = prompt_restore_main_menu()
+
+        if save_quit is None :
+            raise error
+
+        elif save_quit :
+            save_results(
+                result_df=result_df,
+                cell_result_df=cell_result_df,
+                global_coloc_df=global_coloc_df,
+                cell_coloc_df = cell_coloc_df,
+            )
+            quit()
+        else :
+            continue
+
 quit()

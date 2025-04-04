@@ -222,7 +222,6 @@ def detection_parameters_promt(
     else : values['dim'] = 2
     return values
 
-
 def ask_replace_file(filename:str) :
     layout = [
         [sg.Text("{0} already exists, replace ?")],
@@ -341,7 +340,6 @@ def ask_cancel_detection() :
     else :
         return True
 
-
 def ask_confirmation(question_displayed : str) :
     layout =[
         [sg.Text(question_displayed, font= 'bold 10')],
@@ -355,7 +353,6 @@ def ask_confirmation(question_displayed : str) :
     else :
         return True
     
-
 def prompt_save_segmentation() -> 'dict[Literal["folder","filename","ext"]]':
     while True :
         relaunch = False
@@ -407,3 +404,28 @@ def prompt_load_segmentation() -> 'dict[Literal["nucleus","cytoplasm"]]':
 
 
     return values
+
+def prompt_restore_main_menu() -> bool :
+    """
+    Warn user that software will try to go back to main menu while saving parameters, and propose to save results and quit if stuck.
+
+    Returns True if user want to save and quit else False, to raise error close window.
+    """
+
+
+    layout = [
+        [sg.Text("An error was caught while proceeding.\nSoftware can try to save parameters and return to main menu or save results and quit.")],
+        [sg.Button("Return to main menu", key='menu'), sg.Button("Save and quit", key='save')]
+    ]
+
+    window = sg.Window('small fish', layout=layout, margins=(10,10), auto_size_text=True, resizable=True)
+    event, values = window.read(close=True)
+
+    if event is None :
+        return None
+    elif event == "save" :
+        return True
+    elif event == "menu" :
+        return False
+    else :
+        raise AssertionError("Unforseen answer")
