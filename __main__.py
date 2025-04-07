@@ -1,4 +1,4 @@
-import sys, subprocess, traceback, os
+import sys, subprocess, traceback, os, re
 from small_fish_gui import __version__
 
 def main():
@@ -14,14 +14,19 @@ AVAILABLE_ARGUMENTS = {
 }
 
 def is_last_version() :
-    latest_version = str(subprocess.run([sys.executable, '-m', 'pip', 'install', '{}==random'.format('small_fish_gui')], capture_output=True, text=True))
-    latest_version = latest_version[latest_version.find('(from versions:')+15:]
-    latest_version = latest_version[:latest_version.find(')')]
-    latest_version = latest_version.replace(' ','').split(',')[-1]
-
+    
+    query = subprocess.run([sys.executable, '-m', 'pip', 'index', 'versions', 'small_fish_gui'], capture_output=True, text=True)
+    all_version = query.stdout.split(',')
+    latest_version = all_version[0]
+    regex = r"\d+\.\d+\.\d+"
+    latest = re.findall(regex, latest_version)
+    
     current_version = _get_version()
-
-    return current_version == latest_version
+    
+    if len(latest) == 0 : 
+        return current_version
+    else :
+        return current_version == latest[-1]
 
 if __name__ == "__main__":
 
