@@ -5,7 +5,6 @@ import numpy as np
 from typing import Literal, Union, Any
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout, radio_layout
 from ..interface import open_image, check_format, FormatError
-from .help_module import ask_help
 
 def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', add_scrollbar=True) :
     """
@@ -54,8 +53,6 @@ def prompt_with_help(layout, help =None, add_scrollbar=True, vertical_scroll_onl
         elif event == 'Ok': 
             window.close()
             return event, values
-        elif event == 'Help' :
-            ask_help(chapter= help)
         
         else:
             window.close()
@@ -287,9 +284,12 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
         [sg.Button('Save results', button_color= 'green'), sg.Button('Save segmentation', button_color= 'green'), sg.Button('Load segmentation', button_color= 'green'), sg.Button('Open wiki', button_color='blue', key="open wiki")],
         [sg.Button('Rename acquisition', button_color= 'gray'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset all',button_color= 'gray')],
     ]
+    
+    
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))
 
+    
     while True : 
         event, values = window.read()
         if event == None : quit()
