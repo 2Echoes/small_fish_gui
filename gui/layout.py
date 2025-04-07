@@ -4,8 +4,6 @@ from ..utils import check_parameter
 import cellpose.models as models
 from cellpose.core import use_gpu
 
-sg.theme('DarkAmber')
-
 
 def add_header(header_text) :
     """Returns [elmnt] not layout"""
