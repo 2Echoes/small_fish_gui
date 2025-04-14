@@ -2,7 +2,7 @@
 This script is called when software starts; it is the main loop.
 """
 
-import webbrowser
+import traceback
 import pandas as pd
 import FreeSimpleGUI as sg
 from ..gui import hub_prompt, prompt_restore_main_menu
@@ -104,9 +104,6 @@ while True : #Break this loop to close small_fish
             selected_acquisitions = values.setdefault('result_table', []) #Contains the lines selected by the user on the sum-up array.
             result_df, cell_result_df, global_coloc_df, cell_coloc_df = rename_acquisitions(selected_acquisitions, result_df, cell_result_df, global_coloc_df, cell_coloc_df)
 
-        elif event == "open wiki" :
-            webbrowser.open("https://github.com/2Echoes/small_fish_gui/wiki")
-        
         else :
             break
         

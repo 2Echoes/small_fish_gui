@@ -2,9 +2,10 @@ import FreeSimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
-from typing import Literal, Union
-from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, path_layout, radio_layout
+from typing import Literal, Union, Any
+from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout, radio_layout
 from ..interface import open_image, check_format, FormatError
+from .help_module import ask_help
 
 def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', add_scrollbar=True) :
     """
@@ -53,6 +54,8 @@ def prompt_with_help(layout, help =None, add_scrollbar=True, vertical_scroll_onl
         elif event == 'Ok': 
             window.close()
             return event, values
+        elif event == 'Help' :
+            ask_help(chapter= help)
         
         else:
             window.close()
@@ -273,23 +276,20 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
     sumup_df = _sumup_df(fov_results)
     
     if do_segmentation :
-        segmentation_object = sg.Text('Segmentation in memory', font='12', text_color= 'green')
+        segmentation_object = sg.Text('Segmentation in memory', font='8', text_color= 'green')
     else :
-        segmentation_object = sg.Text('No segmentation in memory', font='12', text_color= 'red')
+        segmentation_object = sg.Text('No segmentation in memory', font='8', text_color= 'red')
 
     layout = [
         [sg.Text('RESULTS', font= 'bold 13')],
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
         [sg.Button('Segment cells'), sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
-        [sg.Button('Save results', button_color= 'green'), sg.Button('Save segmentation', button_color= 'green'), sg.Button('Load segmentation', button_color= 'green'), sg.Button('Open wiki', button_color='blue', key="open wiki")],
+        [sg.Button('Save results', button_color= 'green'), sg.Button('Save segmentation', button_color= 'green'), sg.Button('Load segmentation', button_color= 'green')],
         [sg.Button('Rename acquisition', button_color= 'gray'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset all',button_color= 'gray')],
     ]
-    
-    
 
     window = sg.Window('small fish', layout= layout, margins= (10,10))
 
-    
     while True : 
         event, values = window.read()
         if event == None : quit()

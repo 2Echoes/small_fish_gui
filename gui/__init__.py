@@ -13,6 +13,7 @@ from .prompts import coloc_prompt
 from .prompts import output_image_prompt
 from .prompts import ask_cancel_detection
 from .prompts import ask_cancel_segmentation
+from .prompts import ask_help
 from .prompts import ask_detection_confirmation
 from .prompts import prompt_restore_main_menu
 
@@ -26,7 +27,3 @@ from .layout import radio_layout
 from .layout import add_header
 
 from .animation import add_default_loading
-
-#Default Theme
-from .theme import default_theme
-default_theme()
