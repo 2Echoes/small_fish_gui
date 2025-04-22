@@ -102,3 +102,4 @@ Optional features to include in future versions :
 * allows npz files with multiple masks in load segmentation by asking user which one to select
 * fix parquet format or replace to another compressed format
 * In Napari viewer, or add an extra spot layer to visualsize spots that are in foci or color spots that are in clusters in specific color.
+* Foci merge tool in Napari
