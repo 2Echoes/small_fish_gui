@@ -23,7 +23,7 @@ If you don't have a python installation yet I would recommend the [miniconda dis
 It is higly recommanded to create a specific [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) or [virtual](https://docs.python.org/3.6/library/venv.html) environnement to install small fish.
 
 ```bash
-conda create -n small_fish python=3.8
+conda create -n small_fish python=3.9
 conda activate small_fish
 ```
 Then download the small_fish package : 
