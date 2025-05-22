@@ -8,10 +8,11 @@ napari-plugin-engine==0.2.0
 napari-plugin-manager==0.1.0a2
 napari-svg==0.1.10
 numpy==1.24.4
-pandas==1.5.3
+pandas>=1.5.3
 FreeSimpleGUI==5.1.1
 scipy==1.9.1
 scikit-image==0.19.1
 scikit-learn==1.3.2
 openpyxl==3.1.2
 pyarrow==11.0.0
+aicsimageio>=aicsimageio==4.14.0

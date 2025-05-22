@@ -1,8 +1,8 @@
 import numpy as np
 import os
 import FreeSimpleGUI as sg
-from ..gui import _error_popup, _warning_popup, parameters_layout, add_header, prompt, prompt_with_help
-from ..gui.prompts import input_image_prompt
+from ..gui import _error_popup, _warning_popup, parameters_layout, add_header
+from ..gui.prompts import input_image_prompt, prompt
 
 class ParameterInputError(Exception) :
     """
@@ -141,7 +141,7 @@ def _ask_channel_map(shape, is_3D_stack, is_time_stack, multichannel, preset_map
         if multichannel : layout += [parameters_layout(['c'], default_values=[c])]
         if is_time_stack : layout += [parameters_layout(['t'], default_values=[t])]
 
-        event, preset_map = prompt_with_help(layout,help= 'mapping', add_scrollbar=False)
+        event, preset_map = prompt(layout, add_scrollbar=False)
         if event == 'Cancel' : return save_preset
 
         #Check integrity
@@ -169,7 +169,7 @@ def _show_mapping(shape, map_, is_3D_stack, is_time_stack, multichannel) :
             [sg.Button('Change mapping')]
         ]
 
-        event, values = prompt_with_help(layout, help='mapping', add_scrollbar=False)
+        event, values = prompt(layout, add_scrollbar=False)
 
         if event == 'Ok' :
             return map_
@@ -186,20 +186,26 @@ def convert_parameters_types(values:dict) :
     """
 
     #Tuples
-    tuples_list = ['voxel_size', 'spot_size', 'log_kernel_size', 'minimum_distance', 'deconvolution_kernel']
+    tuples_dict = {
+        'voxel_size' : int,
+        'spot_size' : float, 
+        'log_kernel_size' : float, 
+        'minimum_distance' : float, 
+        'deconvolution_kernel' : float,
+        }
     dim = values['dim']
     if dim == 3 : dim_tuple = ('z', 'y', 'x')
     else : dim_tuple = ('y', 'x')
 
-    for tuple_parameter in tuples_list :
+    for tuple_parameter, type_cast in tuples_dict.items() :
         try :
-            tuple_values = tuple([float(values.get(tuple_parameter + '_{0}'.format(dimension))) for dimension in dim_tuple])
+            tuple_values = tuple([type_cast(values.get(tuple_parameter + '_{0}'.format(dimension))) for dimension in dim_tuple])
         except Exception as e : #execption when str cannot be converted to float or no parameter was given.
             values[tuple_parameter] = None
         else : values[tuple_parameter] = tuple_values
 
     #Parameters
-    int_list = ['threshold', 'channel_to_compute', 'channel_to_compute', 'min number of spots', 'cluster size','nucleus channel signal']
+    int_list = ['threshold', 'channel_to_compute', 'channel_to_compute', 'min_number_of_spots', 'cluster_size','nucleus channel signal']
     float_list = ['alpha', 'beta', 'gamma', 'threshold penalty']
 
     for parameter in int_list :
@@ -252,9 +258,9 @@ def check_integrity(
             raise ParameterInputError("alpha must be set between 0 and 1.")
 
     if do_clustering :
-        if not isinstance(values['min number of spots'], (int)) :
+        if not isinstance(values['min_number_of_spots'], (int)) :
             raise ParameterInputError("Incorrect min spot number parameter.")
-        if not isinstance(values['cluster size'], (int)) :
+        if not isinstance(values['cluster_size'], (int)) :
             raise ParameterInputError("Incorrect cluster size parameter.")
 
     #channel
@@ -339,7 +345,7 @@ def clean_unused_parameters_cache(user_parameters: dict) :
     """
     Clean unused parameters that were set to None in previous run.
     """
-    parameters = ['alpha', 'beta', 'gamma', 'cluster size', 'min number of spots']
+    parameters = ['alpha', 'beta', 'gamma', 'cluster_size', 'min_number_of_spots']
     for parameter in parameters :
         if parameter in user_parameters.keys() :
             if type(user_parameters[parameter]) == type(None) :
@@ -389,6 +395,6 @@ def ask_input_parameters(ask_for_segmentation=True) :
 
     values.update(image_input_values)
     values['dim'] = 3 if values['is_3D_stack'] else 2
-    values['filename'] = os.path.basename(values['image path'])
+    values['filename'] = os.path.basename(values['image_path'])
     
     return values

@@ -2,145 +2,16 @@
 Contains Napari wrappers to visualise and correct spots/clusters.
 """
 
-import napari.layers
-import napari.types
 import numpy as np
 import napari
-
-from sklearn.cluster import DBSCAN
-from sklearn.neighbors import NearestNeighbors
 
 from magicgui import widgets
 
 from bigfish.stack import check_parameter
-from bigfish.detection.cluster_detection import _extract_information
-from ._napari_widgets import cell_label_eraser, segmentation_reseter, changes_propagater, free_label_picker
+from ._napari_widgets import CellLabelEraser, SegmentationReseter, ChangesPropagater, FreeLabelPicker
+from ._napari_widgets import ClusterIDSetter, ClusterMerger, ClusterUpdater, ClusterCreator
+from ._napari_widgets import initialize_all_cluster_wizards
 from ..utils import compute_anisotropy_coef
-from ..pipeline._colocalisation import spots_multicolocalisation
-
-#Post detection
-
-def _update_clusters(
-        old_spots : np.ndarray,
-        spot_cluster_id : np.ndarray,
-        new_spots : np.ndarray, 
-        old_clusters : np.ndarray, 
-        new_clusters : np.ndarray,
-        cluster_size : int,
-        min_number_spot : int,
-        voxel_size : tuple,
-        null_value = -2,
-        talks = False,
-        ) :
-    """
-
-    new_spots get weight of 1.
-    spots already in cluster get weight 1
-    spots not in cluster before but now in cluster radius get weigth = min_number_spot/*number of spot in new cluster radius (>=1)*
-    spots in radius of deleted cluster get weight = 0 unless they are in radius of a new cluster.
-
-    Parameters
-    ----------
-        new_spots : array (spots_number, space_dim + 1,) containing coordinates of each spots after napari correction as well as the id of belonging cluster. -1 if free spot, np.NaN if unknown.
-        old_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid before napari correction, number of spots in cluster and the id of cluster.
-        new_clusters : array (spots_number, space_dim + 2,) containing coordinates of each clusters centroid after napari correction, number of spots in cluster and the id of cluster. number of spots is NaN if new cluster.
-        cluster_size : size of cluster in nanometer passed to DBSCAN.
-
-    Returns
-    -------
-        corrected_spots : array with updated cluster id.
-        corrected_clusters : array with updated number of spot.
-
-    """
-
-    spots_weights = np.ones(len(new_spots), dtype=float)
-
-    if talks :
-        print("\nTALKS IN napari_visualiser._update_clusters")
-        print('new_spots_shape : ', new_spots.shape)
-        print('old_clusters : ', old_clusters.shape)
-        print('new_clusters : ', new_clusters.shape)
-
-    #Finding new and deleted clusters
-    deleted_cluster = old_clusters[~(np.isin(old_clusters[:,-1], new_clusters[:,-1]))]
-    added_cluster = new_clusters[new_clusters[:,-1] == null_value]
-
-    if talks :
-        print('deleted_cluster : ', deleted_cluster.shape)
-        print('added_cluster : ', added_cluster.shape)
-
-
-
-    #Removing cluster_id from points clustered in deleted clusters
-    spots_0_weights = old_spots[np.isin(spot_cluster_id, deleted_cluster[:,-1])]    
-    spots_weights[np.isin(new_spots, spots_0_weights).all(axis=1)] = 0 #Setting weigth to 0 for spots in deleted clusters.
-    
-    if talks : 
-        print("deleted cluster ids : ", deleted_cluster[:,-1])
-        print("spots in deleted cluster : \n", spots_0_weights)
-    
-    #Finding spots in range of new clusters
-    if len(added_cluster) > 0 :
-        points_neighbors = NearestNeighbors(radius= cluster_size)
-        points_neighbors.fit(new_spots*voxel_size)
-        neighbor_query = points_neighbors.radius_neighbors(added_cluster[:,:-2]*voxel_size, return_distance=False)
-
-        for cluster_neighbor in neighbor_query :
-            neighboring_spot_number = len(cluster_neighbor)
-            if neighboring_spot_number == 0 : continue # will not add a cluster if there is not even one spot nearby.
-            weight = min_number_spot / neighboring_spot_number # >1
-            if weight <= 1 : print("napari._update_clusters warning : weight <= 1; this  should not happen some clusters might be missed during post napari computation.")
-            if any(spots_weights[cluster_neighbor] > weight) : # Not replacing a weight for a smaller weigth to ensure all new clusters will be added.
-                mask = spots_weights[cluster_neighbor] > weight
-                cluster_neighbor = np.delete(cluster_neighbor, mask)
-            if len(cluster_neighbor) > 0 : spots_weights[cluster_neighbor] = weight
-
-    #Initiating new DBSCAN model
-    dbscan_model = DBSCAN(cluster_size, min_samples=min_number_spot)
-    dbscan_model.fit(new_spots*voxel_size, sample_weight=spots_weights)
-
-    #Constructing corrected_arrays
-    spots_labels = dbscan_model.labels_.reshape(len(new_spots), 1)
-    corrected_spots = np.concatenate([new_spots, spots_labels], axis=1).astype(int)
-    corrected_cluster = _extract_information(corrected_spots)
-
-    if talks :
-        print("spots with weigth 0 :", len(spots_weights[spots_weights == 0]))
-        print("spots with weigth > 1 :", len(spots_weights[spots_weights > 1]))
-        print("spots with weigth == 1 :", len(spots_weights[spots_weights == 1]))
-        print("spots with weigth < 1 :", len(spots_weights[np.logical_and(spots_weights < 1,spots_weights > 0)]))
-
-        print('corrected_spots : ', corrected_spots.shape)
-        print('corrected_cluster : ', corrected_cluster.shape)
-        print("END TALK\n")
-
-
-    return corrected_spots, corrected_cluster
-
-
-def __update_clusters(new_clusters: np.ndarray, spots: np.ndarray, voxel_size, cluster_size, shape) :
-    """
-    Outdated. previous behaviour.
-    """
-    if len(new_clusters) == 0 : return new_clusters
-    if len(spots) == 0 : return np.empty(shape=(0,2+len(voxel_size)), dtype=int)
-
-    if len(new_clusters[0]) in [2,3] :
-        new_clusters = np.concatenate([
-            new_clusters,
-            np.zeros(shape=(len(new_clusters),1), dtype=int),
-            np.arange(len(new_clusters), dtype=int).reshape(len(new_clusters),1)
-            ],axis=1, dtype=int)
-
-    assert len(new_clusters[0]) == 4 or len(new_clusters[0]) == 5, "Wrong number of coordinates for clusters should not happen."
-    
-    # Update spots clusters
-    new_clusters[:,-2] = spots_multicolocalisation(new_clusters[:,:-2], spots, radius_nm= cluster_size, voxel_size=voxel_size, image_shape=shape)
-
-    # delete too small clusters
-    new_clusters = np.delete(new_clusters, new_clusters[:,-2] == 0, 0)
-
-    return new_clusters
 
 def correct_spots(
         image, 
@@ -184,14 +55,19 @@ def correct_spots(
     for im, color in zip(other_images, other_colors) :  
         Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color, contrast_limits=[im.min(), im.max()])
 
-    Viewer.add_points(  # single molecule spots; this layer can be update by user.
+    single_layer = Viewer.add_points(  # single molecule spots; this layer can be update by user.
         spots, 
         size = 5, 
         scale=scale, 
-        face_color= 'transparent', 
+        face_color= 'transparent',
+        border_color ='red', 
         opacity= 1, 
         symbol= 'disc', 
-        name= 'single spots'
+        name= 'single spots',
+        features={
+            "cluster_id" : spot_cluster_id if not spot_cluster_id is None else [],
+            "end" : [True] * len(spots)
+            }
         )
     
     if type(clusters) != type(None) :
@@ -199,7 +75,7 @@ def correct_spots(
             clusters_coordinates = clusters[:, :dim]
         else :
             clusters_coordinates = np.empty(shape=(0,dim), dtype=int) 
-        Viewer.add_points( # cluster; this layer can be update by user.
+        cluster_layer = Viewer.add_points( # cluster; this layer can be update by user.
             clusters_coordinates, 
             size = 10, 
             scale=scale, 
@@ -207,45 +83,70 @@ def correct_spots(
             opacity= 0.7, 
             symbol= 'diamond', 
             name= 'foci', 
-            features= {"spot_number" : clusters[:,dim], "id" : clusters[:,dim+1]}, 
-            feature_defaults= {"spot_number" : 0, "id" : -2} # napari features default will not work with np.NaN passing -2 instead.
+            features= {
+                "spot_number" : clusters[:,dim], 
+                "cluster_id" : clusters[:,dim+1],
+                "end" : [True] * len(clusters_coordinates)
+                }, 
+            feature_defaults= {"spot_number" : 0, "cluster_id" : -2, "end" : True} # napari features default will not work with np.NaN passing -2 instead.
         )
 
     if type(cell_label) != type(None) and not np.array_equal(nucleus_label, cell_label) : Viewer.add_labels(cell_label, scale=scale, opacity= 0.2, blending= 'additive')
     if type(nucleus_label) != type(None) : Viewer.add_labels(nucleus_label, scale=scale, opacity= 0.2, blending= 'additive')
-        
+    
+    #Adding widget
+    if type(clusters) != type(None) :
+        initialize_all_cluster_wizards(
+            single_layer=single_layer,
+            cluster_layer=cluster_layer
+        )
+
+        widget_clusterID = ClusterIDSetter(single_layer=single_layer, cluster_layer=cluster_layer)
+        widget_cluster_merge =ClusterMerger(single_layer=single_layer, cluster_layer=cluster_layer)
+        widget_cluster_updater = ClusterUpdater(
+            single_layer=single_layer,
+            cluster_layer=cluster_layer,
+            default_cluster_radius= cluster_size,
+            default_min_spot= min_spot_number,
+            voxel_size=voxel_size
+        )
+        widget_cluster_creator = ClusterCreator(
+            cluster_layer=cluster_layer,
+            single_layer=single_layer
+        )
+
+
+        buttons_container = widgets.Container(widgets=[widget_clusterID.widget, widget_cluster_creator.widget], labels=False, layout='horizontal')
+        updater_container = widgets.Container(widgets=[widget_cluster_updater.widget, widget_cluster_merge.widget], labels=False)
+        tools_container = widgets.Container(
+            widgets = [updater_container, buttons_container],
+            labels=False,
+        )
+        Viewer.window.add_dock_widget(tools_container, name='SmallFish', area='left')
+
     Viewer.show(block=False)
     napari.run()
 
-    new_spots = np.array(Viewer.layers['single spots'].data, dtype= int)
+    new_spots = np.concatenate([
+        single_layer.data,
+        single_layer.features.loc[:,["cluster_id"]].to_numpy()
+    ], axis=1).astype(int)
 
     if type(clusters) != type(None) :
-        new_clusters = np.round(Viewer.layers['foci'].data).astype(int)
-        if len(new_clusters) == 0 :
-            new_clusters = np.empty(shape=(0,dim + 2), dtype=int)
-            new_cluster_id = -1 * np.ones(shape=(len(new_spots), 1), dtype=int)
-            new_spots = np.concatenate([new_spots, new_cluster_id], axis=1)
-        else :
-            new_cluster_id = Viewer.layers['foci'].features.to_numpy()
-            new_clusters = np.concatenate([new_clusters, new_cluster_id], axis=1)
+        new_clusters = np.concatenate([
+            cluster_layer.data,
+            cluster_layer.features.loc[:,["spot_number","cluster_id"]].to_numpy()
+        ],axis=1)
 
-    
-            new_spots, new_clusters = _update_clusters(
-                old_spots =spots,
-                spot_cluster_id = spot_cluster_id,
-                new_spots=new_spots,
-                old_clusters=clusters,
-                new_clusters=new_clusters,
-                cluster_size=cluster_size,
-                min_number_spot=min_spot_number,
-                voxel_size=voxel_size,
-                null_value= -2
-            )
-    
+        new_cluster_radius = widget_cluster_updater.cluster_radius
+        new_min_spot_number = widget_cluster_updater.min_spot
 
-    else : new_clusters = None
+    else : 
+        new_clusters = None
+        new_cluster_radius = None
+        new_min_spot_number = None
 
-    return new_spots, new_clusters
+    return new_spots, new_clusters,  new_cluster_radius, new_min_spot_number
 
 
 # Segmentation
@@ -295,10 +196,10 @@ def show_segmentation(
         labels_layer_list += [cyto_label_layer]
 
     #Adding widget
-    label_eraser = cell_label_eraser(labels_layer_list)
-    label_picker = free_label_picker(labels_layer_list)
-    label_reseter = segmentation_reseter(labels_layer_list)
-    changes_applier = changes_propagater(labels_layer_list)
+    label_eraser = CellLabelEraser(labels_layer_list)
+    label_picker = FreeLabelPicker(labels_layer_list)
+    label_reseter = SegmentationReseter(labels_layer_list)
+    changes_applier = ChangesPropagater(labels_layer_list)
 
     buttons_container = widgets.Container(widgets=[label_picker.widget, changes_applier.widget, label_reseter.widget], labels=False, layout='horizontal')
     tools_container = widgets.Container(

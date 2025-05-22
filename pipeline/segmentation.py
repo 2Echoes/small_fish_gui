@@ -6,7 +6,7 @@ from cellpose.core import use_gpu
 from skimage.measure import label
 from ..hints import pipeline_parameters
 from ..gui.layout import _segmentation_layout
-from ..gui import prompt, prompt_with_help, ask_cancel_segmentation
+from ..gui import prompt, ask_cancel_segmentation
 from ..interface import open_image
 from ..gui.napari_visualiser import show_segmentation as napari_show_segmentation
 from .utils import from_label_get_centeroidscoords
@@ -88,7 +88,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 multichannel=multichannel,
             )
 
-            event, values = prompt_with_help(layout, help='segmentation')
+            event, values = prompt(layout)
             if event == 'Cancel' :
                 cancel_segmentation = ask_cancel_segmentation()
 

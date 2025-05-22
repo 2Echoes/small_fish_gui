@@ -38,3 +38,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 __version__ = "1.9.4"
+__wiki__ = "https://github.com/2Echoes/small_fish_gui/wiki"
+
+import os
+os.environ["QT_QPA_PLATFORM"] = "xcb"

@@ -1,14 +1,22 @@
 """
 This script is called when software starts; it is the main loop.
 """
+import traceback, os
+from small_fish_gui import __version__
 
-import traceback
 import pandas as pd
 import FreeSimpleGUI as sg
-from ..gui import hub_prompt, prompt_restore_main_menu
-from .actions import add_detection, save_results, compute_colocalisation, delete_acquisitions, rename_acquisitions, save_segmentation, load_segmentation, segment_cells
+
+from .actions import add_detection 
+from . actions import save_results 
+from . actions import compute_colocalisation 
+from . actions import delete_acquisitions, rename_acquisitions 
+from . actions import save_segmentation, load_segmentation, segment_cells
+from .actions import open_wiki
+
 from ._preprocess import clean_unused_parameters_cache
 from ..batch import batch_promp
+from ..gui import hub_prompt, prompt_restore_main_menu
 from ..hints import pipeline_parameters
 
 #'Global' parameters
@@ -104,12 +112,24 @@ while True : #Break this loop to close small_fish
             selected_acquisitions = values.setdefault('result_table', []) #Contains the lines selected by the user on the sum-up array.
             result_df, cell_result_df, global_coloc_df, cell_coloc_df = rename_acquisitions(selected_acquisitions, result_df, cell_result_df, global_coloc_df, cell_coloc_df)
 
+        elif event == "wiki" :
+            open_wiki()
+
         else :
             break
         
 
     except Exception as error :
         sg.popup(str(error))
+
+        with open("error_log.txt",'a') as error_log :
+            error_log.writelines([
+                f"version {__version__}",
+                f"error : {error}",
+                f"traceback :\n{traceback.format_exc()}",
+            ])
+
+        print(f"error_log saved at {os.getcwd()}/error_log.txt. Please consider reporting this by opening an issue on github.")
 
         save_quit = prompt_restore_main_menu()
 

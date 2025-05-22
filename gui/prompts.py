@@ -5,13 +5,13 @@ import numpy as np
 from typing import Literal, Union, Any
 from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout, radio_layout
 from ..interface import open_image, check_format, FormatError
-from .help_module import ask_help
+
 
 def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', add_scrollbar=True) :
     """
     Default event : 'Ok', 'Cancel'
     """
-    if add_ok_cancel : layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
+    if add_ok_cancel : layout += [[sg.Button('Ok', bind_return_key=True), sg.Button('Cancel')]]
 
     if add_scrollbar :
         size = (400,500)
@@ -20,7 +20,7 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', 
     else :
         size = (None,None)
     
-    window = sg.Window('small fish', layout=layout, margins=(10,10), size=size, resizable=True)
+    window = sg.Window('small fish', layout=layout, margins=(10,10), size=size, resizable=True, location=None)
     event, values = window.read(timeout=timeout, timeout_key=timeout_key)
     if event == None : 
         window.close()
@@ -33,33 +33,7 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', 
         window.close()
         return event, values
 
-def prompt_with_help(layout, help =None, add_scrollbar=True, vertical_scroll_only=True) :
-    layout += [[]]
-    layout += [[sg.Button('Ok'), sg.Button('Cancel')]]
-    
-    if add_scrollbar :
-        size = (400,500)
-        col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=vertical_scroll_only, size=size)
-        layout = [[col_elmt]]
-    else :
-        size = (None,None)
 
-    window = sg.Window('small fish', layout=layout, size=size, resizable=True)
-    while True :
-        event, values = window.read()
-        if event == None :
-            window.close()
-            quit()
-
-        elif event == 'Ok': 
-            window.close()
-            return event, values
-        elif event == 'Help' :
-            ask_help(chapter= help)
-        
-        else:
-            window.close()
-            return event,{}
 
 def input_image_prompt(
         is_3D_stack_preset=False,
@@ -70,7 +44,7 @@ def input_image_prompt(
 ) :
     """
         Keys :
-        - 'image path'
+        - 'image_path'
         - 'is_3D_stack'
         - 'time stack'
         - 'is_multichannel'
@@ -81,18 +55,18 @@ def input_image_prompt(
     Returns Values
 
     """
-    layout_image_path = path_layout(['image path'], header= "Image")
+    layout_image_path = path_layout(['image_path'], header= "Image")
     layout_image_path += bool_layout(['3D stack', 'Multichannel stack'],keys= ['is_3D_stack', 'is_multichannel'], preset= [is_3D_stack_preset, multichannel_preset])
     
     if type(do_dense_regions_deconvolution_preset) != type(None) and type(do_clustering_preset) != type(None) and type(do_Napari_correction) != type(None): 
         layout_image_path += bool_layout(['Dense regions deconvolution', 'Compute clusters', 'Open results in Napari'], keys = ['do_dense_regions_deconvolution', 'do_cluster_computation', 'show_napari_corrector'], preset= [do_dense_regions_deconvolution_preset, do_clustering_preset, do_Napari_correction], header= "Pipeline settings")
     
-    event, values = prompt_with_help(layout_image_path, help= 'general', add_scrollbar=False)
+    event, values = prompt(layout_image_path, add_scrollbar=False)
 
     if event == 'Cancel' :
         return None
 
-    im_path = values['image path']
+    im_path = values['image_path']
     is_3D_stack = values['is_3D_stack']
     is_multichannel = values['is_multichannel']
     
@@ -191,8 +165,8 @@ def detection_parameters_promt(
     
     #Clustering
     if do_clustering :
-        layout += parameters_layout(['cluster size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster size',400)])
-        layout += parameters_layout(['min number of spots'], default_values=[default_dict.setdefault('min number of spots', 5)])
+        layout += parameters_layout(['cluster_size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster_size',400)])
+        layout += parameters_layout(['min_number_of_spots'], default_values=[default_dict.setdefault('min_number_of_spots', 5)])
 
     if is_multichannel and segmentation_done :
         default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
@@ -216,7 +190,7 @@ def detection_parameters_promt(
         preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
     )
 
-    event, values = prompt_with_help(layout, help='detection')
+    event, values = prompt(layout)
     if event == 'Cancel' : return None
     if is_3D_stack : values['dim'] = 3
     else : values['dim'] = 2
@@ -285,10 +259,10 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
         [sg.Table(values= list(sumup_df.values), headings= list(sumup_df.columns), row_height=20, num_rows= 5, vertical_scroll_only=False, key= "result_table"), segmentation_object],
         [sg.Button('Segment cells'), sg.Button('Add detection'), sg.Button('Compute colocalisation'), sg.Button('Batch detection')],
         [sg.Button('Save results', button_color= 'green'), sg.Button('Save segmentation', button_color= 'green'), sg.Button('Load segmentation', button_color= 'green')],
-        [sg.Button('Rename acquisition', button_color= 'gray'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset all',button_color= 'gray')],
+        [sg.Button('Rename acquisition', button_color= 'gray'), sg.Button('Delete acquisitions',button_color= 'gray'), sg.Button('Reset segmentation',button_color= 'gray'), sg.Button('Reset all',button_color= 'gray'), sg.Button('Open wiki',button_color= 'yellow', key='wiki')],
     ]
 
-    window = sg.Window('small fish', layout= layout, margins= (10,10))
+    window = sg.Window('small fish', layout= layout, margins= (10,10), location=None)
 
     while True : 
         event, values = window.read()
@@ -300,7 +274,7 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
 
 def coloc_prompt() :
     layout = parameters_layout(['colocalisation distance'], unit= 'nm', header= 'Colocalisation', default_values= 0)
-    event, values = prompt_with_help(layout)
+    event, values = prompt(layout)
 
     if event == 'Ok' :
         return values['colocalisation distance']
@@ -308,7 +282,7 @@ def coloc_prompt() :
 
 def rename_prompt() :
     layout = parameters_layout(['name'], header= "Rename acquisitions", size=12)
-    event, values = prompt_with_help(layout)
+    event, values = prompt(layout)
     if event == 'Ok' :
         return values['name']
     else : return False

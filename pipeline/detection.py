@@ -3,7 +3,6 @@ Contains code to handle detection as well as bigfish wrappers related to spot de
 """
 from ..hints import pipeline_parameters
 
-
 from ._preprocess import ParameterInputError
 from ._preprocess import check_integrity, convert_parameters_types
 
@@ -11,22 +10,24 @@ from ..gui.napari_visualiser import correct_spots, threshold_selection
 from ..gui import add_default_loading
 from ..gui import detection_parameters_promt
 
+from ..interface import get_voxel_size
 from ..utils import compute_anisotropy_coef
 from ._signaltonoise import compute_snr_spots
 
 from magicgui import magicgui
+
+from types import GeneratorType
 from napari.types import LayerDataTuple
 
 import numpy as np
+from numpy import NaN
 import pandas as pd
 import FreeSimpleGUI as sg
-from numpy import NaN
 import bigfish.detection as detection
 import bigfish.stack as stack
 import bigfish.multistack as multistack
 import bigfish.classification as classification
 from bigfish.detection.spot_detection import get_object_radius_pixel
-from types import GeneratorType
 from skimage.measure import regionprops
 from scipy.ndimage import binary_dilation
 
@@ -211,6 +212,22 @@ def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
     do_clustering = user_parameters['do_cluster_computation']
     detection_parameters = user_parameters.copy()
     
+    #Attempt to read voxel size from metadata
+    voxel_size = get_voxel_size(user_parameters['image_path'])
+    if voxel_size is None or not user_parameters.get('voxel_size') is None:
+        pass
+    else :
+        detection_parameters['voxel_size'] = [int(v) for v in voxel_size]
+        detection_parameters['voxel_size_z'] = round(voxel_size[0])
+        detection_parameters['voxel_size_y'] = round(voxel_size[1])
+        detection_parameters['voxel_size_x'] = round(voxel_size[2])
+
+    #Setting default spot size to 1.5 voxel
+    if detection_parameters.get('spot_size') is None :
+        detection_parameters['spot_size_z'] = round(detection_parameters['voxel_size_z']*1.5) if not detection_parameters['voxel_size_z'] is None else None
+        detection_parameters['spot_size_y'] = round(detection_parameters['voxel_size_y']*1.5) if not detection_parameters['voxel_size_y'] is None else None
+        detection_parameters['spot_size_x'] = round(detection_parameters['voxel_size_x']*1.5) if not detection_parameters['voxel_size_x'] is None else None
+
     while True :
         detection_parameters = detection_parameters_promt(
             is_3D_stack=is_3D_stack,
@@ -237,6 +254,7 @@ def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
         else :
             user_parameters.update(detection_parameters)
             break
+    
     return user_parameters
 
 @add_default_loading
@@ -557,8 +575,8 @@ def launch_cell_extraction(
 def launch_clustering(spots, user_parameters : pipeline_parameters): 
 
     voxel_size = user_parameters['voxel_size']
-    nb_min_spots = user_parameters['min number of spots']
-    cluster_size = user_parameters['cluster size']
+    nb_min_spots = user_parameters['min_number_of_spots']
+    cluster_size = user_parameters['cluster_size']
 
     cluster_result_dict = cluster_detection(
         spots=spots,
@@ -622,18 +640,23 @@ def launch_detection(
 
     if user_parameters['show_napari_corrector'] :
 
-        spots, clusters = correct_spots(
+        spots, clusters, new_cluster_radius, new_min_spot_number = correct_spots(
             image, 
             spots, 
             user_parameters['voxel_size'],
             clusters=clusters,
             spot_cluster_id = spots_cluster_id,
-            cluster_size= user_parameters.get('cluster size'),
-            min_spot_number= user_parameters.setdefault('min number of spots', 0),
+            cluster_size= user_parameters.get('cluster_size'),
+            min_spot_number= user_parameters.setdefault('min_number_of_spots', 0),
             cell_label=cell_label,
             nucleus_label=nucleus_label,
             other_images=other_image
             )
+        
+        if type(new_cluster_radius) != type(None) :
+            user_parameters['cluster_size'] = new_cluster_radius
+        if type(new_min_spot_number) != type(None) :
+            user_parameters['min_number_of_spots'] = new_min_spot_number
         
         if do_clustering :
             spots, spots_cluster_id = spots[:,:-1], spots[:,-1]

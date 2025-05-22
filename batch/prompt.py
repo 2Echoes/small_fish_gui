@@ -212,7 +212,7 @@ def batch_promp(
     #Hiding options for non batch mode
     window= window.finalize()
     napari_correction_elmt.update(disabled=True)
-    get_elmt_from_key(tab_dict['Input'], key= 'image path').update(disabled=True)
+    get_elmt_from_key(tab_dict['Input'], key= 'image_path').update(disabled=True)
     for key in seg_keys_to_hide : get_elmt_from_key(tab_dict['Segmentation'], key=key).update(disabled=True)
     for key in detection_keys_to_hide : get_elmt_from_key(tab_dict['Detection'], key=key).update(disabled=True)
     

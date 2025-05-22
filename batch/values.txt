@@ -2,7 +2,7 @@ List of keys for batch 'values' dict instance :
 
 Batch_folder 
 0
-image path 
+image_path 
 3D stack 
 multichannel 
 Dense regions deconvolution 

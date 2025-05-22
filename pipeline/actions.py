@@ -22,11 +22,16 @@ from .segmentation import launch_segmentation
 from ._colocalisation import initiate_colocalisation, launch_colocalisation
 
 from ..hints import pipeline_parameters
+from ..__init__ import __wiki__
 
 import os
 import pandas as pd
 import FreeSimpleGUI as sg
 import numpy as np
+import webbrowser
+
+def open_wiki() :
+    webbrowser.open_new_tab(__wiki__)
 
 def segment_cells(user_parameters : pipeline_parameters, nucleus_label, cytoplasm_label) :
     if user_parameters['segmentation_done'] :

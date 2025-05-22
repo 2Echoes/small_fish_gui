@@ -1,6 +1,7 @@
 import FreeSimpleGUI as sg
 import os
 from ..utils import check_parameter
+from typing import Optional, Union
 import cellpose.models as models
 from cellpose.core import use_gpu
 
@@ -18,7 +19,7 @@ def pad_right(string, length, pad_char) :
     else : return string + pad_char* (length - len(string))
     
 
-def parameters_layout(parameters:'list[str]' = [], unit=None, header= None, default_values=None, size=5, opt=None) :
+def parameters_layout(parameters:'list[str]' = [], unit=None, header= None, default_values=None, size=5, opt:list=None) :
 
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header = (str, type(None)))
@@ -101,7 +102,7 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
         layout = [add_header(header)] + layout
     return layout
 
-def bool_layout(parameters= [], header=None, preset=None, keys=None) :
+def bool_layout(parameters= [], header=None, preset : Optional[Union['list[bool]',bool,None]]=None, keys=None) :
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header= (str, type(None)), preset=(type(None), list, tuple, bool))
     for key in parameters : check_parameter(key = str)
@@ -226,7 +227,7 @@ def _input_parameters_layout(
         do_Napari_correction
 
 ) :
-    layout_image_path = path_layout(['image path'], header= "Image")
+    layout_image_path = path_layout(['image_path'], header= "Image")
     layout_image_path += bool_layout(['3D stack', 'Multichannel stack'], keys=['is_3D_stack', 'is_multichannel'], preset= [is_3D_stack_preset, multichannel_preset])
     
     layout_image_path += bool_layout(
@@ -283,8 +284,8 @@ def _detection_layout(
     
     #Clustering
     if do_clustering :
-        layout += parameters_layout(['cluster size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster size',400)])
-        layout += parameters_layout(['min number of spots'], default_values=[default_dict.setdefault('min number of spots', 5)])
+        layout += parameters_layout(['cluster_size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster_size',400)])
+        layout += parameters_layout(['min_number_of_spots'], default_values=[default_dict.setdefault('min_number_of_spots', 5)])
 
     
 

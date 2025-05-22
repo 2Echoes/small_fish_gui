@@ -51,8 +51,8 @@ def update_detection_tab(
     deconvolution_kernel_z = get_elmt_from_key(tab_elmt, key= 'deconvolution_kernel_z')
     
     #Clustering
-    cluster_size = get_elmt_from_key(tab_elmt, key= 'cluster size')
-    min_number_of_spot = get_elmt_from_key(tab_elmt, key= 'min number of spots')
+    cluster_size = get_elmt_from_key(tab_elmt, key= 'cluster_size')
+    min_number_of_spot = get_elmt_from_key(tab_elmt, key= 'min_number_of_spots')
     
     #segmentation and multichannel
     nucleus_channel_signal = get_elmt_from_key(tab_elmt, key= 'nucleus channel signal')
