@@ -1,6 +1,7 @@
 import FreeSimpleGUI as sg
 import os
 from ..utils import check_parameter
+from ..hints import pipeline_parameters
 from typing import Optional, Union
 import cellpose.models as models
 from cellpose.core import use_gpu
@@ -246,7 +247,7 @@ def _detection_layout(
         do_clustering,
         do_segmentation,
         segmentation_done=False,
-        default_dict={},
+        default_dict : pipeline_parameters={},
 ) :
     if is_3D_stack : dim = 3
     else : dim = 2
@@ -296,9 +297,10 @@ def _detection_layout(
         header= "Individual spot extraction",
         preset= default_dict.setdefault('spots_extraction_folder', '')
     )
+    default_filename = default_dict.setdefault("filename","") + "_spot_extraction"
     layout += parameters_layout(
         parameters=['spots_filename'],
-        default_values=[default_dict.setdefault('spots_filename','spots_extraction')],
+        default_values=[default_filename],
         size= 13
     )
     layout += bool_layout(

@@ -179,9 +179,10 @@ def detection_parameters_promt(
         header= "Individual spot extraction",
         preset= default_dict.setdefault('spots_extraction_folder', '')
     )
+    default_filename = default_dict.setdefault("filename","") + "_spot_extraction"
     layout += parameters_layout(
         parameters=['spots_filename'],
-        default_values=[default_dict.setdefault('spots_filename','spots_extraction')],
+        default_values=[default_filename],
         size= 13
     )
     layout += bool_layout(

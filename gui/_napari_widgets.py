@@ -374,7 +374,6 @@ class ClusterCreator(ClusterWidget) :
                     [centroid]
                 ], axis=0)
                 
-                #TODO update features
                 last_index = len(self.cluster_layer.data) - 1
                 self.cluster_layer.features.loc[last_index, ['cluster_id']] = new_cluster_id
                 self.cluster_layer.features.loc[last_index, ['spot_number']] = spot_number
