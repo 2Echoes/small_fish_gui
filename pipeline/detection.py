@@ -217,16 +217,16 @@ def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
     if voxel_size is None or not user_parameters.get('voxel_size') is None:
         pass
     else :
-        detection_parameters['voxel_size'] = [int(v) for v in voxel_size]
-        detection_parameters['voxel_size_z'] = round(voxel_size[0])
-        detection_parameters['voxel_size_y'] = round(voxel_size[1])
-        detection_parameters['voxel_size_x'] = round(voxel_size[2])
+        detection_parameters['voxel_size'] = [round(v) if isinstance(v, (float,int)) else None for v in voxel_size]
+        detection_parameters['voxel_size_z'] = detection_parameters['voxel_size'][0]
+        detection_parameters['voxel_size_y'] = detection_parameters['voxel_size'][1]
+        detection_parameters['voxel_size_x'] = detection_parameters['voxel_size'][2]
 
     #Setting default spot size to 1.5 voxel
     if detection_parameters.get('spot_size') is None :
-        detection_parameters['spot_size_z'] = round(detection_parameters['voxel_size_z']*1.5) if not detection_parameters['voxel_size_z'] is None else None
-        detection_parameters['spot_size_y'] = round(detection_parameters['voxel_size_y']*1.5) if not detection_parameters['voxel_size_y'] is None else None
-        detection_parameters['spot_size_x'] = round(detection_parameters['voxel_size_x']*1.5) if not detection_parameters['voxel_size_x'] is None else None
+        detection_parameters['spot_size_z'] = round(detection_parameters['voxel_size_z']*1.5) if isinstance(detection_parameters['voxel_size_z'], (float,int)) else None
+        detection_parameters['spot_size_y'] = round(detection_parameters['voxel_size_y']*1.5) if isinstance(detection_parameters['voxel_size_y'],(float,int)) else None
+        detection_parameters['spot_size_x'] = round(detection_parameters['voxel_size_x']*1.5) if isinstance(detection_parameters['voxel_size_x'],(float,int)) else None
 
     while True :
         detection_parameters = detection_parameters_promt(
@@ -275,7 +275,8 @@ def _launch_detection(image, image_input_values: dict) :
     
     if type(threshold) == type(None) :     
         threshold = threshold_penalty * compute_auto_threshold(image, voxel_size=voxel_size, spot_radius=spot_size, log_kernel_size=log_kernel_size, minimum_distance=minimum_distance)
-    
+        threshold = max(threshold,15) # Force threshold to be at least 15 to match napari widget and to not have too many spots for weak configs
+
     filtered_image = _apply_log_filter(
         image=image,
         voxel_size=voxel_size,
@@ -827,7 +828,7 @@ def _create_threshold_slider(
             'size': 5, 
             'scale' : scale, 
             'face_color' : 'transparent', 
-            'edge_color' : 'red', 
+            'border_color' : 'red', 
             'symbol' : 'disc', 
             'opacity' : 0.7, 
             'blending' : 'translucent', 
