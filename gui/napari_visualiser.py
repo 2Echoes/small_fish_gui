@@ -55,6 +55,8 @@ def correct_spots(
     for im, color in zip(other_images, other_colors) :  
         Viewer.add_image(im, scale=scale, blending='additive', visible=False, colormap=color, contrast_limits=[im.min(), im.max()])
 
+
+
     single_layer = Viewer.add_points(  # single molecule spots; this layer can be update by user.
         spots, 
         size = 5, 
@@ -65,7 +67,7 @@ def correct_spots(
         symbol= 'disc', 
         name= 'single spots',
         features={
-            "cluster_id" : spot_cluster_id if not spot_cluster_id is None else [],
+            "cluster_id" : spot_cluster_id if not spot_cluster_id is None else [None] * len(spots),
             "end" : [True] * len(spots)
             }
         )
@@ -127,10 +129,6 @@ def correct_spots(
     Viewer.show(block=False)
     napari.run()
 
-    new_spots = np.concatenate([
-        single_layer.data,
-        single_layer.features.loc[:,["cluster_id"]].to_numpy()
-    ], axis=1).astype(int)
 
     if type(clusters) != type(None) :
         new_clusters = np.concatenate([
@@ -138,10 +136,16 @@ def correct_spots(
             cluster_layer.features.loc[:,["spot_number","cluster_id"]].to_numpy()
         ],axis=1)
 
+        new_spots = np.concatenate([
+            single_layer.data,
+            single_layer.features.loc[:,["cluster_id"]].to_numpy()
+        ], axis=1).astype(int)
+
         new_cluster_radius = widget_cluster_updater.cluster_radius
         new_min_spot_number = widget_cluster_updater.min_spot
 
-    else : 
+    else :
+        new_spots = single_layer.data 
         new_clusters = None
         new_cluster_radius = None
         new_min_spot_number = None
