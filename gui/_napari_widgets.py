@@ -133,7 +133,7 @@ class SegmentationReseter(NapariWidget) :
     def __init__(self, label_list: 'list[Labels]'):
         self.label_list = label_list
         if len(self.label_list) == 0 : raise ValueError("Empty label list")
-        self.save = self._get_save()
+        self.save = self._get_save(label_list)
         super().__init__()
         
     
