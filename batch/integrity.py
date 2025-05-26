@@ -8,6 +8,7 @@ import bigfish.stack as stack
 import numpy as np
 import FreeSimpleGUI as sg
 
+from ..hints import pipeline_parameters
 from ..pipeline._preprocess import check_integrity, convert_parameters_types, ParameterInputError, _check_segmentation_parameters
 from ..pipeline.segmentation import _cast_segmentation_parameters
 
@@ -100,7 +101,7 @@ def check_segmentation_parameters(
     return segmentation_is_ok, values
 
 def check_detection_parameters(
-        values,
+        values : pipeline_parameters,
         do_dense_region_deconvolution,
         do_clustering,
         is_multichannel,
@@ -117,7 +118,7 @@ def check_detection_parameters(
             do_dense_region_deconvolution=do_dense_region_deconvolution,
             do_clustering=do_clustering,
             multichannel=is_multichannel,
-            segmentation_done=None,
+            segmentation_done= values['do_segmentation'],
             map_=map_,
             shape=shape
         )
