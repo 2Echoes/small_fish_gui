@@ -71,7 +71,20 @@ def write_list_of_results(
     return True
 
 
-def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= True, do_feather= False, do_csv=False, overwrite=False, reset_index=True) :
+def write_results(
+        dataframe: pd.DataFrame, 
+        path:str, 
+        filename:str, 
+        do_excel= True, 
+        do_feather= False, 
+        do_csv=False, 
+        overwrite=False, 
+        reset_index=True, 
+        batch_mode = False,
+        header = True,
+        xlsx_start_line = 1,
+        ) :
+    
     check_parameter(dataframe= pd.DataFrame, path= str, filename = str, do_excel = bool, do_feather = bool)
 
     if len(dataframe) == 0 : return True
@@ -103,16 +116,20 @@ def write_results(dataframe: pd.DataFrame, path:str, filename:str, do_excel= Tru
 
     if reset_index : dataframe = dataframe.reset_index(drop=True)
 
-    if do_csv : dataframe.to_csv(path + new_filename + '.csv', sep=";")
+    if do_csv : 
+        if batch_mode : mode = 'a'
+        else : mode = 'w'
+        dataframe.to_csv(path + new_filename + '.csv', sep=";", header=header, mode=mode)
     if do_excel : 
         if len(dataframe) < MAX_LEN_EXCEL :
-            dataframe.to_excel(path + new_filename + '.xlsx')
+            dataframe.to_excel(path + new_filename + '.xlsx', header=header, startrow=xlsx_start_line)
         else : 
             print("Error : Table too big to be saved in excel format.")
             return False
     
-    if do_feather : 
-        dataframe.to_parquet(path + new_filename + '.parquet')
+    if do_feather :
+        print("feather saving is depreciated, please use csv instead") 
+        pass
 
     return True
 
