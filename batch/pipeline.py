@@ -49,6 +49,9 @@ def batch_pipeline(
     if parameters['save segmentation'] : os.makedirs(main_dir + "segmentation/", exist_ok=True)
     if parameters['save detection'] : os.makedirs(main_dir + "detection/", exist_ok=True)
     if parameters['extract spots'] : os.makedirs(main_dir + "results/spots_extraction", exist_ok=True)
+    first_save = True # init for excel append
+    append_to_line = 1 #Start at line one
+    cell_append_to_line = 1 #Start at line one
 
     #Setting spot detection dimension
     parameters['dim'] = 3 if is_3D else 2
@@ -61,6 +64,12 @@ def batch_pipeline(
 
     error_log = open(main_dir + "error_log", mode='w')
     error_count = 0
+
+    #These columns usually kept for coloc analysis will be dropped for memory gain in batch mode
+    COLUMNS_TO_DROP = ['image', 'spots', 'clusters', 'rna_coords', 'cluster_coords',"rna_coords", "cluster_coords", "free_spots_coords", "clustered_spots_coords"]
+    for col in COLUMNS_TO_DROP :
+                if col in cell_results_df : cell_results_df.drop(columns=col)
+                if col in results_df : results_df.drop(columns=col)
 
     for acquisition_id, file in enumerate(filenames_list) :
         try :
@@ -192,6 +201,10 @@ def batch_pipeline(
             frame_results=frame_result,
             )
 
+            for col in COLUMNS_TO_DROP :
+                if col in new_cell_results_df : new_cell_results_df.drop(columns=col)
+                if col in new_results_df : new_results_df.drop(columns=col)
+
             results_df = pd.concat([
                 results_df.reset_index(drop=True), new_results_df.reset_index(drop=True)
             ], axis=0)
@@ -202,6 +215,10 @@ def batch_pipeline(
 
 
             #6. Saving results
+            if parameters['xlsx'] :
+                if first_save : xlsx_header = True
+                else : xlsx_header = False
+
             window_print(batch_window,"saving image_results...")
             #1 file per batch + 1 file per batch if segmentation
             acquisition_success = write_results(
@@ -212,7 +229,12 @@ def batch_pipeline(
                 do_feather= parameters["feather"], 
                 do_csv= parameters["csv"],
                 overwrite=True,
+                batch_mode=True,
+                header=first_save,
+                xlsx_start_line=append_to_line
                 )
+            append_to_line += len(results_df)
+            results_df = results_df.drop(results_df.index)
 
             if do_segmentation :
                 cell_success = write_results(
@@ -223,9 +245,15 @@ def batch_pipeline(
                     do_feather= parameters["feather"], 
                     do_csv= parameters["csv"],
                     overwrite=True,
+                    batch_mode=True,
+                    header=first_save,
+                    xlsx_start_line=cell_append_to_line
                     )
-
+                cell_append_to_line += len(cell_results_df)
+                cell_results_df = cell_results_df.drop(cell_results_df.index)
+            first_save = False
             window_print(batch_window,"Sucessfully saved.")
+
 
         except Exception as error :
             
