@@ -218,9 +218,9 @@ def initiate_detection(user_parameters : pipeline_parameters, map_, shape) :
         pass
     else :
         detection_parameters['voxel_size'] = [round(v) if isinstance(v, (float,int)) else None for v in voxel_size]
-        detection_parameters['voxel_size_z'] = detection_parameters['voxel_size'][0]
-        detection_parameters['voxel_size_y'] = detection_parameters['voxel_size'][1]
-        detection_parameters['voxel_size_x'] = detection_parameters['voxel_size'][2]
+        detection_parameters['voxel_size_z'] = detection_parameters['voxel_size'][0] if isinstance(detection_parameters['voxel_size'][0], (float,int)) else None
+        detection_parameters['voxel_size_y'] = detection_parameters['voxel_size'][1] if isinstance(detection_parameters['voxel_size'][1], (float,int)) else None
+        detection_parameters['voxel_size_x'] = detection_parameters['voxel_size'][2] if isinstance(detection_parameters['voxel_size'][2], (float,int)) else None
 
     #Setting default spot size to 1.5 voxel
     if detection_parameters.get('spot_size') is None :
