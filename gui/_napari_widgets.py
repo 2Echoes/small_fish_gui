@@ -56,7 +56,7 @@ class ClusterWizard(ABC) :
 CLUSTER_WIZARDS = []
 def register_cluster_wizard(cls):
     """
-    Helper to register all clusters related class
+    Helper to register all clusters related wizard class. Object to be instanciated upon launching napari but that have no widget.
     """
     CLUSTER_WIZARDS.append(cls)
     return cls
@@ -198,6 +198,8 @@ class ClusterIDSetter(ClusterWidget) :
                     new_spot_number = len(self.single_layer.features.loc[self.single_layer.features['cluster_id'] == cluster_id])
                     self.cluster_layer.features.loc[self.cluster_layer.features['cluster_id'] == cluster_id, ["spot_number"]] = new_spot_number
                 self.cluster_layer.events.features()
+            else :
+                print(f"Not cluster with id {cluster_id} was found.")
 
             self.cluster_layer.selected_data.clear()
 
@@ -490,7 +492,6 @@ class ClusterCleaner(ClusterWizard) :
 
         def delete_empty_cluster() :
             drop_idx = self.cluster_layer.features[self.cluster_layer.features['spot_number'] == 0].index
-            print("drop_idx : ",drop_idx)
             
             if len(drop_idx) > 0 :
                 print("Removing {} empty cluster(s)".format(len(drop_idx)))
