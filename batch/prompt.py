@@ -119,7 +119,7 @@ def batch_promp(
         [save_detection_box],
         [extract_spots_box],
         [sg.Text("Data extension", font=('bold',15), pad=(0,10))],
-        [sg.Checkbox(".csv", key='csv'),sg.Checkbox(".xlsx", key='xlsx'),sg.Checkbox(".feather", key='feather'),],
+        [sg.Checkbox(".csv", key='csv'),sg.Checkbox(".xlsx", key='xlsx')],
         [apply_output_button],
     ]
     output_tab = sg.Tab("Output", output_layout, visible=True)
