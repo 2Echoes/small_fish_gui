@@ -9,7 +9,7 @@ AVAILABLE_ARGUMENTS = {
 
 
 def main():
-    import small_fish_gui.pipeline.main
+    import small_fish_gui.main_menu
 
 def _get_version() :
     return __version__

@@ -227,6 +227,8 @@ def batch_promp(
                 timeout = 500
                 print("Welcome to small fish batch analysis. Please start by loading some files and setting parameters.")
 
+            if values is None : return results_df, cell_results_df, acquisition_id, preset, False, None,None
+            
             batch_folder = values.get('Batch_folder')
             is_multichanel = values.get('is_multichannel')
             is_3D = values.get('is_3D_stack')
