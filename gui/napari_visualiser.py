@@ -134,7 +134,7 @@ def correct_spots(
         new_clusters = np.concatenate([
             cluster_layer.data,
             cluster_layer.features.loc[:,["spot_number","cluster_id"]].to_numpy()
-        ],axis=1)
+        ],axis=1).astype(int)
 
         new_spots = np.concatenate([
             single_layer.data,
@@ -145,7 +145,7 @@ def correct_spots(
         new_min_spot_number = widget_cluster_updater.min_spot
 
     else :
-        new_spots = single_layer.data 
+        new_spots = single_layer.data.astype(int) 
         new_clusters = None
         new_cluster_radius = None
         new_min_spot_number = None
