@@ -424,7 +424,5 @@ def batch_promp(
         except Exception as e :
             stream_output.restore_stderr()
             stream_output.restore_stdout()
+            window.close()
             raise e
-
-
-    window.close()

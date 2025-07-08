@@ -63,10 +63,17 @@ def check_channel_map_integrity(
         ) :
     
     #Check integrity
-    channels_values = np.array(list(maping.values()), dtype= int)
+    try :
+        channels_values = np.array(list(maping.values()), dtype= int)
+    except Exception :
+        res = False
+        sg.popup("Incorrect values for channel mapping. ({0})".format(maping.values()))
+        return res
+
     total_channels = len(maping)
     unique_channel = len(np.unique(channels_values))
     res= True
+
 
     if expected_dim != total_channels :
         sg.popup("Image has {0} dimensions but {1} were mapped.".format(expected_dim, total_channels))
