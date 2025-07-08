@@ -302,8 +302,8 @@ def _detection_layout(
         size= 13
     )
     layout += bool_layout(
-        parameters= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
-        preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
+        parameters= ['do_spots_csv', 'do_spots_excel'],
+        preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),]
     )
 
     return layout

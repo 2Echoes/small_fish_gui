@@ -359,8 +359,6 @@ def launch_post_detection(image, spots, image_input_values: dict,) :
         fov_res['spotsSignal_median'], fov_res['spotsSignal_mean'], fov_res['spotsSignal_std'] = np.NaN, np.NaN, np.NaN
     else :
         if dim == 3 :
-            print(spots)
-            print(spots.shape)
             Z,Y,X = list(zip(*spots))
             spots_values = image[Z,Y,X]
         else :
