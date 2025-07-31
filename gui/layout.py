@@ -175,6 +175,8 @@ def _segmentation_layout(
         segment_only_nuclei_preset=False, 
         saving_path_preset=os.getcwd(), 
         filename_preset='cell_segmentation.png',
+        cytoplasm_segmentation_3D = False,
+        nucleus_segmentation_3D = False,
         ) :
     
     USE_GPU = use_gpu()
@@ -191,7 +193,8 @@ def _segmentation_layout(
     layout += [
         add_header("Cell Segmentation"),
         [sg.Text("Choose cellpose model for cytoplasm: \n")],
-        combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)
+        combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset),
+        bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'], header='Cytoplasm segmentation')
                         ]
                         
     if multichannel : layout += parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])
@@ -202,7 +205,8 @@ def _segmentation_layout(
     layout += [
             add_header("Nucleus segmentation"),
             [sg.Text("Choose cellpose model for nucleus: \n")],
-              combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
+              combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset),
+              bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'], header='Nucleus segmentation')
                 ]
     
     if multichannel : layout += parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])
