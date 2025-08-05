@@ -50,28 +50,7 @@ Then launch Small fish :
 python -m small_fish_gui
 ```
 
-## Cellpose configuration
-
-For the following steps first activate your small fish environnement : 
-
-```bash
-conda activate small_fish
-```
-
-
-### Training cellpose
-If you want to train your own cellpose model or import custom model from exterior source I recommend doing so from the cellpose GUI. Note that Small fish uses mean projection to segment images in 2D, if you want to retrain a cellpose model to fit your data it is recommended to do so on mean or max projection of your data.
-
-To install the GUI run : 
-
-```bash
-pip install cellpose[gui]
-```
-Then to run cellpose
-```bash
-cellpose
-```
-Note that for training it is recommended to first set up your GPU as training computation can be quite long otherwise. To get started with how to train your models you can watch the [video](https://www.youtube.com/watch?v=5qANHWoubZU) from cellpose authors.
+You are all set! Try it yourself or check the [get started](https://github.com/2Echoes/small_fish_gui/wiki/Get-started) section in the wiki.
 
 ## Developpement
 
