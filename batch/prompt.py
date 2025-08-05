@@ -76,17 +76,17 @@ def batch_promp(
     segmentation_layout = _segmentation_layout(
         multichannel=True, 
         cytoplasm_model_preset=preset.setdefault("cyto_model_name",'cyto3'),
-        cytoplasm_channel_preset=preset.setdefault("cytoplasm channel",0),
-        cyto_diameter_preset=preset.setdefault("cytoplasm diameter",180),
+        cytoplasm_channel_preset=preset.setdefault("cytoplasm_channel",0),
+        cyto_diameter_preset=preset.setdefault("cytoplasm_diameter",180),
         nucleus_model_preset=preset.setdefault("nucleus_model_name",'nuclei'),
         nucleus_channel_preset=preset.setdefault("nucleus channel",0),
-        nucleus_diameter_preset=preset.setdefault("nucleus diameter",150),
-        segment_only_nuclei_preset=preset.setdefault("Segment only nuclei",False)
+        nucleus_diameter_preset=preset.setdefault("nucleus_diameter",150),
+        segment_only_nuclei_preset=preset.setdefault("segment_only_nuclei",False)
         )
     
     apply_segmentation_button = sg.Button('apply', key='apply-segmentation')
     segmentation_layout += [[apply_segmentation_button]]
-    seg_keys_to_hide = ['show segmentation', 'saving path', 'filename', 'other_nucleus_image']
+    seg_keys_to_hide = ['show_segmentation', 'saving path', 'filename', 'other_nucleus_image']
     segmentation_tab = sg.Tab("Segmentation", segmentation_layout, visible=False)
 
     #Detection tab

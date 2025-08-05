@@ -100,11 +100,11 @@ def batch_pipeline(
                 cytoplasm_label, nucleus_label = cell_segmentation(
                     im_seg,
                     cyto_model_name= parameters['cyto_model_name'],
-                    cyto_diameter= parameters['cytoplasm diameter'],
+                    cyto_diameter= parameters['cytoplasm_diameter'],
                     nucleus_model_name= parameters['nucleus_model_name'],
-                    nucleus_diameter= parameters['nucleus diameter'],
-                    channels=[parameters['cytoplasm channel'], parameters['nucleus channel']],
-                    do_only_nuc=parameters['Segment only nuclei']
+                    nucleus_diameter= parameters['nucleus_diameter'],
+                    channels=[parameters['cytoplasm_channel'], parameters['nucleus channel']],
+                    do_only_nuc=parameters['segment_only_nuclei']
                     )
 
                 parameters['segmentation_done'] = True
@@ -117,12 +117,12 @@ def batch_pipeline(
 
                     if parameters['save segmentation'] :
                         plot_segmentation(
-                            cyto_image=im_seg[parameters['cytoplasm channel']],
+                            cyto_image=im_seg[parameters['cytoplasm_channel']],
                             cyto_label= cytoplasm_label,
                             nuc_image= im_seg[parameters['nucleus channel']],
                             nuc_label=nucleus_label,
                             path= main_dir + "segmentation/" + file,
-                            do_only_nuc= parameters['Segment only nuclei'],
+                            do_only_nuc= parameters['segment_only_nuclei'],
                         )
 
             else :

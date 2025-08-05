@@ -12,6 +12,9 @@ class pipeline_parameters(TypedDict) :
             beta : float
             channel_to_compute : int
             cluster_size : int
+            cyto_model_name : str
+            cytoplasm_diameter : int
+            cytoplasm_channel : int
             do_cluster_computation : bool
             do_dense_regions_deconvolution : bool
             do_spots_excel : bool
@@ -34,8 +37,11 @@ class pipeline_parameters(TypedDict) :
             minimum_distance_z : float
             is_3D_stack : bool
             is_multichannel : bool
-            show_napari_corrector : bool
             nucleus_channel_signal : int
+            nucleus_diameter : int
+            nucleus_model_name : str
+            nucleus_channel : int
+            other_nucleus_image : str
             reodered_shape : Tuple[int,int,int,int,int]
             do_segmentation : bool
             segmentation_done : bool
@@ -46,6 +52,11 @@ class pipeline_parameters(TypedDict) :
             spot_size_x : int
             spot_size_y : int
             spot_size_z : int
+            segment_only_nuclei : bool
+            cytoplasm_segmentation_3D : bool
+            nucleus_segmentation_3D : bool
+            show_napari_corrector : bool
+            show_segmentation : bool
             threshold : int
             threshold_penalty : int
             time_stack : None
