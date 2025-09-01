@@ -56,18 +56,22 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
     while True : # Loop if show_segmentation 
         #Default parameters
         cyto_model_name = segmentation_parameters.setdefault('cyto_model_name', 'cyto3')
-        cyto_size = segmentation_parameters.setdefault('cytoplasm diameter', 180)
-        cytoplasm_channel = segmentation_parameters.setdefault('cytoplasm channel', 0)
+        cyto_size = segmentation_parameters.setdefault('cytoplasm_diameter', 180)
+        cytoplasm_channel = segmentation_parameters.setdefault('cytoplasm_channel', 0)
         nucleus_model_name = segmentation_parameters.setdefault('nucleus_model_name', 'nuclei')
-        nucleus_size = segmentation_parameters.setdefault('nucleus diameter', 130)
+        nucleus_size = segmentation_parameters.setdefault('nucleus_diameter', 130)
         nucleus_channel = segmentation_parameters.setdefault('nucleus channel', 0)
         other_nucleus_image = segmentation_parameters.setdefault('other_nucleus_image',None)
         path = os.getcwd()
-        show_segmentation = segmentation_parameters.setdefault('show segmentation', False)
-        segment_only_nuclei = segmentation_parameters.setdefault('Segment only nuclei', False)
+        show_segmentation = segmentation_parameters.setdefault('show_segmentation', False)
+        segment_only_nuclei = segmentation_parameters.setdefault('segment_only_nuclei', False)
+        multichannel = segmentation_parameters.get('is_multichannel')
+        is_3D_stack = segmentation_parameters.get('is_3D_stack')
+        anisotropy = segmentation_parameters.setdefault('anisotropy', 1)
+        cytoplasm_segmentation_3D = segmentation_parameters.setdefault('cytoplasm_segmentation_3D', False)
+        nucleus_segmentation_3D = segmentation_parameters.setdefault('nucleus_segmentation_3D', False)
         filename = segmentation_parameters['filename']
         available_channels = list(range(image.shape[0]))
-        multichannel = segmentation_parameters.get('is_multichannel')
 
 
     #Ask user for parameters
@@ -86,6 +90,10 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 segment_only_nuclei_preset=segment_only_nuclei,
                 filename_preset=filename,
                 multichannel=multichannel,
+                is_3D_stack=is_3D_stack,
+                cytoplasm_segmentation_3D=cytoplasm_segmentation_3D,
+                nucleus_segmentation_3D=nucleus_segmentation_3D,
+                anisotropy=anisotropy,
             )
 
             event, values = prompt(layout)
@@ -99,16 +107,16 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
 
             #Extract parameters
             values = _cast_segmentation_parameters(values)
-            do_only_nuc = values['Segment only nuclei']
+            do_only_nuc = values['segment_only_nuclei']
             cyto_model_name = values['cyto_model_name']
-            cyto_size = values['cytoplasm diameter']
-            cytoplasm_channel = values['cytoplasm channel']
+            cyto_size = values['cytoplasm_diameter']
+            cytoplasm_channel = values['cytoplasm_channel']
             nucleus_model_name = values['nucleus_model_name']
-            nucleus_size = values['nucleus diameter']
+            nucleus_size = values['nucleus_diameter']
             nucleus_channel = values['nucleus channel']
             other_nucleus_image = values['other_nucleus_image']
             path = values['saving path'] if values['saving path'] != '' else None
-            show_segmentation = values['show segmentation']
+            show_segmentation = values['show_segmentation']
             filename = values['filename'] if type(path) != type(None) else None
             channels = [cytoplasm_channel, nucleus_channel] if multichannel else [...,...]
 
@@ -120,16 +128,24 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 relaunch= True
             if multichannel :
                 if cytoplasm_channel not in available_channels and not do_only_nuc:
-                    sg.popup('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+                    sg.popup('For given input image please select channel in {0}\ncytoplasm_channel : {1}'.format(available_channels, cytoplasm_channel))
                     relaunch= True
-                    values['cytoplasm channel'] = user_parameters.setdefault('cytoplasm channel',0)
+                    values['cytoplasm_channel'] = user_parameters.setdefault('cytoplasm_channel',0)
             else :
                 cytoplasm_channel = ...
+
+            if is_3D_stack :
+                try :
+                    int(anisotropy)
+                except ValueError :
+                    sg.popup("Anisotropy must be an integer.")
+                    relaunch = True
+                    values['anisotropy'] = user_parameters.setdefault('anisotropy', 1)
 
             if type(cyto_size) not in [int, float] and not do_only_nuc:
                 sg.popup("Incorrect cytoplasm size.")
                 relaunch= True
-                values['cytoplasm diameter'] = user_parameters.setdefault('diameter', 30)
+                values['cytoplasm_diameter'] = user_parameters.setdefault('diameter', 30)
 
             if type(nucleus_model_name) != str :
                 sg.popup('Invalid nucleus model name.')
@@ -147,7 +163,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             if type(nucleus_size) not in [int, float] :
                 sg.popup("Incorrect nucleus size.")
                 relaunch= True
-                values['nucleus diameter'] = user_parameters.setdefault('nucleus diameter', 30)
+                values['nucleus_diameter'] = user_parameters.setdefault('nucleus_diameter', 30)
             if other_nucleus_image != '' :
                 if not os.path.isfile(other_nucleus_image) :
                     sg.popup("Nucleus image is not a file.")
@@ -212,6 +228,9 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 channels=channels,
                 do_only_nuc=do_only_nuc,
                 external_nucleus_image = nucleus_image,
+                anisotropy=anisotropy,
+                nucleus_3D_segmentation=nucleus_segmentation_3D,
+                cyto_3D_segmentation=cytoplasm_segmentation_3D,
                 )
 
         finally  : window.close()
@@ -284,43 +303,50 @@ def cell_segmentation(
         image, cyto_model_name, 
         nucleus_model_name, 
         channels, cyto_diameter, 
-        nucleus_diameter, 
+        nucleus_diameter,
+        nucleus_3D_segmentation=False,
+        cyto_3D_segmentation=False,
+        anisotropy = 1,
         do_only_nuc=False,
         external_nucleus_image = None,
         ) :
 
     nuc_channel = channels[1]
-    if not do_only_nuc : 
-        cyto_channel = channels[0]
-        if image[cyto_channel].ndim >= 3 :
-            cyto = stack.maximum_projection(image[cyto_channel])
-        else : 
-            cyto = image[cyto_channel]
+    
 
     if type(external_nucleus_image) != type(None) :
         nuc = external_nucleus_image
     else :
         nuc = image[nuc_channel]
 
-    if nuc.ndim >= 3 :
+    if nuc.ndim >= 3 and not nucleus_3D_segmentation:
         nuc = stack.maximum_projection(nuc)
+    nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0], do_3D=nucleus_3D_segmentation, anisotropy=anisotropy)
     
-    if not do_only_nuc :
+    if not do_only_nuc : 
+        cyto_channel = channels[0]
+        nuc = image[nuc_channel] if type(external_nucleus_image) != type(None) else external_nucleus_image
+
+        if image[cyto_channel].ndim >= 3 and not cyto_3D_segmentation:
+            cyto = stack.maximum_projection(image[cyto_channel])
+        else : 
+            cyto = image[cyto_channel]
+        if nuc.ndim >= 3 and not cyto_3D_segmentation:
+            nuc = stack.maximum_projection(nuc)
+
         image = np.zeros(shape=(2,) + cyto.shape)
         image[0] = cyto
         image[1] = nuc
         image = np.moveaxis(image, source=(0,1,2), destination=(2,0,1))
 
-    nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0])
-    if not do_only_nuc :
-        cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2])
+        cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2], do_3D=cyto_3D_segmentation, anisotropy=anisotropy)
         nuc_label, cytoplasm_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
     else :
         cytoplasm_label = nuc_label
 
     return cytoplasm_label, nuc_label
 
-def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
+def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D = False, anisotropy = 1) :
 
     model = models.CellposeModel(
         gpu= use_gpu(),
@@ -331,7 +357,8 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
         im,
         diameter= object_size_px,
         channels= channels,
-        do_3D= False,
+        do_3D= do_3D,
+        anisotropy=anisotropy
         )[0]
     label = np.array(label, dtype= np.int64)
     label = remove_disjoint(label)
@@ -340,7 +367,7 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0]) :
 
 def _cast_segmentation_parameters(values:dict) :
 
-    values.setdefault('cytoplasm channel',0)
+    values.setdefault('cytoplasm_channel',0)
     values.setdefault('nucleus channel',0)
 
     if values['cyto_model_name'] == '' :
@@ -349,8 +376,8 @@ def _cast_segmentation_parameters(values:dict) :
     if values['nucleus_model_name'] == '' :
         values['nucleus_model_name'] = None
 
-    try : #cytoplasm channel
-        values['cytoplasm channel'] = int(values['cytoplasm channel'])
+    try : #cytoplasm_channel
+        values['cytoplasm_channel'] = int(values['cytoplasm_channel'])
     except ValueError :
         pass
 
@@ -360,12 +387,12 @@ def _cast_segmentation_parameters(values:dict) :
         pass
 
     try : #object size
-        values['cytoplasm diameter'] = float(values['cytoplasm diameter'])
+        values['cytoplasm_diameter'] = float(values['cytoplasm_diameter'])
     except ValueError :
         pass
 
     try : #object size
-        values['nucleus diameter'] = float(values['nucleus diameter'])
+        values['nucleus_diameter'] = float(values['nucleus_diameter'])
     except ValueError :
         pass
     

@@ -15,13 +15,13 @@ z
 c 
 t 
 cyto_model_name 
-cytoplasm channel 
-cytoplasm diameter 
+cytoplasm_channel 
+cytoplasm_diameter 
 nucleus_model_name 
 nucleus channel 
-nucleus diameter 
-Segment only nuclei 
-show segmentation 
+nucleus_diameter 
+segment_only_nuclei 
+show_segmentation 
 saving path 
 filename 
 threshold 

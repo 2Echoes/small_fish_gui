@@ -163,7 +163,8 @@ def radio_layout(values, header=None, key=None) :
     return layout
 
 def _segmentation_layout(
-        multichannel, 
+        multichannel : bool,
+        is_3D_stack : bool,
         cytoplasm_model_preset= 'cyto3', 
         nucleus_model_preset= 'nuclei', 
         cytoplasm_channel_preset=0, 
@@ -175,6 +176,9 @@ def _segmentation_layout(
         segment_only_nuclei_preset=False, 
         saving_path_preset=os.getcwd(), 
         filename_preset='cell_segmentation.png',
+        cytoplasm_segmentation_3D = False,
+        nucleus_segmentation_3D = False,
+        anisotropy=1,
         ) :
     
     USE_GPU = use_gpu()
@@ -191,27 +195,32 @@ def _segmentation_layout(
     layout += [
         add_header("Cell Segmentation"),
         [sg.Text("Choose cellpose model for cytoplasm: \n")],
-        combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)
+        combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset),
                         ]
                         
-    if multichannel : layout += parameters_layout(['cytoplasm channel'],default_values= [cytoplasm_channel_preset])
+    if multichannel : layout += parameters_layout(['cytoplasm_channel'],default_values= [cytoplasm_channel_preset])
 
 
-    layout += parameters_layout(['cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset])
+    layout += parameters_layout(['cytoplasm_diameter'], unit= "px", default_values= [cyto_diameter_preset])
     #Nucleus parameters
     layout += [
             add_header("Nucleus segmentation"),
             [sg.Text("Choose cellpose model for nucleus: \n")],
-              combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)
+              combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset),
                 ]
     
     if multichannel : layout += parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])
     layout += path_layout(['other_nucleus_image'], preset=other_nucleus_image_preset)
-    layout += parameters_layout([ 'nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset])
-    layout += bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset)
+    layout += parameters_layout([ 'nucleus_diameter'],unit= "px", default_values= [nucleus_diameter_preset])
+    layout += bool_layout(["segment_only_nuclei"], preset=segment_only_nuclei_preset)
     
+    if is_3D_stack :
+        layout += bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'],)
+        layout += bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'],)
+        layout += parameters_layout(['anisotropy'], default_values=[anisotropy], unit='px')
+
     #Control plots
-    layout += bool_layout(['show segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)
+    layout += bool_layout(['show_segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)
     layout += path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)
     layout += parameters_layout(['filename'], default_values=[filename_preset], size= 25)
 
