@@ -90,7 +90,7 @@ def update_detection_tab(
 def update_segmentation_tab(tab_elmt : sg.Tab, segmentation_correct_text : sg.Text, do_segmentation, is_multichannel, is_mapping_ok) : 
     
     #Access elements
-    cytoplasm_channel_elmt = get_elmt_from_key(tab_elmt, key= 'cytoplasm channel')
+    cytoplasm_channel_elmt = get_elmt_from_key(tab_elmt, key= 'cytoplasm_channel')
     nucleus_channel_elmt = get_elmt_from_key(tab_elmt, key= 'nucleus channel')
     
     #Update values

@@ -55,7 +55,10 @@ def compute_Spots(
     index = tuple(index)
     spot_intensities_list = list(image[index])
     if type(nucleus_label) != type(None) :
-        in_nuc_list = list(nucleus_label.astype(bool)[index[-2:]]) #Only plane coordinates
+        if nucleus_label.ndim == 2 :
+            in_nuc_list = list(nucleus_label.astype(bool)[index[-2:]]) #Only plane coordinates
+        else :
+            in_nuc_list = list(nucleus_label.astype(bool)[index])
     else :
         in_nuc_list = np.NaN
     if type(cell_label) != type(None) :

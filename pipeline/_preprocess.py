@@ -314,19 +314,19 @@ def _check_segmentation_parameters(
 ) :
 
     available_channels = list(range(len(shape)))
-    do_only_nuc = user_parameters['Segment only nuclei']
+    do_only_nuc = user_parameters['segment_only_nuclei']
     cyto_model_name = user_parameters['cyto_model_name']
-    cyto_size = user_parameters['cytoplasm diameter']
-    cytoplasm_channel = user_parameters['cytoplasm channel']
+    cyto_size = user_parameters['cytoplasm_diameter']
+    cytoplasm_channel = user_parameters['cytoplasm_channel']
     nucleus_model_name = user_parameters['nucleus_model_name']
-    nucleus_size = user_parameters['nucleus diameter']
+    nucleus_size = user_parameters['nucleus_diameter']
     nucleus_channel = user_parameters['nucleus channel']
    
 
     if type(cyto_model_name) != str  and not do_only_nuc:
         raise ParameterInputError('Invalid cytoplasm model name.')
     if cytoplasm_channel not in available_channels and not do_only_nuc and is_multichannel:
-        raise ParameterInputError('For given input image please select channel in {0}\ncytoplasm channel : {1}'.format(available_channels, cytoplasm_channel))
+        raise ParameterInputError('For given input image please select channel in {0}\ncytoplasm_channel : {1}'.format(available_channels, cytoplasm_channel))
 
     if type(cyto_size) not in [int, float] and not do_only_nuc:
         raise ParameterInputError("Incorrect cytoplasm size.")
