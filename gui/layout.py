@@ -198,10 +198,10 @@ def _segmentation_layout(
         combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset),
                         ]
                         
-    if multichannel : layout += parameters_layout(['cytoplasm_channel'],default_values= [cytoplasm_channel_preset])
-
-
     layout += parameters_layout(['cytoplasm_diameter'], unit= "px", default_values= [cyto_diameter_preset])
+    if multichannel : layout += parameters_layout(['cytoplasm_channel'],default_values= [cytoplasm_channel_preset])
+    if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'],)
+
     #Nucleus parameters
     layout += [
             add_header("Nucleus segmentation"),
@@ -212,12 +212,11 @@ def _segmentation_layout(
     if multichannel : layout += parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])
     layout += path_layout(['other_nucleus_image'], preset=other_nucleus_image_preset)
     layout += parameters_layout([ 'nucleus_diameter'],unit= "px", default_values= [nucleus_diameter_preset])
-    layout += bool_layout(["segment_only_nuclei"], preset=segment_only_nuclei_preset)
+    layout += bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset, keys=["segment_only_nuclei"])
     
     if is_3D_stack :
-        layout += bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'],)
         layout += bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'],)
-        layout += parameters_layout(['anisotropy'], default_values=[anisotropy], unit='px')
+        layout += parameters_layout(['anisotropy'], default_values=[anisotropy])
 
     #Control plots
     layout += bool_layout(['show_segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)

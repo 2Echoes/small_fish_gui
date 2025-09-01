@@ -443,7 +443,11 @@ def launch_cell_extraction(
         image = stack.maximum_projection(image)
     if nucleus_signal.ndim == 3 :
         nucleus_signal = stack.maximum_projection(nucleus_signal)
-    
+    if cell_label.ndim == 3 :
+        cell_label = stack.maximum_projection(nucleus_signal)
+    if nucleus_label.ndim == 3 :
+        nucleus_label = stack.maximum_projection(nucleus_signal)
+
     cells_results = multistack.extract_cell(
         cell_label=cell_label,
         ndim=dim,

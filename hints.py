@@ -42,7 +42,7 @@ class pipeline_parameters(TypedDict) :
             nucleus_model_name : str
             nucleus_channel : int
             other_nucleus_image : str
-            reodered_shape : Tuple[int,int,int,int,int]
+            reordered_shape : Tuple[int,int,int,int,int]
             do_segmentation : bool
             segmentation_done : bool
             shape : Tuple[int,int,int,int,int]

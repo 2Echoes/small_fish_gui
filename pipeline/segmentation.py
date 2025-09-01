@@ -119,6 +119,8 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             show_segmentation = values['show_segmentation']
             filename = values['filename'] if type(path) != type(None) else None
             channels = [cytoplasm_channel, nucleus_channel] if multichannel else [...,...]
+            nucleus_segmentation_3D = values['nucleus_segmentation_3D']
+            cytoplasm_segmentation_3D = values['cytoplasm_segmentation_3D']
 
             relaunch= False
             #Checking integrity of parameters
@@ -218,7 +220,8 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 nuc_path = None
                 cyto_path = None
 
-
+            print("cytoplasm : ",cytoplasm_segmentation_3D )
+            print("nucleus : ",nucleus_segmentation_3D )
             cytoplasm_label, nucleus_label = cell_segmentation(
                 image,
                 cyto_model_name= cyto_model_name,
@@ -261,9 +264,9 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             nuc_proj = image[nucleus_channel]
             im_proj = image[cytoplasm_channel]
             if im_proj.ndim == 3 :
-                im_proj = stack.maximum_projection(im_proj)
+                im_proj = stack.mean_projection(im_proj)
             if nuc_proj.ndim == 3 :
-                nuc_proj = stack.maximum_projection(nuc_proj)
+                nuc_proj = stack.mean_projection(nuc_proj)
             
             #Call plots
             plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
@@ -318,21 +321,24 @@ def cell_segmentation(
         nuc = external_nucleus_image
     else :
         nuc = image[nuc_channel]
+    print(type(nuc))
 
     if nuc.ndim >= 3 and not nucleus_3D_segmentation:
-        nuc = stack.maximum_projection(nuc)
+        nuc = stack.mean_projection(nuc)
+    print("launch segmentation")
     nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0], do_3D=nucleus_3D_segmentation, anisotropy=anisotropy)
+    print("nuc segmentation done")
     
     if not do_only_nuc : 
         cyto_channel = channels[0]
-        nuc = image[nuc_channel] if type(external_nucleus_image) != type(None) else external_nucleus_image
+        nuc = image[nuc_channel] if type(external_nucleus_image) == type(None) else external_nucleus_image
 
         if image[cyto_channel].ndim >= 3 and not cyto_3D_segmentation:
-            cyto = stack.maximum_projection(image[cyto_channel])
+            cyto = stack.mean_projection(image[cyto_channel])
         else : 
             cyto = image[cyto_channel]
         if nuc.ndim >= 3 and not cyto_3D_segmentation:
-            nuc = stack.maximum_projection(nuc)
+            nuc = stack.mean_projection(nuc)
 
         image = np.zeros(shape=(2,) + cyto.shape)
         image[0] = cyto
@@ -350,16 +356,16 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D =
 
     model = models.CellposeModel(
         gpu= use_gpu(),
-        model_type= model_name,
+        pretrained_model= model_name,
     )
 
-    label = model.eval(
+    label, flow, style = model.eval(
         im,
         diameter= object_size_px,
-        channels= channels,
         do_3D= do_3D,
+        z_axis=0,
         anisotropy=anisotropy
-        )[0]
+        )
     label = np.array(label, dtype= np.int64)
     label = remove_disjoint(label)
     
