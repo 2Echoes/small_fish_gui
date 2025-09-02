@@ -18,7 +18,7 @@ Spot detection is performed via *big-fish* a python implementation of FishQuant 
 - Cell segmentation
 - Multichannel colocalisation
 
-<img src="https://github.com/2Echoes/small_fish_gui/tree/segmentation_3D/illustrations/Detection_Vitrine_signal.png" width="500" title="Cell segmentation with Cellpose" alt="Cell segmentation - cellpose">| <img src="https://github.com/2Echoes/small_fish_gui/tree/segmentation_3D/illustrations/Detection_Vitrine_filter.png" width="500" title="Spot detection; clustering visualisation on Napari" alt="detection; Napari example">
+<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D.png" width="500" title="Cell segmentation with Cellpose" alt="Cell segmentation - cellpose">| <img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D_with_labels.png" width="500" title="Spot detection; clustering visualisation on Napari" alt="detection; Napari example">
 
 ## Installation
 If you don't have a python installation yet I would recommend the [miniconda distribution](https://docs.anaconda.com/free/miniconda/miniconda-other-installer-links/).
