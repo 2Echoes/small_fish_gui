@@ -18,10 +18,10 @@ Spot detection is performed via *big-fish* a python implementation of FishQuant 
 - Cell segmentation
 - Multichannel colocalisation
 
-|Segmentation|Detection|
-|:----------:|:--------|
+|Segmentation|Detection - Clustering|
+|:----------:|:-------:|
 |<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D.png" width="500" title="Fish_signal" alt="Fish signal">|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine.png" width="500" title="Detection_signal" alt="Detection_signal">|
-|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D_with_labels.png" width="500" title="Cell segmentation" alt="Segmentation">|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/DetectionVitrine_filtre.png" width="500" title="Detection filter" alt="detection">|
+|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D_with_labels.png" width="500" title="Cell segmentation" alt="Segmentation">|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine_no_spots.png" width="500" title="Detection filter" alt="detection">|
 
 ## Installation
 If you don't have a python installation yet I would recommend the [miniconda distribution](https://docs.anaconda.com/free/miniconda/miniconda-other-installer-links/).
