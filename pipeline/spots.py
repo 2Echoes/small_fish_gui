@@ -81,4 +81,27 @@ def compute_Spots(
 
     return Spots
     
+def load_spots(
+        table_path : str
+        ) -> pd.DataFrame :
+    
+    if table_path.endswith('.csv') :
+        Spots = pd.read_csv(table_path, sep= ";")
+    elif table_path.endswith('.xlsx') or table_path.endswith('.xls') :
+        Spots = pd.read_excel(table_path)
+    elif table_path.endswith('.feather') :
+        Spots = pd.read_feather(table_path)
+    else :
+        raise ValueError("Table format not recognized. Please use .csv, .xlsx or .feather files.")
+    
+    if "coordinates" in Spots.columns :
+        coordinates = Spots['coordinates'].to_list()
+    elif "y" in Spots.columns and "x" in Spots.columns :
+        if "z" in Spots.columns :
+            coordinates = list(zip(Spots['z'], Spots['y'], Spots['x']))
+        else :
+            coordinates = list(zip(Spots['y'], Spots['x']))
+    else :
+        raise ValueError("Coordinates information not found in table. Please provide a 'coordinates' column with tuples (z,y,x) or (y,x) or 'y' and 'x' columns.")
 
+    return coordinates

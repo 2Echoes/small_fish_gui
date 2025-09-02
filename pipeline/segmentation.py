@@ -363,7 +363,7 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D =
         im,
         diameter= object_size_px,
         do_3D= do_3D,
-        z_axis=0,
+        z_axis=0 if do_3D else None,
         anisotropy=anisotropy
         )
     label = np.array(label, dtype= np.int64)
