@@ -22,7 +22,7 @@ from .hints import pipeline_parameters
 #'Global' parameters
 user_parameters = pipeline_parameters({'segmentation_done' : False}) #TypedDict
 acquisition_id = -1
-result_df = pd.DataFrame(columns=['acquisition_id'])
+result_df = pd.DataFrame(columns=['acquisition_id', 'name'])
 cell_result_df = pd.DataFrame(columns=['acquisition_id'])
 global_coloc_df = pd.DataFrame()
 cell_coloc_df = dict()
@@ -32,6 +32,7 @@ nucleus_label = None
 while True : #Break this loop to close small_fish
     try :
         result_df = result_df.reset_index(drop=True)
+
         event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
 
         if event == 'Add detection' :
@@ -71,10 +72,8 @@ while True : #Break this loop to close small_fish
             nucleus_label, cytoplasm_label, user_parameters['segmentation_done'] = load_segmentation(nucleus_label, cytoplasm_label, user_parameters['segmentation_done'])
         
         elif event == 'Compute colocalisation' :
-            result_tables = values.setdefault('result_table', []) #Contains the lines selected by the user on the sum-up array.
 
             global_coloc_df, cell_coloc_df = compute_colocalisation(
-                result_tables,
                 result_dataframe=result_df,
                 cell_result_dataframe=cell_result_df,
                 global_coloc_df=global_coloc_df,

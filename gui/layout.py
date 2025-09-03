@@ -316,18 +316,18 @@ def _detection_layout(
 
     return layout
 
-def colocalization_layout() :
+def colocalization_layout(spot_list : list) :
     layout = [
         [sg.Push(), sg.Text("Co-localization", size=25, font="bold"), sg.Push()],
         [sg.VPush()],
         [sg.Text("Spots 1", size = 10)],
-        [sg.DropDown(values=["","spots1","spots2"], key="spots1_dropdown"), sg.Input(disabled=True, text_color="black"),sg.FileBrowse("Load spot extraction", key="spots_1_browse")],
+        [sg.DropDown(values=[""] + spot_list, key="spots1_dropdown"), sg.Input(disabled=True, text_color="black"),sg.FileBrowse("Load spot extraction", key="spots1_browse")],
         [sg.Text("Spots 2", size = 10)],
-        [sg.DropDown(values=["","spots1","spots2"], key="spots2_dropdown"), sg.Input(disabled=True, text_color="black"),sg.FileBrowse("Load spot extraction", key="spots_2_browse")],
+        [sg.DropDown(values=[""] + spot_list, key="spots2_dropdown"), sg.Input(disabled=True, text_color="black"),sg.FileBrowse("Load spot extraction", key="spots2_browse")],
     ]
 
-    layout += parameters_layout(['colocalisation distance'], unit= 'nm', header= 'Colocalisation', default_values= 0,),
-    layout += [[sg.Push(),sg.Button("Ok"),sg.Push(),],
+    layout += parameters_layout(['colocalisation distance'], unit= 'nm', default_values= 0,)
+    layout += [[sg.Push(),sg.Button("Ok"),sg.Button("Cancel"),sg.Push(),],
         [sg.VPush()]
     ]
 

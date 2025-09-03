@@ -1,6 +1,8 @@
 from ._custom_errors import MissMatchError
 from ..gui import coloc_prompt, add_default_loading
+from .spots import load_spots
 
+import os
 import numpy as np
 import pandas as pd
 import FreeSimpleGUI as sg
@@ -152,25 +154,46 @@ def spots_colocalisation(spot_list1:list, spot_list2:list, distance: float, voxe
     return count
 
 
-   
+def initiate_colocalisation(result_tables : pd.DataFrame) :
 
+    result_tables = result_tables.set_index('acquisition_id', drop=False)
+    available_spots = dict(zip(result_tables['acquisition_id'].astype(str).str.cat(result_tables['name'], result_tables.index)))
 
-
-def initiate_colocalisation(result_tables) :
-    if len(result_tables) != 2 : 
-        sg.popup("Please select 2 acquisitions for colocalisation (Ctrl + click in the table)")
-        return False
-    else : 
-        while True :
-            colocalisation_distance = coloc_prompt()
-            if colocalisation_distance == False : return False
-            try : 
-                colocalisation_distance = int(colocalisation_distance)
-            except Exception :
-                sg.popup("Incorrect colocalisation distance")
+    while True :
+        try : 
+            colocalisation_distance, spots1, spots2 = coloc_prompt(list(available_spots.values()))
+            
+            if spots1 in available_spots.keys() :
+                acq_id = available_spots[spots1]
+                spots1 = result_tables.at[acq_id, "spots"]
+            elif os.path.isfile(spots1) :
+                spots1 = load_spots(spots1)
             else :
-                break
-        return colocalisation_distance
+                raise ValueError("Incorrect value for spots1")
+            
+            if spots2 in available_spots.keys() :
+                acq_id = available_spots[spots2]
+                spots2 = result_tables.at[acq_id, "spots"]
+            elif os.path.isfile(spots2) :
+                spots2 = load_spots(spots2)
+            else :
+                raise ValueError("Incorrect value for spots1")
+
+            if colocalisation_distance == False : return False
+            colocalisation_distance = int(colocalisation_distance)
+        except ValueError as e :
+            
+            if str(e) == "Incorrect value for spots1" :
+                sg.popup(str(e))
+
+            elif str(e) == "Incorrect value for spots2" :
+                sg.popup(str(e))
+
+            else :
+                sg.popup("Incorrect colocalisation distance")
+        else :
+            break
+    return colocalisation_distance, spots1, spots2
 
 def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisation_distance) :
     """
@@ -420,11 +443,8 @@ def _cell_coloc(
     return colocalisation_df
 
 @add_default_loading
-def launch_colocalisation(result_tables, result_dataframe, cell_result_dataframe, colocalisation_distance, global_coloc_df, cell_coloc_df: dict) :
+def launch_colocalisation(acquisition1, acquisition2, result_dataframe, cell_result_dataframe, colocalisation_distance, global_coloc_df, cell_coloc_df: dict) :
     
-    acquisition1 = result_dataframe.iloc[result_tables[0]]
-    acquisition2 = result_dataframe.iloc[result_tables[1]]
-
     acquisition_id1, acquisition_id2 = (acquisition1.at['acquisition_id'], acquisition2.at['acquisition_id'])
 
     if acquisition_id1 in list(cell_result_dataframe['acquisition_id']) and acquisition_id2 in list(cell_result_dataframe['acquisition_id']) :

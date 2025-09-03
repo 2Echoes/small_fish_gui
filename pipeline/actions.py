@@ -264,14 +264,13 @@ def save_results(
         dic = None
         sg.popup('No results to save.') 
 
-def compute_colocalisation(result_tables, result_dataframe, cell_result_dataframe, global_coloc_df, cell_coloc_df) :
-    colocalisation_distance = initiate_colocalisation(result_tables)
+def compute_colocalisation(result_dataframe, cell_result_dataframe, global_coloc_df, cell_coloc_df) :
+    colocalisation_distance, spots1, spots2 = initiate_colocalisation(result_dataframe)
 
     if colocalisation_distance == False :
         pass
     else :
         global_coloc_df, cell_coloc_df = launch_colocalisation(
-            result_tables, 
             result_dataframe=result_dataframe, 
             cell_result_dataframe=cell_result_dataframe,
             colocalisation_distance=colocalisation_distance,
