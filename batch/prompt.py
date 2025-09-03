@@ -393,6 +393,7 @@ def batch_promp(
                 segmentation_correct_text= segmentation_ok_text,
                 do_segmentation=do_segmentation,
                 is_multichannel=is_multichanel,
+                is_3D=is_3D,
                 is_mapping_ok=Master_parameters_dict['_is_mapping_correct']
             )
 

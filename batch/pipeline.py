@@ -9,6 +9,7 @@ import FreeSimpleGUI as sg
 from ..hints import pipeline_parameters
 
 from .input import open_image
+from .output import output_masks
 from ..interface import write_results
 from ..pipeline import reorder_shape, reorder_image_stack, prepare_image_detection
 from ..pipeline import cell_segmentation, launch_detection, launch_features_computation
@@ -123,6 +124,14 @@ def batch_pipeline(
                             nuc_label=nucleus_label,
                             path= main_dir + "segmentation/" + file,
                             do_only_nuc= parameters['segment_only_nuclei'],
+                        )
+
+                    if parameters["save_masks"] :
+                        output_masks(
+                            batch_path= main_dir,
+                            acquisition_name= file,
+                            nucleus_label= nucleus_label,
+                            cytoplasm_label= cytoplasm_label if not parameters['segment_only_nuclei'] else None,
                         )
 
             else :

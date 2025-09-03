@@ -87,15 +87,26 @@ def update_detection_tab(
 
     tab_elmt.update(visible=is_mapping_ok)
 
-def update_segmentation_tab(tab_elmt : sg.Tab, segmentation_correct_text : sg.Text, do_segmentation, is_multichannel, is_mapping_ok) : 
+def update_segmentation_tab(
+        tab_elmt : sg.Tab, 
+        segmentation_correct_text : sg.Text, 
+        do_segmentation : bool, 
+        is_multichannel : bool, 
+        is_3D : bool, 
+        is_mapping_ok: bool
+        ) : 
     
     #Access elements
     cytoplasm_channel_elmt = get_elmt_from_key(tab_elmt, key= 'cytoplasm_channel')
     nucleus_channel_elmt = get_elmt_from_key(tab_elmt, key= 'nucleus channel')
+    do_nucleus_3D_elmt = get_elmt_from_key(tab_elmt, key= "nucleus_segmentation_3D")
+    do_cytoplasm_3D_elmt = get_elmt_from_key(tab_elmt, key= "cytoplasm_segmentation_3D")
     
     #Update values
     cytoplasm_channel_elmt.update(disabled = not is_multichannel)
     nucleus_channel_elmt.update(disabled = not is_multichannel)
+    do_nucleus_3D_elmt.update(disabled = not is_3D)
+    do_cytoplasm_3D_elmt.update(disabled = not is_3D)
     segmentation_correct_text.update(visible= do_segmentation)
 
     tab_elmt.update(visible=is_mapping_ok and do_segmentation)
@@ -126,7 +137,12 @@ def update_output_tab(
         do_segmentation,
         output_folder,
 ) :
+    
+    #Segmentation
     segmentation_box = get_elmt_from_key(tab_elmt, "save segmentation")
     segmentation_box.update(disabled = not do_segmentation)
+    segmentation_save_masks_elmt = get_elmt_from_key(tab_elmt, "save_masks")
+    segmentation_save_masks_elmt.update(disabled = not do_segmentation)
+
     batch_folder_text = get_elmt_from_key(tab_elmt, "batch_folder_text")
     batch_folder_text.update(value = output_folder)
