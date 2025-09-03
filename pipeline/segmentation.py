@@ -343,9 +343,17 @@ def cell_segmentation(
         image = np.zeros(shape=(2,) + cyto.shape)
         image[0] = cyto
         image[1] = nuc
-        image = np.moveaxis(image, source=(0,1,2), destination=(2,0,1))
+        source = list(range(image.ndim))
+        dest = source[-1:] + source[:-1]
+        image = np.moveaxis(image, source=range(image.ndim), destination= dest)
 
         cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2], do_3D=cyto_3D_segmentation, anisotropy=anisotropy)
+
+        if cytoplasm_label.ndim == 3 and nuc_label.ndim == 2 :
+            nuc_label = np.repeat(nuc_label[np.newaxis], len(cytoplasm_label), axis= 0)
+        if nuc_label.ndim == 3 and cytoplasm_label.ndim == 2 :
+            cytoplasm_label = np.repeat(cytoplasm_label[np.newaxis], len(nuc_label), axis= 0)
+
         nuc_label, cytoplasm_label = multistack.match_nuc_cell(nuc_label=nuc_label, cell_label=cytoplasm_label, single_nuc=True, cell_alone=False)
     else :
         cytoplasm_label = nuc_label
@@ -359,15 +367,19 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D =
         pretrained_model= model_name,
     )
 
+    print("im shape : ", im.shape)
+
     label, flow, style = model.eval(
         im,
         diameter= object_size_px,
         do_3D= do_3D,
         z_axis=0 if do_3D else None,
+        channel_axis= im.ndim -1 if im.ndim == 3+ do_3D else None,
         anisotropy=anisotropy
         )
     label = np.array(label, dtype= np.int64)
-    label = remove_disjoint(label)
+    if not do_3D : label = remove_disjoint(label) # Too much time consuming in 3D
+    else : pass #TODO : filter too litle regions
     
     return label
 

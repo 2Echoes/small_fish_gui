@@ -2,8 +2,16 @@ import FreeSimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
-from typing import Literal, Union, Any
-from .layout import path_layout, parameters_layout, bool_layout, tuple_layout, combo_elmt, add_header, path_layout, radio_layout
+from typing import Literal, Union
+from .layout import (
+    path_layout,
+    parameters_layout,
+    bool_layout,
+    tuple_layout, 
+    path_layout, 
+    radio_layout,
+    colocalization_layout
+    )
 from ..interface import open_image, check_format, FormatError
 
 
@@ -268,13 +276,12 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
     while True : 
         event, values = window.read()
         if event == None : quit()
-        elif event == 'Help' : pass
         else : 
             window.close()
             return event, values
 
 def coloc_prompt() :
-    layout = parameters_layout(['colocalisation distance'], unit= 'nm', header= 'Colocalisation', default_values= 0)
+    layout = colocalization_layout()
     event, values = prompt(layout)
 
     if event == 'Ok' :
