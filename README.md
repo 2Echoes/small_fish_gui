@@ -19,17 +19,25 @@ Spot detection is performed via *big-fish* a python implementation of FishQuant 
 - Cell segmentation
 - Multichannel colocalisation
 
+<p align="center">
 <img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D.png" width="500" title="Fish_signal" alt="Fish signal">
-<p align="center">**Raw fish signal with dapi**</p> 
+</p>
+<p align="center"><strong>Raw fish signal with dapi</p> 
 
+<p align="center">
 <img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D_with_labels.png" width="500" title="Cell segmentation" alt="Segmentation"> 
-<p align="center">**2D segmentation**</p>  
+</p>
+<p align="center"><strong>2D segmentation</p>  
 
+<p align="center">
 <img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine.png" width="500" title="Detection_signal" alt="Detection_signal">
-<p align="center">**Spot detection**</p> 
+</p>
+<p align="center"><strong>Spot detection</p> 
 
+<p align="center">
 <img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine_no_spots.png" width="500" title="Detection filter" alt="detection">
-<p align="center">**Cluster detection**</p>  
+</p>
+<p align="center"><strong>Cluster detection</p>  
 
 Analysis can be performed either fully interactively throught a Napari interface or performed automatically through a batch processing allowing for reproducible quantifications. 
 
