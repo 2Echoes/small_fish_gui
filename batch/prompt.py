@@ -74,14 +74,15 @@ def batch_promp(
 
     #Segmentation tab
     segmentation_layout = _segmentation_layout(
-        multichannel=True, 
+        multichannel=True,
+        is_3D_stack=True, 
         cytoplasm_model_preset=preset.setdefault("cyto_model_name",'cyto3'),
         cytoplasm_channel_preset=preset.setdefault("cytoplasm_channel",0),
         cyto_diameter_preset=preset.setdefault("cytoplasm_diameter",180),
         nucleus_model_preset=preset.setdefault("nucleus_model_name",'nuclei'),
         nucleus_channel_preset=preset.setdefault("nucleus channel",0),
         nucleus_diameter_preset=preset.setdefault("nucleus_diameter",150),
-        segment_only_nuclei_preset=preset.setdefault("segment_only_nuclei",False)
+        segment_only_nuclei_preset=preset.setdefault("segment_only_nuclei",False),
         )
     
     apply_segmentation_button = sg.Button('apply', key='apply-segmentation')
@@ -100,13 +101,14 @@ def batch_promp(
     )
     apply_detection_button = sg.Button('apply', key='apply-detection')
     detection_layout += [[apply_detection_button]]
-    detection_keys_to_hide = ['do_spots_csv', 'do_spots_excel', 'do_spots_feather','spots_filename','spots_extraction_folder']
+    detection_keys_to_hide = ['do_spots_csv', 'do_spots_excel', 'spots_filename','spots_extraction_folder']
     detection_tab = sg.Tab("Detection", detection_layout, visible=False)
 
     #Output tab
     show_batch_folder_text = sg.Text('', key= 'batch_folder_text')
     apply_output_button = sg.Button('apply', key='apply-output')
-    save_segmentation_box = sg.Checkbox("save segmentation", disabled=True, key='save segmentation')
+    save_segmentation_visual_box = sg.Checkbox("save segmentation", disabled=True, key='save segmentation', tooltip= "Save png files illustrating segmentation borders.")
+    save_segmentation_masks_box = sg.Check("save labels",  disabled=True, key="save_masks", tooltip= "Save segmentation labels as .npy files.")
     save_detection_box = sg.Checkbox("create spot detection visuals", key= 'save detection', tooltip="Create multichannel tiff with raw spot signal and detected spots.\nWarning if processing a lot of files make sure you have enough free space on your hard drive.")
     extract_spots_box = sg.Checkbox("extract spots", key='extract spots')
     batch_name_input = sg.InputText(size=25, key='batch_name')
@@ -115,13 +117,16 @@ def batch_promp(
         [show_batch_folder_text],
         [sg.Text("Select a folder : "), sg.FolderBrowse(initial_folder=os.getcwd(), key='output_folder', target=(1,-1))],
         [sg.Text("Name for batch : "), batch_name_input],
-        [save_segmentation_box],
         [save_detection_box],
         [extract_spots_box],
         [sg.Text("Data extension", font=('bold',15), pad=(0,10))],
         [sg.Checkbox(".csv", key='csv'),sg.Checkbox(".xlsx", key='xlsx')],
         [apply_output_button],
+        [sg.Text("Segmentation", font=('bold',15), pad=(0,10))],
+        [save_segmentation_visual_box],
+        [save_segmentation_masks_box],
     ]
+
     output_tab = sg.Tab("Output", output_layout, visible=True)
 
     ##TAB GROUP
