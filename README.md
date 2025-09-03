@@ -1,3 +1,5 @@
+[Segmentation2D]: https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D.png
+
 # Small Fish - A User-Friendly Graphical Interface for smFISH Image Quantification
 
 **Small Fish** is a python application for smFish image analysis. It provides a ready to use graphical interface to synthetize state-of-the-art scientific packages into an automated workflow. Small Fish is designed to simplify images quantification and analysis for people without coding skills. 
@@ -12,16 +14,15 @@ Spot detection is performed via *big-fish* a python implementation of FishQuant 
 
 - Single molecule quantification
 - Transcriptomics
-- Foci/Transcription site quantification
+- Foci quantification
+- Transcription sites quantification
 - Nuclear signal quantification
 - Signal to noise analysis
 - Cell segmentation
 - Multichannel colocalisation
 
-|Segmentation|Detection - Clustering|
-|:----------:|:-------:|
-|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D.png" width="500" title="Fish_signal" alt="Fish signal">|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine.png" width="500" title="Detection_signal" alt="Detection_signal">|
-|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D_with_labels.png" width="500" title="Cell segmentation" alt="Segmentation">|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine_no_spots.png" width="500" title="Detection filter" alt="detection">|
+<img src=[Segmentation2D] width="500" title="Fish_signal" alt="Fish signal">|<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine.png" width="500" title="Detection_signal" alt="Detection_signal">
+<img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/Segmentation2D_with_labels.png" width="500" title="Cell segmentation" alt="Segmentation"><img src="https://github.com/2Echoes/small_fish_gui/blob/segmentation_3D/illustrations/FocciVitrine_no_spots.png" width="500" title="Detection filter" alt="detection">
 
 Analysis can be performed either fully interactively throught a Napari interface or performed automatically through a batch processing allowing for reproducible quantifications. 
 
