@@ -95,13 +95,94 @@ def load_spots(
         raise ValueError("Table format not recognized. Please use .csv, .xlsx or .feather files.")
     
     if "coordinates" in Spots.columns :
-        coordinates = Spots['coordinates'].to_list()
+        pass
     elif "y" in Spots.columns and "x" in Spots.columns :
         if "z" in Spots.columns :
-            coordinates = list(zip(Spots['z'], Spots['y'], Spots['x']))
+            pass
         else :
-            coordinates = list(zip(Spots['y'], Spots['x']))
+            pass
     else :
         raise ValueError("Coordinates information not found in table. Please provide a 'coordinates' column with tuples (z,y,x) or (y,x) or 'y' and 'x' columns.")
 
-    return coordinates
+    return Spots
+
+def reconstruct_acquisition_data(
+        Spots : pd.DataFrame,
+        max_id : int,
+        filename : str,
+        ) :
+    """
+    Aim : creating a acquisition to add to result_dataframe from loaded spots for co-localization use  
+
+    **Needed keys for colocalization**
+        * acquisition_id
+        * name
+        * spots : np.ndarray[int] (nb_spots, nb_coordinates)
+        * clusters : np.ndarray[int] (nb_cluster, nb_coordinate + 2)
+        * spots_cluster_id : list[int]
+        * voxel_size : tuple[int]
+        * shape : tuple[int]
+        * filename : str
+    """
+    
+    spots = reconstruct_spots(Spots['coordinates'])
+    has_clusters = not Spots['cluster_id'].isna().all()
+    spot_number = len(spots)
+
+    if has_clusters :
+
+        clusters = np.empty(shape=(0,5), dtype=int) #useless for coloc only needded in columns to enable coloc on clusters
+        spot_cluster_id = Spots['cluster_id'].to_numpy().astype(int).tolist()
+
+        new_acquisition = pd.DataFrame({
+            'acquisition_id' : [max_id + 1],
+            'name' : ["loaded_spots_{}".format(max_id + 1)],
+            'threshold' : [0],
+            'spots' : [spots],
+            'clusters' : [clusters],
+            'spot_cluster_id' : [spot_cluster_id],
+            'spot_number' : [spot_number],
+            'filename' : [filename],
+        })
+    else :
+        new_acquisition = pd.DataFrame({
+            'acquisition_id' : [max_id + 1],
+            'name' : ["loaded_spots_{}".format(max_id + 1)],
+            'threshold' : [0],
+            'spots' : [spots],
+            'spot_number' : [spot_number],
+            'filename' : [filename],
+        })
+
+    return new_acquisition
+
+def reconstruct_spots(
+        coordinates_serie : pd.Series
+        ) :
+    spots = coordinates_serie.str.replace('(','').str.replace(')','')
+    spots = spots.str.split(',')
+    spots = spots.apply(np.array)
+    spots = np.array(spots.to_list()).astype(int)
+
+    return spots
+
+
+def reconstruct_cell_data(
+        Spots : pd.DataFrame,
+        max_id : int,
+        ) :
+    
+    has_cluster = Spots['cluster_id'].isna().all()
+    Spots['coordinates'] = reconstruct_spots(Spots['coordinates'])
+
+    cell = Spots.groupby('cell_label')['coordinates'].apply(np.array).rename("rna_coords").reset_index(drop=False)
+    cell['total_rna_number'] = cell['rna_coords'].apply(len)
+    
+    if has_cluster :
+        cell = Spots[Spots['cluster_id'] !=-1].groupby('cell_label')['coordinates'].rename("clustered_spots_coords").apply(np.array).reset_index(drop=False)
+        cell['clustered_spot_number'] = cell['clustered_spots_coords'].apply(len)
+
+    cell['acquisition_id'] = max_id + 1
+    cell['name'] = "loaded_spots_{}".format(max_id + 1)
+
+    return cell
