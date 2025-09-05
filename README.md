@@ -64,7 +64,7 @@ pip install napari[all]
 
 First activate your python environnement : 
 ```bash
-activate small_fish
+conda activate small_fish
 ```
 Then launch Small fish : 
 ```bash
