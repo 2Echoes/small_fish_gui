@@ -243,7 +243,7 @@ def save_results(
         global_coloc_df : pd.DataFrame, 
         cell_coloc_df : dict, #TODO : Rename to cell_coloc_dict
         ) :
-    if len(result_df) != 0 :
+    if len(result_df) != 0  :
         dic = output_image_prompt(filename=result_df.iloc[0].at['filename'])
 
         if isinstance(dic, dict) :
@@ -260,6 +260,22 @@ def save_results(
             sucess3 = write_results(global_coloc_df, path= path, filename=filename + 'global_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             sucess4 = write_list_of_results(cell_coloc_df.values(), path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
             if all([sucess1,sucess2, sucess3, sucess4,]) : sg.popup("Sucessfully saved at {0}.".format(path))
+
+    elif len(global_coloc_df) !=0 or len(cell_coloc_df) !=0 :
+        dic = output_image_prompt(filename="loaded_spots_coloc")
+        if isinstance(dic, dict) :
+            path = dic['folder']
+            filename = dic['filename']
+            do_excel = dic['Excel']
+            do_feather = dic['Feather']
+            do_csv = dic['csv']
+
+            if 'rna_coords' in cell_result_df.columns : cell_result_df = cell_result_df.drop(columns='rna_coords')
+
+            sucess3 = write_results(global_coloc_df, path= path, filename=filename + 'global_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
+            sucess4 = write_list_of_results(cell_coloc_df.values(), path= path, filename=filename + 'cell2cell_coloc_result', do_excel= do_excel, do_feather= do_feather, do_csv=do_csv)
+            if all([sucess3, sucess4,]) : sg.popup("Sucessfully saved at {0}.".format(path))
+
 
     else :
         dic = None
