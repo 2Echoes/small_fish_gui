@@ -110,7 +110,8 @@ def reconstruct_acquisition_data(
         Spots : pd.DataFrame,
         max_id : int,
         filename : str,
-        ) :
+        voxel_size : 'tuple[int]'
+        ) -> pd.DataFrame:
     """
     Aim : creating a acquisition to add to result_dataframe from loaded spots for co-localization use  
 
@@ -140,9 +141,10 @@ def reconstruct_acquisition_data(
             'threshold' : [0],
             'spots' : [spots],
             'clusters' : [clusters],
-            'spot_cluster_id' : [spot_cluster_id],
+            'spots_cluster_id' : [spot_cluster_id],
             'spot_number' : [spot_number],
             'filename' : [filename],
+            'voxel_size' : [voxel_size],
         })
     else :
         new_acquisition = pd.DataFrame({
@@ -152,6 +154,7 @@ def reconstruct_acquisition_data(
             'spots' : [spots],
             'spot_number' : [spot_number],
             'filename' : [filename],
+            'voxel_size' : [voxel_size],
         })
 
     return new_acquisition

@@ -280,12 +280,13 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
             window.close()
             return event, values
 
-def coloc_prompt(result_tables : pd.DataFrame, spot_list : list) :
+def coloc_prompt(spot_list : list) :
     layout = colocalization_layout(spot_list)
     
     window = sg.Window('small fish', layout=layout, margins=(10,10), resizable=True, location=None, auto_size_buttons=True)
     while True : 
         event, values = window.read(timeout=100, timeout_key="timeout")
+
         if event == None : quit()
         elif event == "timeout" : pass
         elif event == 'Ok' :
@@ -301,10 +302,11 @@ def coloc_prompt(result_tables : pd.DataFrame, spot_list : list) :
                 spots2 = values["spots2_dropdown"]
             
 
-            return values['colocalisation distance'], spots1, spots2
+            window.close()
+            return values['colocalisation distance'], [values['voxel_size_z'], values['voxel_size_y'], values['voxel_size_x']], spots1, spots2
         else : 
             window.close()
-            return False,False,False
+            return None,None,None,None
 
 def rename_prompt() :
     layout = parameters_layout(['name'], header= "Rename acquisitions", size=12)

@@ -17,6 +17,7 @@ from ._preprocess import ask_input_parameters
 from .detection import initiate_detection, launch_detection, launch_features_computation
 from .detection import get_nucleus_signal
 from .spots import launch_spots_extraction
+from .spots import load_spots, reconstruct_acquisition_data, reconstruct_cell_data
 
 from .segmentation import launch_segmentation
 from ._colocalisation import initiate_colocalisation, launch_colocalisation
@@ -264,21 +265,90 @@ def save_results(
         dic = None
         sg.popup('No results to save.') 
 
-def compute_colocalisation(result_dataframe, cell_result_dataframe, global_coloc_df, cell_coloc_df) :
-    colocalisation_distance, spots1, spots2 = initiate_colocalisation(result_dataframe)
+def compute_colocalisation(
+        result_dataframe, 
+        cell_result_dataframe, 
+        global_coloc_df, 
+        cell_coloc_df,
+        max_id,
+        ) :
+    
+    colocalisation_distance, voxel_size, spots1_key, spots2_key = initiate_colocalisation(result_dataframe)
+    if colocalisation_distance is None :
+        return global_coloc_df, cell_coloc_df, max_id
 
-    if colocalisation_distance == False :
-        pass
-    else :
-        global_coloc_df, cell_coloc_df = launch_colocalisation(
-            result_dataframe=result_dataframe, 
-            cell_result_dataframe=cell_result_dataframe,
-            colocalisation_distance=colocalisation_distance,
-            global_coloc_df=global_coloc_df,
-            cell_coloc_df=cell_coloc_df,
+    if os.path.isfile(spots1_key) :
+        Spots1 = load_spots(spots1_key)
+        fake_acquisition = reconstruct_acquisition_data(
+            Spots=Spots1,
+            max_id=max_id,
+            filename= os.path.basename(spots1_key),
+            voxel_size = voxel_size
+        )
+        result_dataframe = pd.concat([
+            result_dataframe,
+            fake_acquisition
+        ], axis=0)
+
+        if not Spots1['cell_label'].isna().all() :
+            fake_cells = reconstruct_cell_data(
+                Spots=Spots1,
+                max_id=max_id,
             )
 
-    return global_coloc_df, cell_coloc_df
+            cell_result_dataframe = pd.concat([
+                cell_result_dataframe,
+                fake_cells
+            ], axis=0)
+
+        max_id +=1
+        acquisition_id1 = fake_acquisition.iloc[0].at['acquisition_id']
+
+    else :
+        acquisition_id1 = spots1_key
+    
+    if os.path.isfile(spots2_key) :
+        Spots2 = load_spots(spots2_key)
+        fake_acquisition = reconstruct_acquisition_data(
+            Spots=Spots2,
+            max_id=max_id,
+            filename= os.path.basename(spots2_key),
+            voxel_size = voxel_size
+        )
+        result_dataframe = pd.concat([
+            result_dataframe,
+            fake_acquisition
+        ], axis=0)
+
+        if not Spots2['cell_label'].isna().all() :
+            fake_cells = reconstruct_cell_data(
+                Spots=Spots2,
+                max_id=max_id,
+            )
+
+            cell_result_dataframe = pd.concat([
+                cell_result_dataframe,
+                fake_cells
+            ], axis=0)
+
+        max_id +=1
+        acquisition_id2 = fake_acquisition.iloc[0].at['acquisition_id']
+
+    else :
+        acquisition_id2 = spots2_key
+
+
+    global_coloc_df, cell_coloc_df = launch_colocalisation(
+        acquisition_id1 = acquisition_id1,
+        acquisition_id2 = acquisition_id2,
+        result_dataframe=result_dataframe, 
+        cell_result_dataframe=cell_result_dataframe,
+        colocalisation_distance=colocalisation_distance,
+        global_coloc_df=global_coloc_df,
+        cell_coloc_df=cell_coloc_df,
+        )
+
+    return global_coloc_df, cell_coloc_df, max_id
 
 def delete_acquisitions(selected_acquisitions : pd.DataFrame, 
                         result_df : pd.DataFrame, 

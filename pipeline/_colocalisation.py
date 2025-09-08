@@ -1,6 +1,5 @@
 from ._custom_errors import MissMatchError
 from ..gui import coloc_prompt, add_default_loading
-from .spots import load_spots
 
 import os
 import numpy as np
@@ -154,33 +153,37 @@ def spots_colocalisation(spot_list1:list, spot_list2:list, distance: float, voxe
     return count
 
 
-def initiate_colocalisation(result_tables : pd.DataFrame) :
+def initiate_colocalisation(
+        result_tables : pd.DataFrame,
+        ) :
 
     result_tables = result_tables.set_index('acquisition_id', drop=False)
-    available_spots = dict(zip(result_tables['acquisition_id'].astype(str).str.cat(result_tables['name'], result_tables.index)))
+    available_spots = dict(zip(result_tables['acquisition_id'].astype(str).str.cat(result_tables['name'],sep='-'), result_tables.index))
 
     while True :
         try : 
-            colocalisation_distance, spots1, spots2 = coloc_prompt(list(available_spots.values()))
-            
-            if spots1 in available_spots.keys() :
-                acq_id = available_spots[spots1]
-                spots1 = result_tables.at[acq_id, "spots"]
-            elif os.path.isfile(spots1) :
-                spots1 = load_spots(spots1)
+            colocalisation_distance, voxel_size, spots1_key, spots2_key = coloc_prompt(list(available_spots.keys()))
+            print("spot1 : ", spots1_key)
+            print("spot2 : ", spots2_key)
+            if colocalisation_distance is None :
+                return None,None, None,None
+            colocalisation_distance = int(colocalisation_distance)
+
+            if spots1_key in available_spots.keys() :
+                spots1_key = available_spots[spots1_key]
+            elif os.path.isfile(spots1_key) :
+                pass
+
             else :
                 raise ValueError("Incorrect value for spots1")
             
-            if spots2 in available_spots.keys() :
-                acq_id = available_spots[spots2]
-                spots2 = result_tables.at[acq_id, "spots"]
-            elif os.path.isfile(spots2) :
-                spots2 = load_spots(spots2)
+            if spots2_key in available_spots.keys() :
+                spots2_key = available_spots[spots2_key]
+            elif os.path.isfile(spots2_key) :
+                pass
             else :
                 raise ValueError("Incorrect value for spots1")
 
-            if colocalisation_distance == False : return False
-            colocalisation_distance = int(colocalisation_distance)
         except ValueError as e :
             
             if str(e) == "Incorrect value for spots1" :
@@ -193,7 +196,7 @@ def initiate_colocalisation(result_tables : pd.DataFrame) :
                 sg.popup("Incorrect colocalisation distance")
         else :
             break
-    return colocalisation_distance, spots1, spots2
+    return colocalisation_distance, voxel_size, spots1_key, spots2_key
 
 def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisation_distance) :
     """
@@ -221,19 +224,11 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
 
     voxel_size1 = acquisition1.iloc[0].at['voxel_size']
     voxel_size2 = acquisition2.iloc[0].at['voxel_size']
-    shape1 = acquisition1.iloc[0].at['reordered_shape']
-    shape2 = acquisition2.iloc[0].at['reordered_shape']
 
     if voxel_size1 != voxel_size2 : 
         raise MissMatchError("voxel size 1 different than voxel size 2")
     else :
         voxel_size = voxel_size1
-
-    if shape1 != shape2 :
-        raise MissMatchError("shape 1 different than shape 2")
-    else :
-        shape = shape1
-
 
     spots1 = acquisition1.iloc[0].at['spots']
     spots2 = acquisition2.iloc[0].at['spots']
@@ -443,9 +438,8 @@ def _cell_coloc(
     return colocalisation_df
 
 @add_default_loading
-def launch_colocalisation(acquisition1, acquisition2, result_dataframe, cell_result_dataframe, colocalisation_distance, global_coloc_df, cell_coloc_df: dict) :
+def launch_colocalisation(acquisition_id1, acquisition_id2, result_dataframe, cell_result_dataframe, colocalisation_distance, global_coloc_df, cell_coloc_df: dict) :
     
-    acquisition_id1, acquisition_id2 = (acquisition1.at['acquisition_id'], acquisition2.at['acquisition_id'])
 
     if acquisition_id1 in list(cell_result_dataframe['acquisition_id']) and acquisition_id2 in list(cell_result_dataframe['acquisition_id']) :
         print("Launching cell to cell colocalisation.")

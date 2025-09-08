@@ -79,7 +79,7 @@ def tuple_layout(opt=None, default_dict={}, unit:dict={}, **tuples) :
     layout = [
         [sg.Text(pad_right(tup, max_size, ' '), text_color= 'green' if opt[option] else None)] 
         + [sg.InputText(default_text=default_dict.setdefault('{0}_{1}'.format(tup,elmnt), elmnt),key= '{0}_{1}'.format(tup, elmnt), size= 5) for elmnt in tuples[tup]]
-        + [sg.Text(unit.setdefault(tup,''))] 
+        + [sg.Text(unit.setdefault(tup,''))]
         for tup,option, in zip(tuples,opt)
     ]
 
@@ -327,6 +327,10 @@ def colocalization_layout(spot_list : list) :
     ]
 
     layout += parameters_layout(['colocalisation distance'], unit= 'nm', default_values= 0,)
+
+    layout += tuple_layout(opt={'voxel_size' : False},unit={'voxel_size' : "nm"}, voxel_size = ['z','y','x'], )
+    layout += [[sg.Text("   'voxel size' is used only for loaded spot lists.")]]
+
     layout += [[sg.Push(),sg.Button("Ok"),sg.Button("Cancel"),sg.Push(),],
         [sg.VPush()]
     ]

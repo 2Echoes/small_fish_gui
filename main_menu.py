@@ -74,11 +74,12 @@ while True : #Break this loop to close small_fish
         
         elif event == 'Compute colocalisation' :
 
-            global_coloc_df, cell_coloc_df = compute_colocalisation(
+            global_coloc_df, cell_coloc_df, acquisition_id = compute_colocalisation(
                 result_dataframe=result_df,
                 cell_result_dataframe=cell_result_df,
                 global_coloc_df=global_coloc_df,
                 cell_coloc_df=cell_coloc_df,
+                max_id=acquisition_id,
             )
 
         elif event == "Reset all" :
