@@ -117,7 +117,12 @@ def spots_multicolocalisation(spots_list, anchor_list, radius_nm, image_shape, v
 
     return res
 
-def spots_colocalisation(spot_list1:list, spot_list2:list, distance: float, voxel_size)-> int :
+def spots_colocalisation(
+        spot_list1:np.ndarray, 
+        spot_list2:np.ndarray, 
+        distance: int, 
+        voxel_size : tuple
+        )-> int :
     """
     Return number of spots from spot_list1 located closer(large) than distance to at least one spot of spot_list2.
 
@@ -163,8 +168,6 @@ def initiate_colocalisation(
     while True :
         try : 
             colocalisation_distance, voxel_size, spots1_key, spots2_key = coloc_prompt(list(available_spots.keys()))
-            print("spot1 : ", spots1_key)
-            print("spot2 : ", spots2_key)
             if colocalisation_distance is None :
                 return None,None, None,None
             colocalisation_distance = int(colocalisation_distance)
@@ -246,7 +249,7 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
 
     if 'clusters' in acquisition1.columns :
         try : 
-            clusters_id_1 = acquisition1.iloc[0].at['spots_cluster_id']
+            clusters_id_1 = np.array(acquisition1.iloc[0].at['spots_cluster_id'], dtype=int)
             fraction_spots2_coloc_cluster1 = spots_colocalisation(spot_list1=spots2, spot_list2=spots1[clusters_id_1 != -1], distance= colocalisation_distance, voxel_size=voxel_size) / spot2_total
         except MissMatchError as e :
             sg.popup(str(e))
@@ -259,7 +262,7 @@ def _global_coloc(acquisition_id1,acquisition_id2, result_dataframe, colocalisat
 
     if 'clusters' in acquisition2.columns :
         try :
-            clusters_id_2 = acquisition2.iloc[0].at['spots_cluster_id']
+            clusters_id_2 = np.array(acquisition2.iloc[0].at['spots_cluster_id'], dtype=int)
             fraction_spots1_coloc_cluster2 = spots_colocalisation(spot_list1=spots1, spot_list2=spots2[clusters_id_2 != -1], distance= colocalisation_distance, voxel_size=voxel_size) / spot1_total
         except MissMatchError as e :# clusters not computed
             sg.popup(str(e))
