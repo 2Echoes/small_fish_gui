@@ -220,8 +220,6 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 nuc_path = None
                 cyto_path = None
 
-            print("cytoplasm : ",cytoplasm_segmentation_3D )
-            print("nucleus : ",nucleus_segmentation_3D )
             cytoplasm_label, nucleus_label = cell_segmentation(
                 image,
                 cyto_model_name= cyto_model_name,
@@ -321,13 +319,10 @@ def cell_segmentation(
         nuc = external_nucleus_image
     else :
         nuc = image[nuc_channel]
-    print(type(nuc))
 
     if nuc.ndim >= 3 and not nucleus_3D_segmentation:
         nuc = stack.mean_projection(nuc)
-    print("launch segmentation")
     nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0], do_3D=nucleus_3D_segmentation, anisotropy=anisotropy)
-    print("nuc segmentation done")
     
     if not do_only_nuc : 
         cyto_channel = channels[0]
@@ -366,8 +361,6 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D =
         gpu= use_gpu(),
         pretrained_model= model_name,
     )
-
-    print("im shape : ", im.shape)
 
     label, flow, style = model.eval(
         im,

@@ -32,7 +32,6 @@ nucleus_label = None
 while True : #Break this loop to close small_fish
     try :
         result_df = result_df.reset_index(drop=True)
-        result_df.to_csv("/home/floric/Documents/python/small_fish/test.csv")
 
         event, values = hub_prompt(result_df, user_parameters['segmentation_done'])
 
