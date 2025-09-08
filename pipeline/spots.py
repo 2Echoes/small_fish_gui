@@ -175,17 +175,29 @@ def reconstruct_cell_data(
         max_id : int,
         ) :
     
-    has_cluster = Spots['cluster_id'].isna().all()
-    Spots['coordinates'] = reconstruct_spots(Spots['coordinates'])
+    has_cluster = not Spots['cluster_id'].isna().all()
+    coordinates = reconstruct_spots(Spots['coordinates'])
+    Spots['coordinates'] = pd.Series(coordinates.tolist(), dtype=object, index= Spots.index)
 
     cell = Spots.groupby('cell_label')['coordinates'].apply(np.array).rename("rna_coords").reset_index(drop=False)
+    
+    #Handle cells with no spots
+    na_mask =cell[cell['rna_coords'].isna()].index
+    cell.loc[na_mask, ['rna_coords']] = pd.Series([np.empty(shape=(0,3))]*len(na_mask), dtype= object, index=na_mask)
+    
     cell['total_rna_number'] = cell['rna_coords'].apply(len)
     
     if has_cluster :
-        cell = Spots[Spots['cluster_id'] !=-1].groupby('cell_label')['coordinates'].rename("clustered_spots_coords").apply(np.array).reset_index(drop=False)
+        cell['clustered_spots_coords'] = Spots[Spots['cluster_id'] !=-1].groupby('cell_label')['coordinates'].apply(np.array).rename("clustered_spots_coords")
+        
+        #Handle cells with no clusters
+        na_mask =cell[cell['clustered_spots_coords'].isna()].index
+        cell.loc[na_mask, ['clustered_spots_coords']] = pd.Series([np.empty(shape=(0,3))]*len(na_mask), dtype= object, index=na_mask)
+        
         cell['clustered_spot_number'] = cell['clustered_spots_coords'].apply(len)
 
     cell['acquisition_id'] = max_id + 1
     cell['name'] = "loaded_spots_{}".format(max_id + 1)
+    cell = cell.rename(columns={"cell_label": "cell_id"})
 
     return cell

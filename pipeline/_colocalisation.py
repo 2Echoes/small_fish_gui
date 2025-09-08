@@ -13,8 +13,13 @@ def reconstruct_boolean_signal(image_shape, spot_list: list):
     if len(spot_list) == 0 : return signal
     dim = len(spot_list[0])
 
+    print("image shape : ", image_shape)
+
     if dim == 3 :
         Z, Y, X = list(zip(*spot_list))
+        print('max Z : ', max(Z))
+        print('max Y : ', max(Y))
+        print('max X : ', max(X))
         signal[Z,Y,X] = True
 
     else : 
@@ -142,6 +147,10 @@ def spots_colocalisation(
     
     shape1 = np.max(spot_list1,axis=0)
     shape2 = np.max(spot_list2,axis=0)
+
+    print("shape1 : ", shape1)
+    print("shape2 : ", shape2)
+
     image_shape = np.max([shape1, shape2],axis=0) + 1
 
     signal2 = reconstruct_boolean_signal(image_shape, spot_list2)
@@ -334,10 +343,6 @@ def _cell_coloc(
     result_dataframe = result_dataframe.set_index('acquisition_id', drop=False)
     coloc_name_forward = '{0} -> {1}'.format(acquisition_name_id1, acquisition_name_id2)
     coloc_name_backward = '{1} -> {0}'.format(acquisition_name_id1, acquisition_name_id2)
-
-    #Getting shape
-    if not result_dataframe.at[acquisition_id1, 'reordered_shape'] == result_dataframe.at[acquisition_id2, 'reordered_shape'] :
-        raise ValueError("Selected acquisitions have different shapes. Most likely they don't belong to the same fov.")
 
     #Getting voxel_size
     if not result_dataframe.at[acquisition_id1, 'voxel_size'] == result_dataframe.at[acquisition_id2, 'voxel_size'] :
