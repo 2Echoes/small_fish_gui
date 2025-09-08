@@ -145,8 +145,16 @@ def spots_colocalisation(
     if len(spot_list1[0]) != len(spot_list2[0]) : 
         raise MissMatchError("dimensionalities of spots 1 and spots 2 don't match.")
     
+    print(spot_list2)
+
     shape1 = np.max(spot_list1,axis=0)
     shape2 = np.max(spot_list2,axis=0)
+
+    print("spots_colocalization")
+    Z,Y,X = list(zip(*spot_list2))
+    print('max Z : ', max(Z))
+    print('max Y : ', max(Y))
+    print('max X : ', max(X))
 
     print("shape1 : ", shape1)
     print("shape2 : ", shape2)
