@@ -1,0 +1,34 @@
+""""
+Constant submodule to have a common reference for parameters default values
+"""
+
+#Image
+IS_MULTICHANNEL = False
+IS_3D_STACK = False
+
+#Segmentation
+FLOW_THRESHOLD = 0.4
+CELLPROB_THRESHOD = 0.
+CHANNEL = 0
+CYTO_MODEL = "cpsam"
+NUC_MODEL = "cpsam"
+CYTO_DIAMETER = 120
+NUC_DIAMETER = 60
+ANISOTROPY = 1. 
+SHOW_SEGMENTATION = True
+SEGMENT_ONLY_NUCLEI = False
+DO_3D_SEMGENTATION = False
+
+#Detection
+THRESHOLD = None
+DO_DENSE_REGIONS_DECONVOLUTION = False
+DO_CLUSTER_COMPUTATION = False
+DO_CLUSTER_COMPUTATION = False
+SHOW_NAPARI_CORRECTOR = True
+
+ALPHA = 0.5
+BETA = 1.
+GAMMA = 3.
+
+#Coloc
+COLOC_RANGE = 0
