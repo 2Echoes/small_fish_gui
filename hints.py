@@ -11,6 +11,8 @@ class pipeline_parameters(TypedDict) :
             alpha : float
             beta : float
             channel_to_compute : int
+            cellprob_threshold_cyto : float
+            cellprob_threshold_nuc : float
             cluster_size : int
             cyto_model_name : str
             cytoplasm_diameter : int
@@ -22,6 +24,8 @@ class pipeline_parameters(TypedDict) :
             do_spots_csv : bool
             dim : int
             filename : str
+            flow_threshold_cyto : int
+            flow_threshold_nuc : int
             gamma : float
             image_path : str
             image : ndarray

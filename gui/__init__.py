@@ -25,3 +25,5 @@ from .layout import radio_layout
 from .layout import add_header
 
 from .animation import add_default_loading
+
+from .theme import default_theme

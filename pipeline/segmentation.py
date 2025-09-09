@@ -14,6 +14,8 @@ from ._preprocess import ask_input_parameters
 from ._preprocess import map_channels, reorder_shape, reorder_image_stack
 from matplotlib.colors import ListedColormap
 
+import small_fish_gui.default_values as default
+
 import matplotlib as mpl
 import cellpose.models as models
 import numpy as np
@@ -55,21 +57,23 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
 
     while True : # Loop if show_segmentation 
         #Default parameters
-        cyto_model_name = segmentation_parameters.setdefault('cyto_model_name', 'cyto3')
-        cyto_size = segmentation_parameters.setdefault('cytoplasm_diameter', 180)
-        cytoplasm_channel = segmentation_parameters.setdefault('cytoplasm_channel', 0)
-        nucleus_model_name = segmentation_parameters.setdefault('nucleus_model_name', 'nuclei')
-        nucleus_size = segmentation_parameters.setdefault('nucleus_diameter', 130)
-        nucleus_channel = segmentation_parameters.setdefault('nucleus channel', 0)
+        cyto_model_name = segmentation_parameters.setdefault('cyto_model_name', default.CYTO_MODEL)
+        cyto_size = segmentation_parameters.setdefault('cytoplasm_diameter', default.CYTO_DIAMETER)
+        cytoplasm_channel = segmentation_parameters.setdefault('cytoplasm_channel', default.CHANNEL)
+        nucleus_model_name = segmentation_parameters.setdefault('nucleus_model_name', default.NUC_MODEL)
+        nucleus_size = segmentation_parameters.setdefault('nucleus_diameter', default.NUC_DIAMETER)
+        nucleus_channel = segmentation_parameters.setdefault('nucleus channel', default.CHANNEL)
         other_nucleus_image = segmentation_parameters.setdefault('other_nucleus_image',None)
         path = os.getcwd()
-        show_segmentation = segmentation_parameters.setdefault('show_segmentation', False)
-        segment_only_nuclei = segmentation_parameters.setdefault('segment_only_nuclei', False)
-        multichannel = segmentation_parameters.get('is_multichannel')
-        is_3D_stack = segmentation_parameters.get('is_3D_stack')
-        anisotropy = segmentation_parameters.setdefault('anisotropy', 1)
-        cytoplasm_segmentation_3D = segmentation_parameters.setdefault('cytoplasm_segmentation_3D', False)
-        nucleus_segmentation_3D = segmentation_parameters.setdefault('nucleus_segmentation_3D', False)
+        show_segmentation = segmentation_parameters.setdefault('show_segmentation', default.SHOW_SEGMENTATION)
+        segment_only_nuclei = segmentation_parameters.setdefault('segment_only_nuclei', default.SEGMENT_ONLY_NUCLEI)
+        multichannel = segmentation_parameters.setdefault('is_multichannel', default.IS_MULTICHANNEL)
+        is_3D_stack = segmentation_parameters.setdefault('is_3D_stack', default.IS_3D_STACK)
+        anisotropy = segmentation_parameters.setdefault('anisotropy', default.ANISOTROPY)
+        cytoplasm_segmentation_3D = segmentation_parameters.setdefault('cytoplasm_segmentation_3D', default.DO_3D_SEMGENTATION)
+        nucleus_segmentation_3D = segmentation_parameters.setdefault('nucleus_segmentation_3D', default.DO_3D_SEMGENTATION)
+        flow_threshold = segmentation_parameters.setdefault("flow_threshold",0.4)
+        cellprob_threshold = segmentation_parameters.setdefault("cellprob_threshold",0)
         filename = segmentation_parameters['filename']
         available_channels = list(range(image.shape[0]))
 
@@ -94,6 +98,8 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 cytoplasm_segmentation_3D=cytoplasm_segmentation_3D,
                 nucleus_segmentation_3D=nucleus_segmentation_3D,
                 anisotropy=anisotropy,
+                flow_threshold=flow_threshold,
+                cellprob_threshold=cellprob_threshold,
             )
 
             event, values = prompt(layout)
@@ -106,6 +112,8 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                     continue
 
             #Extract parameters
+            print(values)
+            print('CAST')
             values = _cast_segmentation_parameters(values)
             do_only_nuc = values['segment_only_nuclei']
             cyto_model_name = values['cyto_model_name']
@@ -121,51 +129,80 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             channels = [cytoplasm_channel, nucleus_channel] if multichannel else [...,...]
             nucleus_segmentation_3D = values['nucleus_segmentation_3D']
             cytoplasm_segmentation_3D = values['cytoplasm_segmentation_3D']
+            anisotropy = values['anisotropy']
+            cellprob_threshold_cyto = values['cellprob_threshold_cyto']
+            cellprob_threshold_nuc = values['cellprob_threshold_nuc']
+            flow_threshold_cyto = values['flow_threshold_cyto']
+            flow_threshold_nuc = values['flow_threshold_nuc']
+
+            print(values)
 
             relaunch= False
             #Checking integrity of parameters
+
+            #flow thresholds
+            if type(flow_threshold_nuc) != float : 
+                sg.popup('Invalid value for flow threshold in nuc parameters, must be a float between 0 and 1.')
+                values['flow_threshold_nuc'] = user_parameters.setdefault('flow_threshold_nuc',default.FLOW_THRESHOLD)
+            if type(flow_threshold_cyto) != float : 
+                sg.popup('Invalid value for flow threshold in cyto parameters, must be a float between 0 and 1.')
+                values['flow_threshold_cyto'] = user_parameters.setdefault('flow_threshold_cyto',default.FLOW_THRESHOLD)
+            
+            #cellprob thresholds
+            if type(flow_threshold_nuc) != float : 
+                sg.popup('Invalid value for cellprob threshold in nuc parameters, must be a float between -3 and +3.')
+                values['flow_threshold_nuc'] = user_parameters.setdefault('flow_threshold_nuc',default.FLOW_THRESHOLD)
+            if type(flow_threshold_cyto) != float : 
+                sg.popup('Invalid value for cellprob threshold in cyto parameters, must be a float between -3 and +3.')
+                values['flow_threshold_cyto'] = user_parameters.setdefault('flow_threshold_cyto',default.FLOW_THRESHOLD)
+
+            
+            #Models
             if type(cyto_model_name) != str  and not do_only_nuc:
                 sg.popup('Invalid cytoplasm model name.')
-                values['cyto_model_name'] = user_parameters.setdefault('cyto_model_name', 'cyto2')
+                values['cyto_model_name'] = user_parameters.setdefault('cyto_model_name', default.CYTO_MODEL)
                 relaunch= True
             if multichannel :
                 if cytoplasm_channel not in available_channels and not do_only_nuc:
                     sg.popup('For given input image please select channel in {0}\ncytoplasm_channel : {1}'.format(available_channels, cytoplasm_channel))
                     relaunch= True
-                    values['cytoplasm_channel'] = user_parameters.setdefault('cytoplasm_channel',0)
+                    values['cytoplasm_channel'] = user_parameters.setdefault('cytoplasm_channel',default.CHANNEL)
             else :
                 cytoplasm_channel = ...
 
             if is_3D_stack :
                 try :
-                    int(anisotropy)
+                    float(anisotropy)
+                    if anisotropy <0 or anisotropy > 1 : raise ValueError()
+
                 except ValueError :
-                    sg.popup("Anisotropy must be an integer.")
+                    sg.popup("Anisotropy must be a positive float between 0 and 1")
                     relaunch = True
-                    values['anisotropy'] = user_parameters.setdefault('anisotropy', 1)
+                    values['anisotropy'] = user_parameters.setdefault('anisotropy', default.ANISOTROPY)
 
             if type(cyto_size) not in [int, float] and not do_only_nuc:
                 sg.popup("Incorrect cytoplasm size.")
                 relaunch= True
-                values['cytoplasm_diameter'] = user_parameters.setdefault('diameter', 30)
+                values['cytoplasm_diameter'] = user_parameters.setdefault('cytoplasm_diameter', default.CYTO_DIAMETER)
 
             if type(nucleus_model_name) != str :
                 sg.popup('Invalid nucleus model name.')
-                values['nucleus_model_name'] = user_parameters.setdefault('nucleus_model_name', 'nuclei')
+                values['nucleus_model_name'] = user_parameters.setdefault('nucleus_model_name', default.NUC_MODEL)
                 relaunch= True
             
             if multichannel :
                 if nucleus_channel not in available_channels :
                     sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
                     relaunch= True
-                    values['nucleus channel'] = user_parameters.setdefault('nucleus_channel', 0)
+                    values['nucleus channel'] = user_parameters.setdefault('nucleus_channel', default.CHANNEL)
             else : 
                 nucleus_channel = ...
 
             if type(nucleus_size) not in [int, float] :
                 sg.popup("Incorrect nucleus size.")
                 relaunch= True
-                values['nucleus_diameter'] = user_parameters.setdefault('nucleus_diameter', 30)
+                values['nucleus_diameter'] = user_parameters.setdefault('nucleus_diameter', default.NUC_DIAMETER)
+
             if other_nucleus_image != '' :
                 if not os.path.isfile(other_nucleus_image) :
                     sg.popup("Nucleus image is not a file.")
@@ -232,6 +269,11 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 anisotropy=anisotropy,
                 nucleus_3D_segmentation=nucleus_segmentation_3D,
                 cyto_3D_segmentation=cytoplasm_segmentation_3D,
+                cellprob_threshold_cyto=cellprob_threshold_cyto,
+                cellprob_threshold_nuc=cellprob_threshold_nuc,
+                flow_threshold_cyto=flow_threshold_cyto,
+                flow_threshold_nuc=flow_threshold_nuc,
+
                 )
 
         finally  : window.close()
@@ -308,6 +350,10 @@ def cell_segmentation(
         nucleus_3D_segmentation=False,
         cyto_3D_segmentation=False,
         anisotropy = 1,
+        flow_threshold_nuc = 0.4,
+        flow_threshold_cyto = 0.4,
+        cellprob_threshold_nuc = 0.,
+        cellprob_threshold_cyto = 0.,
         do_only_nuc=False,
         external_nucleus_image = None,
         ) :
@@ -322,7 +368,15 @@ def cell_segmentation(
 
     if nuc.ndim >= 3 and not nucleus_3D_segmentation:
         nuc = stack.mean_projection(nuc)
-    nuc_label = _segmentate_object(nuc, nucleus_model_name, nucleus_diameter, [0,0], do_3D=nucleus_3D_segmentation, anisotropy=anisotropy)
+    nuc_label = _segmentate_object(
+        nuc, 
+        nucleus_model_name, 
+        nucleus_diameter, 
+        do_3D=nucleus_3D_segmentation, 
+        anisotropy=anisotropy,
+        flow_threshold= flow_threshold_nuc,
+        cellprob_threshold=cellprob_threshold_nuc
+        )
     
     if not do_only_nuc : 
         cyto_channel = channels[0]
@@ -342,7 +396,15 @@ def cell_segmentation(
         dest = source[-1:] + source[:-1]
         image = np.moveaxis(image, source=range(image.ndim), destination= dest)
 
-        cytoplasm_label = _segmentate_object(image, cyto_model_name, cyto_diameter, [1,2], do_3D=cyto_3D_segmentation, anisotropy=anisotropy)
+        cytoplasm_label = _segmentate_object(
+            image, 
+            cyto_model_name, 
+            cyto_diameter, 
+            do_3D=cyto_3D_segmentation, 
+            anisotropy=anisotropy,
+            flow_threshold=flow_threshold_cyto,
+            cellprob_threshold=cellprob_threshold_cyto,
+            )
 
         if cytoplasm_label.ndim == 3 and nuc_label.ndim == 2 :
             nuc_label = np.repeat(nuc_label[np.newaxis], len(cytoplasm_label), axis= 0)
@@ -355,7 +417,15 @@ def cell_segmentation(
 
     return cytoplasm_label, nuc_label
 
-def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D = False, anisotropy = 1) :
+def _segmentate_object(
+        im : np.ndarray, 
+        model_name : str, 
+        object_size_px : int, 
+        do_3D = False, 
+        anisotropy : float = 1.0,
+        flow_threshold : float = 0.4,
+        cellprob_threshold : float = 0, 
+        ) :
 
     model = models.CellposeModel(
         gpu= use_gpu(),
@@ -368,8 +438,11 @@ def _segmentate_object(im, model_name, object_size_px, channels = [0,0], do_3D =
         do_3D= do_3D,
         z_axis=0 if do_3D else None,
         channel_axis= im.ndim -1 if im.ndim == 3+ do_3D else None,
-        anisotropy=anisotropy
+        anisotropy=anisotropy,
+        flow_threshold=flow_threshold,
+        cellprob_threshold=cellprob_threshold,
         )
+    
     label = np.array(label, dtype= np.int64)
     if not do_3D : label = remove_disjoint(label) # Too much time consuming in 3D
     else : pass #TODO : filter too litle regions
@@ -381,32 +454,32 @@ def _cast_segmentation_parameters(values:dict) :
     values.setdefault('cytoplasm_channel',0)
     values.setdefault('nucleus channel',0)
 
+    cast_rules = {
+        'cytoplasm_diameter' : int,
+        'nucleus_diameter' : int,
+        'cytoplasm_channel' : int,
+        'nucleus_channel' : int,
+        'anisotropy' : float,
+        'flow_threshold_cyto' : float,
+        'cellprob_threshold_cyto' : float,
+        'flow_threshold_nuc' : float,
+        'cellprob_threshold_nuc' : float,
+
+    }    
+
+    for key, constructor in cast_rules.items() :
+        try :
+            if key in values.keys() : values[key] = constructor(values[key])
+        except ValueError :
+            pass
+
+    #None if default
     if values['cyto_model_name'] == '' :
         values['cyto_model_name'] = None
 
     if values['nucleus_model_name'] == '' :
         values['nucleus_model_name'] = None
 
-    try : #cytoplasm_channel
-        values['cytoplasm_channel'] = int(values['cytoplasm_channel'])
-    except ValueError :
-        pass
-
-    try : #nucleus channel
-        values['nucleus channel'] = int(values['nucleus channel'])
-    except ValueError :
-        pass
-
-    try : #object size
-        values['cytoplasm_diameter'] = float(values['cytoplasm_diameter'])
-    except ValueError :
-        pass
-
-    try : #object size
-        values['nucleus_diameter'] = float(values['nucleus_diameter'])
-    except ValueError :
-        pass
-    
     return values
 
 def remove_disjoint(image):

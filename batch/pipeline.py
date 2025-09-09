@@ -105,7 +105,11 @@ def batch_pipeline(
                     nucleus_model_name= parameters['nucleus_model_name'],
                     nucleus_diameter= parameters['nucleus_diameter'],
                     channels=[parameters['cytoplasm_channel'], parameters['nucleus channel']],
-                    do_only_nuc=parameters['segment_only_nuclei']
+                    do_only_nuc=parameters['segment_only_nuclei'],
+                    flow_threshold_cyto=parameters['flow_threshold_cyto'],
+                    flow_threshold_nuc=parameters['flow_threshold_cyto'],
+                    cellprob_threshold_cyto=parameters['cellprob_threshold_cyto'],
+                    cellprob_threshold_nuc=parameters['cellprob_threshold_nuc'],
                     )
 
                 parameters['segmentation_done'] = True

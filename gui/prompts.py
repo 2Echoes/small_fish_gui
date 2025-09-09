@@ -21,12 +21,9 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', 
     """
     if add_ok_cancel : layout += [[sg.Button('Ok', bind_return_key=True), sg.Button('Cancel')]]
 
-    if add_scrollbar :
-        size = (400,500)
-        col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=size)
-        layout = [[col_elmt]]
-    else :
-        size = (None,None)
+    size = (400,500)
+    col_elmt = sg.Column(layout, scrollable=True, vertical_scroll_only=True, size=size, expand_x=True, expand_y=True)
+    layout = [[col_elmt]]
     
     window = sg.Window('small fish', layout=layout, margins=(10,10), size=size, resizable=True, location=None)
     event, values = window.read(timeout=timeout, timeout_key=timeout_key)
@@ -282,7 +279,15 @@ def hub_prompt(fov_results : pd.DataFrame, do_segmentation=False) -> 'Union[Lite
 
 def coloc_prompt(spot_list : list) :
     layout = colocalization_layout(spot_list)
-    
+
+    layout = [[sg.Col(
+        layout,
+        expand_x=True,
+        expand_y=True,
+        vertical_scroll_only=True,
+        scrollable=True
+    )
+    ]]
     window = sg.Window('small fish', layout=layout, margins=(10,10), resizable=True, location=None, auto_size_buttons=True)
     while True : 
         event, values = window.read(timeout=100, timeout_key="timeout")

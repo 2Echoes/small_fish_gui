@@ -4,6 +4,8 @@ import FreeSimpleGUI as sg
 from ..gui import _error_popup, _warning_popup, parameters_layout, add_header
 from ..gui.prompts import input_image_prompt, prompt
 
+import small_fish_gui.default_values as default
+
 class ParameterInputError(Exception) :
     """
     Raised when user inputs an incorrect parameter.
@@ -361,12 +363,11 @@ def ask_input_parameters(ask_for_segmentation=True) :
     values = {}
     image_input_values = {}
     while True :
-        is_3D_preset = image_input_values.setdefault('is_3D_stack', False)
-        is_time_preset = image_input_values.setdefault('time stack', False)
-        is_multichannel_preset = image_input_values.setdefault('is_multichannel', False)
-        denseregion_preset = image_input_values.setdefault('do_dense_regions_deconvolution', False)
-        do_clustering_preset = image_input_values.setdefault('do_cluster_computation', False)
-        do_napari_preset = image_input_values.setdefault('show_napari_corrector', False)
+        is_3D_preset = image_input_values.setdefault('is_3D_stack', default.IS_3D_STACK)
+        is_multichannel_preset = image_input_values.setdefault('is_multichannel', default.IS_MULTICHANNEL)
+        denseregion_preset = image_input_values.setdefault('do_dense_regions_deconvolution', default.DO_DENSE_REGIONS_DECONVOLUTION)
+        do_clustering_preset = image_input_values.setdefault('do_cluster_computation', default.DO_CLUSTER_COMPUTATION)
+        do_napari_preset = image_input_values.setdefault('show_napari_corrector', default.SHOW_NAPARI_CORRECTOR)
 
         if ask_for_segmentation :
             image_input_values = input_image_prompt(

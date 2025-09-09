@@ -13,13 +13,8 @@ def reconstruct_boolean_signal(image_shape, spot_list: list):
     if len(spot_list) == 0 : return signal
     dim = len(spot_list[0])
 
-    print("image shape : ", image_shape)
-
     if dim == 3 :
         Z, Y, X = list(zip(*spot_list))
-        print('max Z : ', max(Z))
-        print('max Y : ', max(Y))
-        print('max X : ', max(X))
         signal[Z,Y,X] = True
 
     else : 
@@ -144,20 +139,14 @@ def spots_colocalisation(
     if len(spot_list1) == 0 or len(spot_list2) == 0 : return np.NaN
     if len(spot_list1[0]) != len(spot_list2[0]) : 
         raise MissMatchError("dimensionalities of spots 1 and spots 2 don't match.")
-    
-    print(spot_list2)
+
+    spot_list1 = np.array([spot for spot in spot_list1], dtype=int)
+    spot_list2 = np.array([spot for spot in spot_list2], dtype=int)
 
     shape1 = np.max(spot_list1,axis=0)
     shape2 = np.max(spot_list2,axis=0)
 
-    print("spots_colocalization")
     Z,Y,X = list(zip(*spot_list2))
-    print('max Z : ', max(Z))
-    print('max Y : ', max(Y))
-    print('max X : ', max(X))
-
-    print("shape1 : ", shape1)
-    print("shape2 : ", shape2)
 
     image_shape = np.max([shape1, shape2],axis=0) + 1
 
@@ -362,9 +351,9 @@ def _cell_coloc(
 
     #Putting spots lists in 2 cols for corresponding cells
     pivot_values_columns = ['rna_coords', 'total_rna_number']
-    if 'clusters' in acquisition2.columns or 'clusters' in acquisition1.columns :
+    if 'clusters' in acquisition2.columns or 'clusters' in acquisition1.columns:
         pivot_values_columns.extend(['clustered_spots_coords','clustered_spot_number'])
-    cell_dataframe['cell_id'] = cell_dataframe['cell_id'].astype(int)
+    cell_dataframe.loc[:,['cell_id']] = cell_dataframe['cell_id'].astype(int)
     colocalisation_df = cell_dataframe.pivot(
         columns=['name', 'acquisition_id'],
         values= pivot_values_columns,
@@ -391,7 +380,7 @@ def _cell_coloc(
         )
     colocalisation_df[("spots_with_spots_fraction",coloc_name_backward,"backward")] = colocalisation_df[("spots_with_spots_count",coloc_name_backward,"backward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)].astype(float)
 
-    if acquisition2['do_cluster_computation'].iat[0] :
+    if 'clusters' in acquisition2.columns:
         if len(acquisition2['clusters'].iat[0]) > 0 :
 
             #spots to clusters
@@ -405,7 +394,7 @@ def _cell_coloc(
                 )
             colocalisation_df[("spots_with_clustered_spots_fraction",coloc_name_forward,"forward")] = colocalisation_df[("spots_with_clustered_spots_count",coloc_name_forward,"forward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id1,acquisition_id1)].astype(float)
         
-    if acquisition1['do_cluster_computation'].iat[0] :
+    if 'clusters' in acquisition1.columns:
         if len(acquisition1['clusters'].iat[0]) > 0 :
             colocalisation_df[("spots_with_clustered_spots_count",coloc_name_backward,"backward")] = colocalisation_df.apply(
                 lambda x: spots_colocalisation(
@@ -418,7 +407,7 @@ def _cell_coloc(
 
             colocalisation_df[("spots_with_clustered_spots_fraction",coloc_name_backward,"backward")] = colocalisation_df[("spots_with_clustered_spots_count",coloc_name_backward,"backward")].astype(float) / colocalisation_df[('total_rna_number',acquisition_name_id2,acquisition_id2)].astype(float)
 
-    if acquisition2['do_cluster_computation'].iat[0] and acquisition1['do_cluster_computation'].iat[0] :
+    if 'clusters' in acquisition2.columns and 'clusters' in acquisition1.columns:
         if len(acquisition1['clusters'].iat[0]) > 0 and len(acquisition2['clusters'].iat[0]) > 0 :
             #clusters to clusters 
             colocalisation_df[("clustered_spots_with_clustered_spots_count",coloc_name_forward,"forward")] = colocalisation_df.apply(

@@ -1,12 +1,12 @@
 import FreeSimpleGUI as sg
 import os
-from ..utils import check_parameter
-from ..hints import pipeline_parameters
 from typing import Optional, Union
 import cellpose.models as models
 from cellpose.core import use_gpu
 
-sg.theme('DarkAmber')
+from .tooltips import FLOW_THRESHOLD_TOOLTIP,CELLPROB_TOOLTIP
+from ..hints import pipeline_parameters
+from ..utils import check_parameter
 
 
 def add_header(header_text) :
@@ -20,12 +20,28 @@ def pad_right(string, length, pad_char) :
     else : return string + pad_char* (length - len(string))
     
 
-def parameters_layout(parameters:'list[str]' = [], unit=None, header= None, default_values=None, size=5, opt:list=None) :
+def parameters_layout(
+        parameters:'list[str]' = [], 
+        unit=None, 
+        header= None, 
+        default_values=None, 
+        keys = None,
+        tooltips = None,
+        size=5, 
+        opt:list=None
+        ) :
 
     if len(parameters) == 0 : return []
     check_parameter(parameters= list, header = (str, type(None)))
     for key in parameters : check_parameter(key = str)
     max_length = len(max(parameters, key=len))
+
+    if keys is None : keys = [None] * len(parameters)
+    else :
+        if len(keys) != len(parameters) : raise ValueError("keys length must be equal with parameters length or set to None.")
+    if tooltips is None : tooltips = [None] * len(parameters)
+    else :
+        if len(tooltips) != len(parameters) : raise ValueError("tooltips length must be equal with parameters length or set to None.")
 
     if type(opt) == type(None) :
         opt = [False] * len(parameters)
@@ -35,10 +51,11 @@ def parameters_layout(parameters:'list[str]' = [], unit=None, header= None, defa
     if isinstance(default_values, (list, tuple)) :
         if len(default_values) != len(parameters) : raise ValueError("if default values specified it must be of equal length as parameters.")
         layout= [
-            [sg.Text("{0}".format(pad_right(parameter, max_length, ' ')), text_color= 'green' if option else None), 
-             sg.InputText(size= size, key= parameter, default_text= value)
-             
-             ] for parameter,value, option in zip(parameters,default_values, opt)
+            [
+                sg.Text("{0}".format(pad_right(parameter, max_length, ' ')), text_color= 'green' if option else None), 
+                sg.InputText(size= size, key= parameter if key is None else key, default_text= value, tooltip=tooltip)
+            
+            ] for parameter,value, option, key, tooltip in zip(parameters,default_values, opt, keys, tooltips)
         ]
     else :
         layout= [
@@ -96,9 +113,13 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
     else : Browse = sg.FileBrowse
 
     max_length = len(max(keys, key=len))
-    layout = [
-        [sg.Text(pad_right(name, max_length, ' ')), Browse(key= name, target=(555666777,2), initial_folder= preset), sg.Text('')] for name in keys
-        ]
+
+    layout = []
+    for name in keys :
+        layout += [
+            [sg.Text(pad_right(name, max_length, ' '))], 
+            [sg.InputText(key= name, expand_x=True), Browse(key= name, initial_folder= preset), sg.Text('')],
+            ]
     if isinstance(header, str) :
         layout = [add_header(header)] + layout
     return layout
@@ -170,14 +191,16 @@ def _segmentation_layout(
         cytoplasm_channel_preset=0, 
         nucleus_channel_preset=0, 
         other_nucleus_image_preset = None,
-        cyto_diameter_preset=30, 
-        nucleus_diameter_preset= 30, 
+        cyto_diameter_preset=120, 
+        nucleus_diameter_preset= 60, 
         show_segmentation_preset= False, 
         segment_only_nuclei_preset=False, 
         saving_path_preset=os.getcwd(), 
         filename_preset='cell_segmentation.png',
         cytoplasm_segmentation_3D = False,
         nucleus_segmentation_3D = False,
+        cellprob_threshold = 0.4,
+        flow_threshold = 0.0,
         anisotropy=1,
         ) :
     
@@ -202,6 +225,13 @@ def _segmentation_layout(
     if multichannel : layout += parameters_layout(['cytoplasm_channel'],default_values= [cytoplasm_channel_preset])
     if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'],)
 
+    layout += parameters_layout(
+        ["Flow threshold", "Cellprob threshold"], 
+        default_values=[flow_threshold, cellprob_threshold], 
+        keys=["flow_threshold_cyto","cellprob_threshold_cyto"],
+        tooltips= [FLOW_THRESHOLD_TOOLTIP, CELLPROB_TOOLTIP]
+        )
+
     #Nucleus parameters
     layout += [
             add_header("Nucleus segmentation"),
@@ -214,9 +244,19 @@ def _segmentation_layout(
     layout += parameters_layout([ 'nucleus_diameter'],unit= "px", default_values= [nucleus_diameter_preset])
     layout += bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset, keys=["segment_only_nuclei"])
     
-    if is_3D_stack :
-        layout += bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'],)
-        layout += parameters_layout(['anisotropy'], default_values=[anisotropy])
+    if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'],)
+    
+    layout += parameters_layout(
+        ["Flow threshold", "Cellprob threshold"], 
+        default_values=[flow_threshold, cellprob_threshold], 
+        keys=["flow_threshold_nuc","cellprob_threshold_nuc"],
+        tooltips= [FLOW_THRESHOLD_TOOLTIP, CELLPROB_TOOLTIP]
+        )
+    if is_3D_stack : layout += parameters_layout(
+        ['anisotropy'], 
+        header = "Model parameters",
+        default_values = [anisotropy]
+        )
 
     #Control plots
     layout += bool_layout(['show_segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)

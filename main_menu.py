@@ -16,7 +16,7 @@ from .pipeline.actions import open_wiki
 
 from .pipeline._preprocess import clean_unused_parameters_cache
 from .batch import batch_promp
-from .gui import hub_prompt, prompt_restore_main_menu
+from .gui import hub_prompt, prompt_restore_main_menu, default_theme
 from .hints import pipeline_parameters
 
 #'Global' parameters
@@ -29,6 +29,7 @@ cell_coloc_df = dict()
 cytoplasm_label = None
 nucleus_label = None
 
+default_theme()
 while True : #Break this loop to close small_fish
     try :
         result_df = result_df.reset_index(drop=True)
