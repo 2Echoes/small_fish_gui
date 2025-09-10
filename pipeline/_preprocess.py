@@ -322,7 +322,7 @@ def _check_segmentation_parameters(
     cytoplasm_channel = user_parameters['cytoplasm_channel']
     nucleus_model_name = user_parameters['nucleus_model_name']
     nucleus_size = user_parameters['nucleus_diameter']
-    nucleus_channel = user_parameters['nucleus channel']
+    nucleus_channel = user_parameters['nucleus_channel']
    
 
     if type(cyto_model_name) != str  and not do_only_nuc:

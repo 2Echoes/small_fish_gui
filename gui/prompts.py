@@ -174,7 +174,7 @@ def detection_parameters_promt(
         layout += parameters_layout(['min_number_of_spots'], default_values=[default_dict.setdefault('min_number_of_spots', 5)])
 
     if is_multichannel and segmentation_done :
-        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus channel',0))]
+        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus_channel',0))]
         layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
 
     layout += bool_layout(['Interactive threshold selector'], keys=['show_interactive_threshold_selector'], preset=[False])

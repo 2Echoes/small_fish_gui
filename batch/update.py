@@ -98,7 +98,7 @@ def update_segmentation_tab(
     
     #Access elements
     cytoplasm_channel_elmt = get_elmt_from_key(tab_elmt, key= 'cytoplasm_channel')
-    nucleus_channel_elmt = get_elmt_from_key(tab_elmt, key= 'nucleus channel')
+    nucleus_channel_elmt = get_elmt_from_key(tab_elmt, key= 'nucleus_channel')
     do_nucleus_3D_elmt = get_elmt_from_key(tab_elmt, key= "nucleus_segmentation_3D")
     do_cytoplasm_3D_elmt = get_elmt_from_key(tab_elmt, key= "cytoplasm_segmentation_3D")
     

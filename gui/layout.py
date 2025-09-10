@@ -216,15 +216,15 @@ def _segmentation_layout(
     
     #cytoplasm parameters
     layout += [
-        add_header("Cell Segmentation"),
-        [sg.Text("Choose cellpose model for cytoplasm: \n")],
-        combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset),
+        add_header("Cytoplasm Segmentation"),
+        [sg.Text("Choose parameters for cytoplasm segmentation: \n")],
                         ]
                         
-    layout += parameters_layout(['cytoplasm_diameter'], unit= "px", default_values= [cyto_diameter_preset])
-    if multichannel : layout += parameters_layout(['cytoplasm_channel'],default_values= [cytoplasm_channel_preset])
     if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'],)
+    if multichannel : layout += parameters_layout(['Cytoplasm channel'],default_values= [cytoplasm_channel_preset], keys = "cytoplasm_channel")
 
+    layout += [[sg.Text("Cellpose model : ")] + combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
+    layout += parameters_layout(['Cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset], keys=['cytoplasm_diameter'])
     layout += parameters_layout(
         ["Flow threshold", "Cellprob threshold"], 
         default_values=[flow_threshold, cellprob_threshold], 
@@ -234,18 +234,17 @@ def _segmentation_layout(
 
     #Nucleus parameters
     layout += [
-            add_header("Nucleus segmentation"),
-            [sg.Text("Choose cellpose model for nucleus: \n")],
-              combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset),
+            add_header("Nuclei segmentation"),
+            [sg.Text("Choose parameters for nuclei segmentation: \n")],
                 ]
     
-    if multichannel : layout += parameters_layout(['nucleus channel'], default_values= [nucleus_channel_preset])
     layout += path_layout(['other_nucleus_image'], preset=other_nucleus_image_preset)
-    layout += parameters_layout([ 'nucleus_diameter'],unit= "px", default_values= [nucleus_diameter_preset])
+    if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'],)
+    if multichannel : layout += parameters_layout(['nucleus_channel'], default_values= [nucleus_channel_preset])
     layout += bool_layout(["Segment only nuclei"], preset=segment_only_nuclei_preset, keys=["segment_only_nuclei"])
     
-    if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[nucleus_segmentation_3D], keys=['nucleus_segmentation_3D'],)
-    
+    layout += [[sg.Text("Cellpose model : ")] + combo_elmt(models_list, key='nucleus_model_name', default_value= nucleus_model_preset)]
+    layout += parameters_layout(['Nucleus diameter'],unit= "px", default_values= [nucleus_diameter_preset], keys=['nucleus_diameter'])
     layout += parameters_layout(
         ["Flow threshold", "Cellprob threshold"], 
         default_values=[flow_threshold, cellprob_threshold], 
@@ -320,7 +319,7 @@ def _detection_layout(
     layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
     
     if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
-        layout += [[sg.Text("nucleus channel signal "), sg.InputText(default_text=default_dict.setdefault('nucleus channel',0), key= "nucleus channel signal", size= 5, tooltip= "Channel from which signal will be measured for nucleus features, \nallowing you to measure signal from a different channel than the one used for segmentation.")]]
+        layout += [[sg.Text("nucleus channel signal "), sg.InputText(default_text=default_dict.setdefault('nucleus_channel',0), key= "nucleus channel signal", size= 5, tooltip= "Channel from which signal will be measured for nucleus features, \nallowing you to measure signal from a different channel than the one used for segmentation.")]]
     
     #Deconvolution
     if do_dense_region_deconvolution :

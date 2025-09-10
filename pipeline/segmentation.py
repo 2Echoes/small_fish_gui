@@ -62,7 +62,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
         cytoplasm_channel = segmentation_parameters.setdefault('cytoplasm_channel', default.CHANNEL)
         nucleus_model_name = segmentation_parameters.setdefault('nucleus_model_name', default.NUC_MODEL)
         nucleus_size = segmentation_parameters.setdefault('nucleus_diameter', default.NUC_DIAMETER)
-        nucleus_channel = segmentation_parameters.setdefault('nucleus channel', default.CHANNEL)
+        nucleus_channel = segmentation_parameters.setdefault('nucleus_channel', default.CHANNEL)
         other_nucleus_image = segmentation_parameters.setdefault('other_nucleus_image',None)
         path = os.getcwd()
         show_segmentation = segmentation_parameters.setdefault('show_segmentation', default.SHOW_SEGMENTATION)
@@ -121,7 +121,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             cytoplasm_channel = values['cytoplasm_channel']
             nucleus_model_name = values['nucleus_model_name']
             nucleus_size = values['nucleus_diameter']
-            nucleus_channel = values['nucleus channel']
+            nucleus_channel = values['nucleus_channel']
             other_nucleus_image = values['other_nucleus_image']
             path = values['saving path'] if values['saving path'] != '' else None
             show_segmentation = values['show_segmentation']
@@ -194,7 +194,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 if nucleus_channel not in available_channels :
                     sg.popup('For given input image please select channel in {0}\nnucleus channel : {1}'.format(available_channels, nucleus_channel))
                     relaunch= True
-                    values['nucleus channel'] = user_parameters.setdefault('nucleus_channel', default.CHANNEL)
+                    values['nucleus_channel'] = user_parameters.setdefault('nucleus_channel', default.CHANNEL)
             else : 
                 nucleus_channel = ...
 
@@ -452,7 +452,7 @@ def _segmentate_object(
 def _cast_segmentation_parameters(values:dict) :
 
     values.setdefault('cytoplasm_channel',0)
-    values.setdefault('nucleus channel',0)
+    values.setdefault('nucleus_channel',0)
 
     cast_rules = {
         'cytoplasm_diameter' : int,

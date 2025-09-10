@@ -104,7 +104,7 @@ def batch_pipeline(
                     cyto_diameter= parameters['cytoplasm_diameter'],
                     nucleus_model_name= parameters['nucleus_model_name'],
                     nucleus_diameter= parameters['nucleus_diameter'],
-                    channels=[parameters['cytoplasm_channel'], parameters['nucleus channel']],
+                    channels=[parameters['cytoplasm_channel'], parameters['nucleus_channel']],
                     do_only_nuc=parameters['segment_only_nuclei'],
                     flow_threshold_cyto=parameters['flow_threshold_cyto'],
                     flow_threshold_nuc=parameters['flow_threshold_cyto'],
@@ -124,7 +124,7 @@ def batch_pipeline(
                         plot_segmentation(
                             cyto_image=im_seg[parameters['cytoplasm_channel']],
                             cyto_label= cytoplasm_label,
-                            nuc_image= im_seg[parameters['nucleus channel']],
+                            nuc_image= im_seg[parameters['nucleus_channel']],
                             nuc_label=nucleus_label,
                             path= main_dir + "segmentation/" + file,
                             do_only_nuc= parameters['segment_only_nuclei'],
