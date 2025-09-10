@@ -1,9 +1,10 @@
 import FreeSimpleGUI as sg
 import os
-from typing import Optional, Union
 import cellpose.models as models
-from cellpose.core import use_gpu
+import small_fish_gui.default_values as default
+from typing import Optional, Union
 
+from cellpose.core import use_gpu
 from .tooltips import FLOW_THRESHOLD_TOOLTIP,CELLPROB_TOOLTIP
 from ..hints import pipeline_parameters
 from ..utils import check_parameter
@@ -73,7 +74,7 @@ def parameters_layout(
         layout = [add_header(header)] + layout
     return layout
 
-def tuple_layout(opt=None, default_dict={}, unit:dict={}, **tuples) :
+def tuple_layout(opt=None, default_dict={}, unit:dict={}, names : dict = {}, **tuples) :
     """
     tuples example : voxel_size = ['z','y','x']; will ask a tuple with 3 element default to 'z', 'y' 'x'.
     """
@@ -94,7 +95,7 @@ def tuple_layout(opt=None, default_dict={}, unit:dict={}, **tuples) :
     max_size = len(max(tuples.keys(), key=len))
     
     layout = [
-        [sg.Text(pad_right(tup, max_size, ' '), text_color= 'green' if opt[option] else None)] 
+        [sg.Text(pad_right(names[tup] if tup in names.keys() else tup, max_size, ' '), text_color= 'green' if opt[option] else None)] 
         + [sg.InputText(default_text=default_dict.setdefault('{0}_{1}'.format(tup,elmnt), elmnt),key= '{0}_{1}'.format(tup, elmnt), size= 5) for elmnt in tuples[tup]]
         + [sg.Text(unit.setdefault(tup,''))]
         for tup,option, in zip(tuples,opt)
@@ -118,7 +119,7 @@ def path_layout(keys= [],look_for_dir = False, header=None, preset=os.getcwd()) 
     for name in keys :
         layout += [
             [sg.Text(pad_right(name, max_length, ' '))], 
-            [sg.InputText(key= name, expand_x=True), Browse(key= name, initial_folder= preset), sg.Text('')],
+            [sg.InputText(key= name, expand_x=True, default_text=preset), Browse(key= name, initial_folder= preset), sg.Text('')],
             ]
     if isinstance(header, str) :
         layout = [add_header(header)] + layout
@@ -186,22 +187,22 @@ def radio_layout(values, header=None, key=None) :
 def _segmentation_layout(
         multichannel : bool,
         is_3D_stack : bool,
-        cytoplasm_model_preset= 'cyto3', 
-        nucleus_model_preset= 'nuclei', 
-        cytoplasm_channel_preset=0, 
-        nucleus_channel_preset=0, 
+        cytoplasm_model_preset= default.CYTO_MODEL, 
+        nucleus_model_preset= default.NUC_MODEL, 
+        cytoplasm_channel_preset=default.CHANNEL, 
+        nucleus_channel_preset=default.NUC_CHANNEL, 
         other_nucleus_image_preset = None,
-        cyto_diameter_preset=120, 
-        nucleus_diameter_preset= 60, 
-        show_segmentation_preset= False, 
-        segment_only_nuclei_preset=False, 
-        saving_path_preset=os.getcwd(), 
+        cyto_diameter_preset=default.CYTO_DIAMETER, 
+        nucleus_diameter_preset= default.NUC_DIAMETER, 
+        show_segmentation_preset= default.SHOW_SEGMENTATION, 
+        segment_only_nuclei_preset=default.SEGMENT_ONLY_NUCLEI, 
+        saving_path_preset=default.VISUAL_PATH, 
         filename_preset='cell_segmentation.png',
-        cytoplasm_segmentation_3D = False,
-        nucleus_segmentation_3D = False,
-        cellprob_threshold = 0.4,
-        flow_threshold = 0.0,
-        anisotropy=1,
+        cytoplasm_segmentation_3D = default.DO_3D_SEMGENTATION,
+        nucleus_segmentation_3D = default.DO_3D_SEMGENTATION,
+        cellprob_threshold = default.CELLPROB_THRESHOD,
+        flow_threshold = default.FLOW_THRESHOLD,
+        anisotropy= default.ANISOTROPY,
         ) :
     
     USE_GPU = use_gpu()
@@ -301,7 +302,7 @@ def _detection_layout(
 
     #Detection
     detection_parameters = ['threshold', 'threshold penalty']
-    default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
+    default_detection = [default_dict.setdefault('threshold',default.THRESHOLD), default_dict.setdefault('threshold penalty', default.THRESHOLD_PENALTY)]
     opt= [True, True]
     if is_multichannel : 
         detection_parameters += ['channel_to_compute']
@@ -315,32 +316,31 @@ def _detection_layout(
     else : tuple_shape = ('z','y','x')
     opt = {'voxel_size' : False, 'spot_size' : False, 'log_kernel_size' : True, 'minimum_distance' : True}
     unit = {'voxel_size' : 'nm', 'minimum_distance' : 'nm', 'spot_size' : 'radius(nm)', 'log_kernel_size' : 'px'}
+    names = {'voxel_size' : 'Voxel size', 'spot_size' : 'Spot size', 'log_kernel_size' : 'LoG kernel size', 'minimum_distance' : 'Minimum distance between spots'}
 
-    layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
+    layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, names=names, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
     
     if (do_segmentation and is_multichannel) or (is_multichannel and segmentation_done):
-        layout += [[sg.Text("nucleus channel signal "), sg.InputText(default_text=default_dict.setdefault('nucleus_channel',0), key= "nucleus channel signal", size= 5, tooltip= "Channel from which signal will be measured for nucleus features, \nallowing you to measure signal from a different channel than the one used for segmentation.")]]
+        layout += [[sg.Text("nucleus channel signal "), sg.InputText(default_text=default_dict.setdefault('nucleus_channel',default.NUC_CHANNEL), key= "nucleus channel signal", size= 5, tooltip= "Channel from which signal will be measured for nucleus features, \nallowing you to measure signal from a different channel than the one used for segmentation.")]]
     
     #Deconvolution
     if do_dense_region_deconvolution :
-        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
+        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',default.ALPHA), default_dict.setdefault('beta',default.BETA)]
         layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'do_dense_regions_deconvolution')
-        layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',5)])
+        layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',default.GAMMA)])
         layout += tuple_layout(opt= {"deconvolution_kernel" : True}, unit= {"deconvolution_kernel" : 'px'}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
     
     #Clustering
     if do_clustering :
-        layout += parameters_layout(['cluster_size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster_size',400)])
-        layout += parameters_layout(['min_number_of_spots'], default_values=[default_dict.setdefault('min_number_of_spots', 5)])
+        layout += parameters_layout(['Cluster radius'],keys=['cluster_size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster_size',default.CLUSTER_SIZE)])
+        layout += parameters_layout(['Min nb spots per cluster'],keys=['min_number_of_spots'], default_values=[default_dict.setdefault('min_number_of_spots', default.MIN_NUMBER_SPOTS)])
 
-    
-
-    layout += bool_layout(['Interactive threshold selector'],keys = ['show_interactive_threshold_selector'], preset=[False])
+    layout += bool_layout(['Interactive threshold selector'],keys = ['show_interactive_threshold_selector'], preset=[default.INTERACTIVE_THRESHOLD])
     layout += path_layout(
         keys=['spots_extraction_folder'],
         look_for_dir=True,
         header= "Individual spot extraction",
-        preset= default_dict.setdefault('spots_extraction_folder', '')
+        preset= default_dict.setdefault('spots_extraction_folder', default.SPOT_EXTRACTION_FOLDER)
     )
     default_filename = default_dict.setdefault("filename","") + "_spot_extraction"
     layout += parameters_layout(
@@ -349,8 +349,9 @@ def _detection_layout(
         size= 13
     )
     layout += bool_layout(
-        parameters= ['do_spots_csv', 'do_spots_excel'],
-        preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),]
+        ['.csv','.excel',],
+        keys= ['do_spots_csv', 'do_spots_excel'],
+        preset= [default_dict.setdefault('do_spots_csv',default.DO_CSV), default_dict.setdefault('do_spots_excel',default.DO_EXCEL),]
     )
 
     return layout

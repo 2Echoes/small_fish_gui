@@ -112,8 +112,6 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                     continue
 
             #Extract parameters
-            print(values)
-            print('CAST')
             values = _cast_segmentation_parameters(values)
             do_only_nuc = values['segment_only_nuclei']
             cyto_model_name = values['cyto_model_name']
@@ -135,8 +133,6 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             flow_threshold_cyto = values['flow_threshold_cyto']
             flow_threshold_nuc = values['flow_threshold_nuc']
 
-            print(values)
-
             relaunch= False
             #Checking integrity of parameters
 
@@ -144,17 +140,21 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             if type(flow_threshold_nuc) != float : 
                 sg.popup('Invalid value for flow threshold in nuc parameters, must be a float between 0 and 1.')
                 values['flow_threshold_nuc'] = user_parameters.setdefault('flow_threshold_nuc',default.FLOW_THRESHOLD)
+                relaunch= True
             if type(flow_threshold_cyto) != float : 
                 sg.popup('Invalid value for flow threshold in cyto parameters, must be a float between 0 and 1.')
                 values['flow_threshold_cyto'] = user_parameters.setdefault('flow_threshold_cyto',default.FLOW_THRESHOLD)
+                relaunch= True
             
             #cellprob thresholds
             if type(flow_threshold_nuc) != float : 
                 sg.popup('Invalid value for cellprob threshold in nuc parameters, must be a float between -3 and +3.')
                 values['flow_threshold_nuc'] = user_parameters.setdefault('flow_threshold_nuc',default.FLOW_THRESHOLD)
+                relaunch= True
             if type(flow_threshold_cyto) != float : 
                 sg.popup('Invalid value for cellprob threshold in cyto parameters, must be a float between -3 and +3.')
                 values['flow_threshold_cyto'] = user_parameters.setdefault('flow_threshold_cyto',default.FLOW_THRESHOLD)
+                relaunch= True
 
             
             #Models

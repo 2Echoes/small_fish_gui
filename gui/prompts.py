@@ -2,15 +2,18 @@ import FreeSimpleGUI as sg
 import pandas as pd
 import os
 import numpy as np
+import small_fish_gui.default_values as default
+
 from typing import Literal, Union
 from .layout import (
     path_layout,
     parameters_layout,
     bool_layout,
-    tuple_layout, 
     path_layout, 
     radio_layout,
-    colocalization_layout
+    colocalization_layout,
+    tuple_layout,
+    _detection_layout
     )
 from ..interface import open_image, check_format, FormatError
 
@@ -37,8 +40,6 @@ def prompt(layout, add_ok_cancel=True, timeout=None, timeout_key='TIMEOUT_KEY', 
     else : 
         window.close()
         return event, values
-
-
 
 def input_image_prompt(
         is_3D_stack_preset=False,
@@ -140,60 +141,15 @@ def detection_parameters_promt(
     Returns Values
         
     """
-    if is_3D_stack : dim = 3
-    else : dim = 2
-
-    #Detection
-    detection_parameters = ['threshold', 'threshold penalty']
-    default_detection = [default_dict.setdefault('threshold',''), default_dict.setdefault('threshold penalty', '1')]
-    opt= [True, True]
-    if is_multichannel : 
-        detection_parameters += ['channel_to_compute']
-        opt += [False]
-        default_detection += [default_dict.setdefault('channel_to_compute', '')]
-    layout = [[sg.Text("Green parameters", text_color= 'green'), sg.Text(" are optional parameters.")]]
-    layout += parameters_layout(detection_parameters, header= 'Detection', opt=opt, default_values=default_detection)
     
-    if dim == 2 : tuple_shape = ('y','x')
-    else : tuple_shape = ('z','y','x')
-    opt = {'voxel_size' : False, 'spot_size' : False, 'log_kernel_size' : True, 'minimum_distance' : True}
-    unit = {'voxel_size' : 'nm', 'minimum_distance' : 'nm', 'spot_size' : 'radius(nm)', 'log_kernel_size' : 'px'}
-
-    layout += tuple_layout(opt=opt, unit=unit, default_dict=default_dict, voxel_size= tuple_shape, spot_size= tuple_shape, log_kernel_size= tuple_shape, minimum_distance= tuple_shape)
-
-    #Deconvolution
-    if do_dense_region_deconvolution :
-        default_dense_regions_deconvolution = [default_dict.setdefault('alpha',0.5), default_dict.setdefault('beta',1)]
-        layout += parameters_layout(['alpha', 'beta',], default_values= default_dense_regions_deconvolution, header= 'do_dense_regions_deconvolution')
-        layout += parameters_layout(['gamma'], unit= 'px', default_values= [default_dict.setdefault('gamma',5)])
-        layout += tuple_layout(opt= {"deconvolution_kernel" : True}, unit= {"deconvolution_kernel" : 'px'}, default_dict=default_dict, deconvolution_kernel = tuple_shape)
-    
-    #Clustering
-    if do_clustering :
-        layout += parameters_layout(['cluster_size'], unit="radius(nm)", default_values=[default_dict.setdefault('cluster_size',400)])
-        layout += parameters_layout(['min_number_of_spots'], default_values=[default_dict.setdefault('min_number_of_spots', 5)])
-
-    if is_multichannel and segmentation_done :
-        default_segmentation = [default_dict.setdefault('nucleus channel signal', default_dict.setdefault('nucleus_channel',0))]
-        layout += parameters_layout(['nucleus channel signal'], default_values=default_segmentation) + [[sg.Text(" channel from which signal will be measured for nucleus features.")]]
-
-    layout += bool_layout(['Interactive threshold selector'], keys=['show_interactive_threshold_selector'], preset=[False])
-    layout += path_layout(
-        keys=['spots_extraction_folder'],
-        look_for_dir=True,
-        header= "Individual spot extraction",
-        preset= default_dict.setdefault('spots_extraction_folder', '')
-    )
-    default_filename = default_dict.setdefault("filename","") + "_spot_extraction"
-    layout += parameters_layout(
-        parameters=['spots_filename'],
-        default_values=[default_filename],
-        size= 13
-    )
-    layout += bool_layout(
-        ['.csv','.excel','.feather'],
-        keys= ['do_spots_csv', 'do_spots_excel', 'do_spots_feather'],
-        preset= [default_dict.setdefault('do_spots_csv',False), default_dict.setdefault('do_spots_excel',False),default_dict.setdefault('do_spots_feather',False)]
+    layout = _detection_layout(
+        is_3D_stack=is_3D_stack, 
+        is_multichannel=is_multichannel, 
+        do_dense_region_deconvolution=do_dense_region_deconvolution, 
+        do_clustering=do_clustering,
+        segmentation_done=segmentation_done, 
+        default_dict=default_dict,
+        do_segmentation=False,
     )
 
     event, values = prompt(layout)

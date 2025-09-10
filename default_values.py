@@ -1,15 +1,17 @@
 """"
 Constant submodule to have a common reference for parameters default values
 """
+import os
 
 #Image
 IS_MULTICHANNEL = False
 IS_3D_STACK = False
+CHANNEL = 0
+NUC_CHANNEL = 1
 
 #Segmentation
 FLOW_THRESHOLD = 0.4
 CELLPROB_THRESHOD = 0.
-CHANNEL = 0
 CYTO_MODEL = "cpsam"
 NUC_MODEL = "cpsam"
 CYTO_DIAMETER = 120
@@ -18,17 +20,30 @@ ANISOTROPY = 1.
 SHOW_SEGMENTATION = True
 SEGMENT_ONLY_NUCLEI = False
 DO_3D_SEMGENTATION = False
+VISUAL_PATH = os.getcwd()
 
 #Detection
 THRESHOLD = None
+THRESHOLD_PENALTY = 1
 DO_DENSE_REGIONS_DECONVOLUTION = False
 DO_CLUSTER_COMPUTATION = False
 DO_CLUSTER_COMPUTATION = False
 SHOW_NAPARI_CORRECTOR = True
+INTERACTIVE_THRESHOLD = False
 
+#Deconvolution
 ALPHA = 0.5
 BETA = 1.
 GAMMA = 3.
 
+#Clustering
+CLUSTER_SIZE = 400
+MIN_NUMBER_SPOTS = 5
+
 #Coloc
 COLOC_RANGE = 0
+
+#Spots Extraction
+DO_CSV = False
+DO_EXCEL = False
+SPOT_EXTRACTION_FOLDER = os.getcwd()
