@@ -366,12 +366,12 @@ def colocalization_layout(spot_list : list) :
         [sg.DropDown(values=[""] + spot_list, key="spots2_dropdown"), sg.Input(disabled=True, text_color="black"),sg.FileBrowse("Load spot extraction", key="spots2_browse")],
     ]
 
-    layout += parameters_layout(['colocalisation distance'], unit= 'nm', default_values= 0,)
+    layout += parameters_layout(['colocalisation distance'], unit= 'nm', default_values= default.COLOC_RANGE,)
 
-    layout += tuple_layout(opt={'voxel_size' : False},unit={'voxel_size' : "nm"}, voxel_size = ['z','y','x'], )
+    layout += tuple_layout(opt={'voxel_size' : False},unit={'voxel_size' : "nm"}, voxel_size = ['z','y','x'], names={'voxel_size' : 'Voxel size'}, default_dict={'voxel_size' : default.COLOC_VOXEL_SIZE},)
     layout += [[sg.Text("   'voxel size' is used only for loaded spot lists.")]]
 
-    layout += [[sg.Push(),sg.Button("Ok"),sg.Button("Cancel"),sg.Push(),],
+    layout += [[sg.Push(),sg.Button("Ok", bind_return_key=True),sg.Button("Cancel"),sg.Push(),],
         [sg.VPush()]
     ]
 

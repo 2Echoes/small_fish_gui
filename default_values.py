@@ -41,7 +41,8 @@ CLUSTER_SIZE = 400
 MIN_NUMBER_SPOTS = 5
 
 #Coloc
-COLOC_RANGE = 0
+COLOC_RANGE = 400
+COLOC_VOXEL_SIZE = (1,2,3)
 
 #Spots Extraction
 DO_CSV = False
