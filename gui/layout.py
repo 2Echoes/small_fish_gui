@@ -222,7 +222,7 @@ def _segmentation_layout(
                         ]
                         
     if is_3D_stack : layout += bool_layout(['3D segmentation'], preset=[cytoplasm_segmentation_3D], keys=['cytoplasm_segmentation_3D'],)
-    if multichannel : layout += parameters_layout(['Cytoplasm channel'],default_values= [cytoplasm_channel_preset], keys = "cytoplasm_channel")
+    if multichannel : layout += parameters_layout(['Cytoplasm channel'],default_values= [cytoplasm_channel_preset], keys = ["cytoplasm_channel"])
 
     layout += [[sg.Text("Cellpose model : ")] + combo_elmt(models_list, key='cyto_model_name', default_value= cytoplasm_model_preset)]
     layout += parameters_layout(['Cytoplasm diameter'], unit= "px", default_values= [cyto_diameter_preset], keys=['cytoplasm_diameter'])

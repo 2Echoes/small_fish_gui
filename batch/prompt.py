@@ -134,9 +134,10 @@ def batch_promp(
     tab_col = sg.Column( #Allow the tab to be scrollable
         [[_tab_group]],
         scrollable=True,
-        vertical_scroll_only=True,
+        vertical_scroll_only=False,
         s= (390,390),
-        pad=((0,0),(5,5))
+        pad=((0,0),(5,5)),
+        expand_x=True,
         )
     
     tab_dict= {
@@ -177,14 +178,14 @@ def batch_promp(
 #########################################
 #####   Window Creation
 #########################################
-    stream_output = sg.Output(size=(100,10), pad=(30,10), visible=True)
+    stream_output = sg.Output(size=(100,10), pad=(30,10), visible=True, expand_x=True, expand_y=True)
     layout = [
         [sg.Text("Batch Processing", font=('bold',20), pad=((300,0),(0,2)))],
         [sg.Text("Select a folder : "), sg.FolderBrowse(initial_folder=os.getcwd(), key='Batch_folder'), sg.Button('Load')],
         [files_table],
         [sanity_header, sanity_check_button, sanity_progress],
         [dimension_number_text],
-        [tab_col, launch_col],
+        [tab_col, sg.Push(), launch_col, sg.Push()],
         [stream_output],
     ]
 
