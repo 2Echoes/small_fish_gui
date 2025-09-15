@@ -159,6 +159,7 @@ def show_segmentation(
         nuc_label : np.ndarray,
         cyto_image : np.ndarray = None,
         cyto_label : np.ndarray = None,
+        anisotrpy : float = 1,
 ) :
     dim = nuc_image.ndim
     
@@ -186,16 +187,18 @@ def show_segmentation(
     #Init Napari viewer
     Viewer = napari.Viewer(ndisplay=2, title= 'Show segmentation', axis_labels=['z','y','x'] if dim == 3 else ['y', 'x'])
     
+    scale = (anisotrpy, 1, 1)
+
     # Adding nuclei
-    nuc_signal_layer = Viewer.add_image(nuc_image, name= "nucleus signal", blending= 'additive', colormap='blue', contrast_limits=[nuc_image.min(), nuc_image.max()])
-    nuc_label_layer = Viewer.add_labels(nuc_label, opacity= 0.6, name= 'nucleus_label',)
+    nuc_signal_layer = Viewer.add_image(nuc_image, name= "nucleus signal", blending= 'additive', colormap='blue', contrast_limits=[nuc_image.min(), nuc_image.max()], scale=scale)
+    nuc_label_layer = Viewer.add_labels(nuc_label, opacity= 0.6, name= 'nucleus_label', scale=scale)
     nuc_label_layer.preserve_labels = True
     labels_layer_list = [nuc_label_layer]
     
     #Adding cytoplasm
     if (type(cyto_label) != type(None) and not np.array_equal(cyto_label, nuc_label) ) or (type(cyto_label) != type(None) and cyto_label.max() == 0): 
-        Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red', contrast_limits=[cyto_image.min(), cyto_image.max()])
-        cyto_label_layer = Viewer.add_labels(cyto_label, opacity= 0.6, name= 'cytoplasm_label')
+        Viewer.add_image(cyto_image, name= "cytoplasm signal", blending= 'additive', colormap='red', contrast_limits=[cyto_image.min(), cyto_image.max()], scale=scale)
+        cyto_label_layer = Viewer.add_labels(cyto_label, opacity= 0.6, name= 'cytoplasm_label', scale=scale)
         cyto_label_layer.preserve_labels = True
         labels_layer_list += [cyto_label_layer]
 

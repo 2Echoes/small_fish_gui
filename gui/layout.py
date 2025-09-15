@@ -194,7 +194,8 @@ def _segmentation_layout(
         other_nucleus_image_preset = None,
         cyto_diameter_preset=default.CYTO_DIAMETER, 
         nucleus_diameter_preset= default.NUC_DIAMETER, 
-        show_segmentation_preset= default.SHOW_SEGMENTATION, 
+        show_segmentation_preset= default.SHOW_SEGMENTATION,
+        save_segmentation_visual_preset = default.SAVE_SEGMENTATION_VISUAL, 
         segment_only_nuclei_preset=default.SEGMENT_ONLY_NUCLEI, 
         saving_path_preset=default.VISUAL_PATH, 
         filename_preset='cell_segmentation.png',
@@ -259,8 +260,9 @@ def _segmentation_layout(
         )
 
     #Control plots
-    layout += bool_layout(['show_segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)
-    layout += path_layout(['saving path'], look_for_dir=True, preset=saving_path_preset)
+    layout += bool_layout(['Show_segmentation'],keys=['show_segmentation'], header= 'Segmentation plots', preset= show_segmentation_preset)
+    layout += bool_layout(['Save segmentation visual'], preset= save_segmentation_visual_preset, keys=['save_segmentation_visual'])
+    layout += path_layout(keys=['saving path'], look_for_dir=True, preset=saving_path_preset)
     layout += parameters_layout(['filename'], default_values=[filename_preset], size= 25)
 
     return layout

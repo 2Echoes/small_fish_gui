@@ -66,6 +66,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
         other_nucleus_image = segmentation_parameters.setdefault('other_nucleus_image',None)
         path = os.getcwd()
         show_segmentation = segmentation_parameters.setdefault('show_segmentation', default.SHOW_SEGMENTATION)
+        save_segmentation_visual = segmentation_parameters.setdefault('save_segmentation_visual', default.SAVE_SEGMENTATION_VISUAL)
         segment_only_nuclei = segmentation_parameters.setdefault('segment_only_nuclei', default.SEGMENT_ONLY_NUCLEI)
         multichannel = segmentation_parameters.setdefault('is_multichannel', default.IS_MULTICHANNEL)
         is_3D_stack = segmentation_parameters.setdefault('is_3D_stack', default.IS_3D_STACK)
@@ -90,6 +91,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 nucleus_diameter_preset= nucleus_size,
                 other_nucleus_image_preset=other_nucleus_image,
                 saving_path_preset= path,
+                save_segmentation_visual_preset=save_segmentation_visual,
                 show_segmentation_preset=show_segmentation,
                 segment_only_nuclei_preset=segment_only_nuclei,
                 filename_preset=filename,
@@ -112,7 +114,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                     continue
 
             #Extract parameters
-            values = _cast_segmentation_parameters(values)
+            values : pipeline_parameters = _cast_segmentation_parameters(values)
             do_only_nuc = values['segment_only_nuclei']
             cyto_model_name = values['cyto_model_name']
             cyto_size = values['cytoplasm_diameter']
@@ -122,6 +124,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             nucleus_channel = values['nucleus_channel']
             other_nucleus_image = values['other_nucleus_image']
             path = values['saving path'] if values['saving path'] != '' else None
+            save_segmentation_visual = values['save_segmentation_visual']
             show_segmentation = values['show_segmentation']
             filename = values['filename'] if type(path) != type(None) else None
             channels = [cytoplasm_channel, nucleus_channel] if multichannel else [...,...]
@@ -173,10 +176,10 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             if is_3D_stack :
                 try :
                     float(anisotropy)
-                    if anisotropy <0 or anisotropy > 1 : raise ValueError()
+                    if anisotropy <0 : raise ValueError()
 
                 except ValueError :
-                    sg.popup("Anisotropy must be a positive float between 0 and 1")
+                    sg.popup("Anisotropy must be a positive float.")
                     relaunch = True
                     values['anisotropy'] = user_parameters.setdefault('anisotropy', default.ANISOTROPY)
 
@@ -284,6 +287,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 nuc_label= nucleus_label,
                 cyto_image=image[cytoplasm_channel],
                 cyto_label=cytoplasm_label,
+                anisotrpy=anisotropy,
             )
 
             if nucleus_label.ndim == 3 : nucleus_label = np.max(nucleus_label, axis=0)
@@ -298,7 +302,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
             if event == "No" :
                 continue
 
-        if type(output_path) != type(None) :
+        if type(output_path) != type(None) and save_segmentation_visual:
             
             #Get backgrounds
             nuc_proj = image[nucleus_channel]
@@ -307,11 +311,20 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 im_proj = stack.mean_projection(im_proj)
             if nuc_proj.ndim == 3 :
                 nuc_proj = stack.mean_projection(nuc_proj)
+            if nucleus_label.ndim == 3 :
+                nucleus_label_proj = np.max(nucleus_channel,axis=0)
+            else : 
+                nucleus_label_proj = nucleus_label
+            if cytoplasm_label.ndim == 3 :
+                cytoplasm_label_proj = np.max(cytoplasm_label,axis=0)
+            else : 
+                cytoplasm_label_proj = cytoplasm_label
+
             
             #Call plots
-            plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
+            plot.plot_segmentation_boundary(nuc_proj, cytoplasm_label_proj, nucleus_label_proj, boundary_size=2, contrast=True, show=False, path_output=nuc_path, title= "Nucleus segmentation (blue)", remove_frame=True,)
             if not do_only_nuc : 
-                plot.plot_segmentation_boundary(im_proj, cytoplasm_label, nucleus_label, boundary_size=2, contrast=True, show=False, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=True)
+                plot.plot_segmentation_boundary(im_proj, cytoplasm_label_proj, nucleus_label_proj, boundary_size=2, contrast=True, show=False, path_output=cyto_path, title="Cytoplasm Segmentation (red)", remove_frame=True)
             plot_labels(
                 nucleus_label,
                 path_output=output_path + "_nucleus_label_map.png",
@@ -319,7 +332,7 @@ def launch_segmentation(user_parameters: pipeline_parameters, nucleus_label, cyt
                 )
             if not do_only_nuc : 
                 plot_labels(
-                    cytoplasm_label,
+                    cytoplasm_label_proj,
                     path_output=output_path + "_cytoplasm_label_map.png",
                     show=False
                     )

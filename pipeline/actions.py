@@ -154,6 +154,7 @@ def save_segmentation(nucleus_label : np.ndarray, cytoplasm_label: np.ndarray) :
                 return False #User clicks cancel
 
             path = answer['folder'] + '/' + answer['filename']
+            print(answer['ext'])
             is_npy, is_npz, is_npz_compressed = answer['ext'], answer['ext0'], answer['ext1']
 
             if is_npy + is_npz + is_npz_compressed == 1 : 

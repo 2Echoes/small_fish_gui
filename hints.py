@@ -29,7 +29,6 @@ class pipeline_parameters(TypedDict) :
             gamma : float
             image_path : str
             image : ndarray
-            show_interactive_threshold_selector : bool
             log_kernel_size : Tuple[float,float,float]
             log_kernel_size_x : float
             log_kernel_size_y : float
@@ -48,8 +47,10 @@ class pipeline_parameters(TypedDict) :
             other_nucleus_image : str
             reordered_shape : Tuple[int,int,int,int,int]
             do_segmentation : bool
-            segmentation_done : bool
             shape : Tuple[int,int,int,int,int]
+            save_segmentation_visual : bool
+            segmentation_done : bool
+            show_interactive_threshold_selector : bool
             spots_extraction_folder : str
             spots_filename : str
             spot_size : Tuple[int,int,int]
